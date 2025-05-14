@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/themotionmachine-omnifocus-mcp-badge.png)](https://mseep.ai/app/themotionmachine-omnifocus-mcp)
+
 # OmniFocus MCP Server
 
 A Model Context Protocol (MCP) server that integrates with OmniFocus to enable Claude (or other MCP-compatible AI assistants) to interact with your tasks and projects.
