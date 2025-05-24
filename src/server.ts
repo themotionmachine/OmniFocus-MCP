@@ -11,6 +11,7 @@ import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
+import * as getTaskDetailsTool from './tools/definitions/getTaskDetails.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -24,6 +25,13 @@ server.tool(
   "Gets the current state of your OmniFocus database",
   dumpDatabaseTool.schema.shape,
   dumpDatabaseTool.handler
+);
+
+server.tool(
+  "get_task_details",
+  "Get detailed information about a specific task by ID or name",
+  getTaskDetailsTool.schema.shape,
+  getTaskDetailsTool.handler
 );
 
 server.tool(

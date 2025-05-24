@@ -12,6 +12,8 @@ export interface AddOmniFocusTaskParams {
   estimatedMinutes?: number;
   tags?: string[]; // Tag names
   projectName?: string; // Project name to add task to
+  parentTaskId?: string; // Parent task ID for nesting
+  parentTaskName?: string; // Parent task name for nesting (alternative to ID)
 }
 
 /**
@@ -27,14 +29,32 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
   const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
+  const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
+  const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
   
   // Construct AppleScript with error handling
   let script = `
   try
     tell application "OmniFocus"
       tell front document
-        -- Determine the container (inbox or project)
-        if "${projectName}" is "" then
+        -- Determine the container (parent task, project, or inbox)
+        if "${parentTaskId}" is not "" then
+          -- Use parent task by ID
+          try
+            set parentTask to first flattened task where id = "${parentTaskId}"
+            set newTask to make new task with properties {name:"${name}"} at end of tasks of parentTask
+          on error
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Parent task not found with ID: ${parentTaskId}\\\"}"
+          end try
+        else if "${parentTaskName}" is not "" then
+          -- Use parent task by name
+          try
+            set parentTask to first flattened task where name = "${parentTaskName}"
+            set newTask to make new task with properties {name:"${name}"} at end of tasks of parentTask
+          on error
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Parent task not found with name: ${parentTaskName}\\\"}"
+          end try
+        else if "${projectName}" is "" then
           -- Use inbox of the document
           set newTask to make new inbox task with properties {name:"${name}"}
         else
@@ -93,16 +113,8 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     // Generate AppleScript
     const script = generateAppleScript(params);
     
-    console.error("Executing AppleScript directly...");
-    
     // Execute AppleScript directly
     const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
-    }
-    
-    console.error("AppleScript stdout:", stdout);
     
     // Parse the result
     try {
@@ -115,14 +127,12 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
         error: result.error
       };
     } catch (parseError) {
-      console.error("Error parsing AppleScript result:", parseError);
       return {
         success: false,
         error: `Failed to parse result: ${stdout}`
       };
     }
   } catch (error: any) {
-    console.error("Error in addOmniFocusTask:", error);
     return {
       success: false,
       error: error?.message || "Unknown error in addOmniFocusTask"

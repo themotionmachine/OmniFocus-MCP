@@ -56,7 +56,7 @@ function formatCompactReport(database: any, options: { hideCompleted: boolean, h
   // Add legend
   output += `FORMAT LEGEND:
 F: Folder | P: Project | •: Task | 🚩: Flagged
-Dates: [M/D] | Duration: (30m) or (2h) | Tags: <tag1,tag2>
+IDs: [abc123] | Dates: [M/D] | Duration: (30m) or (2h) | Tags: <tag1,tag2>
 Status: #next #avail #block #due #over #compl #drop\n\n`;
   
   // Map of folder IDs to folder objects for quick lookup
@@ -91,7 +91,7 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
   // Process folders recursively
   function processFolder(folder: any, level: number): string {
     const indent = '   '.repeat(level);
-    let folderOutput = `${indent}F: ${folder.name}\n`;
+    let folderOutput = `${indent}F: ${folder.name} [${folder.id}]\n`;
     
     // Process subfolders
     if (folder.subfolders && folder.subfolders.length > 0) {
@@ -142,7 +142,10 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
     // Add flag if present
     const flaggedSymbol = project.flagged ? ' 🚩' : '';
     
-    let projectOutput = `${indent}P: ${project.name}${flaggedSymbol}${statusInfo}\n`;
+    // Add project ID
+    const projectId = ` [${project.id}]`;
+    
+    let projectOutput = `${indent}P: ${project.name}${flaggedSymbol}${projectId}${statusInfo}\n`;
     
     // Process tasks in this project
     const projectTasks = database.tasks.filter((task: any) => 
@@ -230,7 +233,11 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
         break;
     }
     
-    let taskOutput = `${indent}• ${flagSymbol}${task.name}${dateInfo}${durationStr}${tagsStr}${statusStr}\n`;
+    // Add task ID (shortened to last 8 chars for readability)
+    const shortId = task.id.length > 8 ? `...${task.id.slice(-8)}` : task.id;
+    const taskId = ` [${shortId}]`;
+    
+    let taskOutput = `${indent}• ${flagSymbol}${task.name}${taskId}${dateInfo}${durationStr}${tagsStr}${statusStr}\n`;
     
     // Process subtasks
     if (task.childIds && task.childIds.length > 0) {

@@ -15,6 +15,8 @@ export const schema = z.object({
     
     // Task-specific properties
     projectName: z.string().optional().describe("For tasks: The name of the project to add the task to"),
+    parentTaskId: z.string().optional().describe("For tasks: The ID of the parent task to nest this task under"),
+    parentTaskName: z.string().optional().describe("For tasks: The name of the parent task to nest this task under"),
     
     // Project-specific properties
     folderName: z.string().optional().describe("For projects: The name of the folder to add the project to"),

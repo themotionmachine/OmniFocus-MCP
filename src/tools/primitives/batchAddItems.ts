@@ -12,6 +12,8 @@ export type BatchAddItemsParams = {
   estimatedMinutes?: number;
   tags?: string[];
   projectName?: string; // For tasks
+  parentTaskId?: string; // For tasks: parent task ID
+  parentTaskName?: string; // For tasks: parent task name
   folderName?: string; // For projects
   sequential?: boolean; // For projects
 };
@@ -51,7 +53,9 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
             flagged: item.flagged,
             estimatedMinutes: item.estimatedMinutes,
             tags: item.tags,
-            projectName: item.projectName
+            projectName: item.projectName,
+            parentTaskId: item.parentTaskId,
+            parentTaskName: item.parentTaskName
           };
           
           // Add task
