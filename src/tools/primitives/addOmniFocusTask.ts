@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
 const execAsync = promisify(exec);
 
 // Interface for task creation parameters
@@ -28,8 +29,23 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const tags = params.tags || [];
   const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
   
+  // Generate date constructions outside tell blocks
+  let datePreScript = '';
+  let dueDateVar = '';
+  let deferDateVar = '';
+  
+  if (dueDate) {
+    dueDateVar = `dueDate${Math.random().toString(36).substr(2, 9)}`;
+    datePreScript += createDateOutsideTellBlock(dueDate, dueDateVar) + '\n\n';
+  }
+  
+  if (deferDate) {
+    deferDateVar = `deferDate${Math.random().toString(36).substr(2, 9)}`;
+    datePreScript += createDateOutsideTellBlock(deferDate, deferDateVar) + '\n\n';
+  }
+  
   // Construct AppleScript with error handling
-  let script = `
+  let script = datePreScript + `
   try
     tell application "OmniFocus"
       tell front document
@@ -50,11 +66,11 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         -- Set task properties
         ${note ? `set note of newTask to "${note}"` : ''}
         ${dueDate ? `
-          set due date of newTask to (current date) + (time to GMT)
-          set due date of newTask to date "${dueDate}"` : ''}
+          -- Set due date
+          set due date of newTask to ` + dueDateVar : ''}
         ${deferDate ? `
-          set defer date of newTask to (current date) + (time to GMT)
-          set defer date of newTask to date "${deferDate}"` : ''}
+          -- Set defer date
+          set defer date of newTask to ` + deferDateVar : ''}
         ${flagged ? `set flagged of newTask to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newTask to ${estimatedMinutes}` : ''}
         

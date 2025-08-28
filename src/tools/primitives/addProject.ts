@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
 const execAsync = promisify(exec);
 
 // Interface for project creation parameters
@@ -30,8 +31,23 @@ function generateAppleScript(params: AddProjectParams): string {
   const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
   const sequential = params.sequential === true;
   
+  // Generate date constructions outside tell blocks
+  let datePreScript = '';
+  let dueDateVar = '';
+  let deferDateVar = '';
+  
+  if (dueDate) {
+    dueDateVar = `dueDate${Math.random().toString(36).substr(2, 9)}`;
+    datePreScript += createDateOutsideTellBlock(dueDate, dueDateVar) + '\n\n';
+  }
+  
+  if (deferDate) {
+    deferDateVar = `deferDate${Math.random().toString(36).substr(2, 9)}`;
+    datePreScript += createDateOutsideTellBlock(deferDate, deferDateVar) + '\n\n';
+  }
+  
   // Construct AppleScript with error handling
-  let script = `
+  let script = datePreScript + `
   try
     tell application "OmniFocus"
       tell front document
@@ -52,11 +68,11 @@ function generateAppleScript(params: AddProjectParams): string {
         -- Set project properties
         ${note ? `set note of newProject to "${note}"` : ''}
         ${dueDate ? `
-          set due date of newProject to (current date) + (time to GMT)
-          set due date of newProject to date "${dueDate}"` : ''}
+          -- Set due date
+          set due date of newProject to ` + dueDateVar : ''}
         ${deferDate ? `
-          set defer date of newProject to (current date) + (time to GMT)
-          set defer date of newProject to date "${deferDate}"` : ''}
+          -- Set defer date
+          set defer date of newProject to ` + deferDateVar : ''}
         ${flagged ? `set flagged of newProject to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newProject to ${estimatedMinutes}` : ''}
         ${`set sequential of newProject to ${sequential}`}

@@ -34,31 +34,81 @@ function generateAppleScript(params: RemoveItemParams): string {
         
   // Add ID search if provided
   if (id) {
-    script += `
-        -- Try to find by ID first
+    if (itemType === 'task') {
+      script += `
+        -- Try to find task by ID (search in projects first, then inbox)
         try
-          set foundItem to first ${itemType === 'task' ? 'flattened task' : 'flattened project'} where id = "${id}"
+          set foundItem to first flattened task where id = "${id}"
+        end try
+        
+        -- If not found in projects, search in inbox
+        if foundItem is missing value then
+          try
+            set foundItem to first inbox task where id = "${id}"
+          end try
+        end if
+`;
+    } else {
+      script += `
+        -- Try to find project by ID
+        try
+          set foundItem to first flattened project where id = "${id}"
         end try
 `;
+    }
   }
         
   // Add name search if provided (and no ID or as fallback)
   if (!id && name) {
-    script += `
-        -- Find by name
+    if (itemType === 'task') {
+      script += `
+        -- Find task by name (search in projects first, then inbox)
         try
-          set foundItem to first ${itemType === 'task' ? 'flattened task' : 'flattened project'} where name = "${name}"
+          set foundItem to first flattened task where name = "${name}"
         end try
-`;
-  } else if (id && name) {
-    script += `
-        -- If ID search failed, try to find by name as fallback
+        
+        -- If not found in projects, search in inbox
         if foundItem is missing value then
           try
-            set foundItem to first ${itemType === 'task' ? 'flattened task' : 'flattened project'} where name = "${name}"
+            set foundItem to first inbox task where name = "${name}"
           end try
         end if
 `;
+    } else {
+      script += `
+        -- Find project by name
+        try
+          set foundItem to first flattened project where name = "${name}"
+        end try
+`;
+    }
+  } else if (id && name) {
+    if (itemType === 'task') {
+      script += `
+        -- If ID search failed, try to find by name as fallback
+        if foundItem is missing value then
+          try
+            set foundItem to first flattened task where name = "${name}"
+          end try
+        end if
+        
+        -- If still not found, search in inbox
+        if foundItem is missing value then
+          try
+            set foundItem to first inbox task where name = "${name}"
+          end try
+        end if
+`;
+    } else {
+      script += `
+        -- If ID search failed, try to find project by name as fallback
+        if foundItem is missing value then
+          try
+            set foundItem to first flattened project where name = "${name}"
+          end try
+        end if
+`;
+    }
   }
         
   // Add the rest of the script
