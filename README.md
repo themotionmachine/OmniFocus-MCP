@@ -44,8 +44,14 @@ Some ways you could use it:
 
 ## 🌈 Use Cases
 
+### Efficient Task Queries
+Use the new `query_omnifocus` tool for fast, targeted searches:
+> "Show me tasks due today"
+> "Get all flagged items in my Work project"  
+> "Count how many tasks are in each project"
+
 ### Reorganize your projects, tasks, and tags
-> "I want every task to have an energy level tag. show me a list of all the tasks that don't have an energy level tag and your suggestions for what tag to add. I'll make any changes I think are appropriate. Then make the changes in OmniFocus."
+> "I want every task to have an energy level tag. Show me a list of all the tasks that don't have an energy level tag and your suggestions for what tag to add. I'll make any changes I think are appropriate. Then make the changes in OmniFocus."
 
 
 ### Add tasks from any conversation
@@ -56,7 +62,11 @@ Some ways you could use it:
 
 Get a summary of your current tasks and manage them conversationally:
 
-> "Show me all my flagged tasks due this week that don't mention "fish". 
+> "Show me all my flagged tasks due this week"
+
+Or create custom views:
+
+> "What are my next actions in the Work folder?" 
 
 ### Process Transcripts or PDFs
 
@@ -75,8 +85,38 @@ Manage multiple items efficiently:
 
 The server currently provides these tools:
 
+### `query_omnifocus` ⭐ NEW
+Efficiently query your OmniFocus database with powerful filters. Get specific tasks, projects, or folders without loading the entire database.
+
+Key Features:
+- **Filter by multiple criteria**: project, tags, status, due dates, flags, and more
+- **Request specific fields**: Reduce response size by only getting the data you need
+- **Sort and limit results**: Control the output format
+- **Much faster than dump_database** for targeted queries
+
+Common Uses:
+```
+"Show me all flagged tasks due this week"
+"Get next actions from my Work project"
+"Count tasks in each project" (use with summary: true)
+"Find all tasks deferred until tomorrow"
+```
+
+Parameters:
+- `entity`: Type to query ('tasks', 'projects', or 'folders')
+- `filters`: (Optional) Narrow results by project, tags, status, dates, etc.
+- `fields`: (Optional) Specific fields to return (id, name, dueDate, etc.)
+- `limit`: (Optional) Maximum items to return
+- `sortBy`: (Optional) Field to sort by
+- `includeCompleted`: (Optional) Include completed items (default: false)
+- `summary`: (Optional) Return only count instead of full details
+
 ### `dump_database`
-Gets the current state of your OmniFocus database.
+Gets the complete current state of your OmniFocus database. Best for comprehensive analysis or when you need everything.
+
+Parameters:
+- `hideCompleted`: (Optional) Hide completed/dropped tasks (default: true)
+- `hideRecurringDuplicates`: (Optional) Hide duplicate recurring tasks (default: true)
 
 ### `add_omnifocus_task`
 Add a new task to OmniFocus.

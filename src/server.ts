@@ -11,6 +11,7 @@ import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
+import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -66,6 +67,13 @@ server.tool(
   "Remove multiple tasks or projects from OmniFocus in a single operation",
   batchRemoveItemsTool.schema.shape,
   batchRemoveItemsTool.handler
+);
+
+server.tool(
+  "query_omnifocus",
+  "Efficiently query OmniFocus database with powerful filters. Get specific tasks, projects, or folders without loading the entire database. Supports filtering by project, tags, status, due dates, and more. Much faster than dump_database for targeted queries.",
+  queryOmniFocusTool.schema.shape,
+  queryOmniFocusTool.handler
 );
 
 // Start the MCP server
