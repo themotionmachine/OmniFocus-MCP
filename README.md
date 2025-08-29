@@ -1,10 +1,10 @@
 # OmniFocus MCP Server
 
-A Model Context Protocol (MCP) server that integrates with OmniFocus to enable Claude (or other MCP-compatible AI assistants) to interact with your tasks and projects.
+A Model Context Protocol (MCP) server that integrates with OmniFocus to enable Claude (or other MCP-compatible clients) to interact with your tasks and projects.
 
 ![OmniFocus MCP](assets/omnifocus-mcp-logo.png)
 
-## 🌟 Overview
+## Overview
 
 This MCP server creates a bridge between AI assistants (like Claude) and your OmniFocus task management system. It gives AI models the ability to view, create, edit, and remove tasks and projects in your OmniFocus database through natural language conversations.
 Some ways you could use it: 
@@ -14,6 +14,14 @@ Some ways you could use it:
 - Create visualizations of your tasks, projects, and tags
 - Process multiple tasks or projects in a single operation
 - Bulk manage your OmniFocus items efficiently
+
+**Known Issues**
+- Dump_database tool currently fails for very large omnifocus databases. 
+
+## Roadmap
+- Enable the client to interact with perspectives
+- Benefit from MCP `resource` and `prompt` features
+- Add support for the new `planned` date type in Omnifocus 4.7
 
 
 ## 🚀 Quick Start
@@ -42,7 +50,7 @@ Some ways you could use it:
 
 3. Restart Claude Desktop
 
-## 🌈 Use Cases
+## Use Cases
 
 ### Efficient Task Queries
 Use the new `query_omnifocus` tool for fast, targeted searches:
@@ -52,7 +60,6 @@ Use the new `query_omnifocus` tool for fast, targeted searches:
 
 ### Reorganize your projects, tasks, and tags
 > "I want every task to have an energy level tag. Show me a list of all the tasks that don't have an energy level tag and your suggestions for what tag to add. I'll make any changes I think are appropriate. Then make the changes in OmniFocus."
-
 
 ### Add tasks from any conversation
 
@@ -72,13 +79,7 @@ Or create custom views:
 
 Extract action items from meeting transcripts, academic research articles, or notes:
 
-> "I'm pasting in the transcript from today's product meeting. Please analyze it and create tasks in OmniFocus for any action items assigned to me. Put them in my 'Product Development' project."
-
-### Batch Operations
-
-Manage multiple items efficiently:
-
-> "I have a list of 20 tasks from this meeting transcript. Please add them all to my 'Q2 Planning' project with appropriate tags and due dates."
+> "I'm pasting in the transcript from today's meeting. Please analyze it and create tasks in OmniFocus for any action items assigned to me. Put them in my 'Product Development' project."
 
 
 ## 🔧 Available Tools
@@ -188,17 +189,13 @@ Parameters:
   - `name`: (Optional) The name of the item to remove
   - `itemType`: The type of item ('task' or 'project')
 
-## 🛠 Development
+## Development
 
 Documentation to follow.
 
-## 🧠 How It Works
+## How It Works
 
 This server uses AppleScript to communicate with OmniFocus, allowing it to interact with the application's native functionality. The server is built using the Model Context Protocol SDK, which provides a standardized way for AI models to interact with external tools and systems.
-
-## 📜 License
-
-MIT
 
 ## 🤝 Contributing
 
