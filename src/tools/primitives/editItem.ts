@@ -1,5 +1,8 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { generateDateAssignmentV2 } from '../../utils/dateFormatting.js';
 const execAsync = promisify(exec);
 
@@ -89,24 +92,33 @@ function generateAppleScript(params: EditItemParams): string {
   if (id) {
     if (itemType === 'task') {
       script += `
-      -- Try to find task by ID (search in projects first, then inbox)
-      try
-        set foundItem to first flattened task where id = "${id}"
-      end try
+      -- Try to find task by ID
+      repeat with aTask in (flattened tasks)
+        if (id of aTask as string) = "${id}" then
+          set foundItem to aTask
+          exit repeat
+        end if
+      end repeat
       
       -- If not found in projects, search in inbox
       if foundItem is missing value then
-        try
-          set foundItem to first inbox task where id = "${id}"
-        end try
+        repeat with aTask in (inbox tasks)
+          if (id of aTask as string) = "${id}" then
+            set foundItem to aTask
+            exit repeat
+          end if
+        end repeat
       end if
 `;
     } else {
       script += `
       -- Try to find project by ID
-      try
-        set foundItem to first flattened project where id = "${id}"
-      end try
+      repeat with aProject in (flattened projects)
+        if (id of aProject as string) = "${id}" then
+          set foundItem to aProject
+          exit repeat
+        end if
+      end repeat
 `;
     }
   }
@@ -116,23 +128,32 @@ function generateAppleScript(params: EditItemParams): string {
     if (itemType === 'task') {
       script += `
       -- Find task by name (search in projects first, then inbox)
-      try
-        set foundItem to first flattened task where name = "${name}"
-      end try
+      repeat with aTask in (flattened tasks)
+        if (name of aTask) = "${name}" then
+          set foundItem to aTask
+          exit repeat
+        end if
+      end repeat
       
       -- If not found in projects, search in inbox
       if foundItem is missing value then
-        try
-          set foundItem to first inbox task where name = "${name}"
-        end try
+        repeat with aTask in (inbox tasks)
+          if (name of aTask) = "${name}" then
+            set foundItem to aTask
+            exit repeat
+          end if
+        end repeat
       end if
 `;
     } else {
       script += `
       -- Find project by name
-      try
-        set foundItem to first flattened project where name = "${name}"
-      end try
+      repeat with aProject in (flattened projects)
+        if (name of aProject) = "${name}" then
+          set foundItem to aProject
+          exit repeat
+        end if
+      end repeat
 `;
     }
   } else if (id && name) {
@@ -140,25 +161,34 @@ function generateAppleScript(params: EditItemParams): string {
       script += `
       -- If ID search failed, try to find by name as fallback
       if foundItem is missing value then
-        try
-          set foundItem to first flattened task where name = "${name}"
-        end try
+        repeat with aTask in (flattened tasks)
+          if (name of aTask) = "${name}" then
+            set foundItem to aTask
+            exit repeat
+          end if
+        end repeat
       end if
       
       -- If still not found, search in inbox
       if foundItem is missing value then
-        try
-          set foundItem to first inbox task where name = "${name}"
-        end try
+        repeat with aTask in (inbox tasks)
+          if (name of aTask) = "${name}" then
+            set foundItem to aTask
+            exit repeat
+          end if
+        end repeat
       end if
 `;
     } else {
       script += `
       -- If ID search failed, try to find project by name as fallback
       if foundItem is missing value then
-        try
-          set foundItem to first flattened project where name = "${name}"
-        end try
+        repeat with aProject in (flattened projects)
+          if (name of aProject) = "${name}" then
+            set foundItem to aProject
+            exit repeat
+          end if
+        end repeat
       end if
 `;
     }
@@ -259,19 +289,21 @@ function generateAppleScript(params: EditItemParams): string {
         
         -- First clear all existing tags
         repeat with existingTag in existingTags
-          tell existingTag to remove tag from foundItem
+          remove existingTag from tags of foundItem
         end repeat
         
         -- Then add new tags
         repeat with tagName in tagNames
           set tagObj to missing value
           try
-            set tagObj to first flattened tag where name = tagName
+            set tagObj to first flattened tag where name = (tagName as string)
+          on error
+            -- Tag doesn't exist, create it
+            set tagObj to make new tag with properties {name:(tagName as string)}
           end try
-          if tagObj is missing value then
-            set tagObj to make new tag with properties {name:tagName}
+          if tagObj is not missing value then
+            add tagObj to tags of foundItem
           end if
-          tell tagObj to add tag to foundItem
         end repeat
         set end of changedProperties to "tags (replaced)"
 `;
@@ -285,12 +317,14 @@ function generateAppleScript(params: EditItemParams): string {
         repeat with tagName in tagNames
           set tagObj to missing value
           try
-            set tagObj to first flattened tag where name = tagName
+            set tagObj to first flattened tag where name = (tagName as string)
+          on error
+            -- Tag doesn't exist, create it
+            set tagObj to make new tag with properties {name:(tagName as string)}
           end try
-          if tagObj is missing value then
-            set tagObj to make new tag with properties {name:tagName}
+          if tagObj is not missing value then
+            add tagObj to tags of foundItem
           end if
-          tell tagObj to add tag to foundItem
         end repeat
         set end of changedProperties to "tags (added)"
 `;
@@ -304,8 +338,8 @@ function generateAppleScript(params: EditItemParams): string {
         set tagNames to {${tagsList}}
         repeat with tagName in tagNames
           try
-            set tagObj to first flattened tag where name = tagName
-            tell tagObj to remove tag from foundItem
+            set tagObj to first flattened tag where name = (tagName as string)
+            remove tagObj from tags of foundItem
           end try
         end repeat
         set end of changedProperties to "tags (removed)"
@@ -396,6 +430,8 @@ export async function editItem(params: EditItemParams): Promise<{
   changedProperties?: string,
   error?: string
 }> {
+  let tempFile: string | undefined;
+  
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
@@ -407,8 +443,19 @@ export async function editItem(params: EditItemParams): Promise<{
     const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
     console.error("AppleScript preview:\n", scriptPreview);
     
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
+    // Write script to temporary file to avoid shell escaping issues
+    tempFile = join(tmpdir(), `edit_omnifocus_${Date.now()}.applescript`);
+    writeFileSync(tempFile, script);
+    
+    // Execute AppleScript from file
+    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
+    
+    // Clean up temp file
+    try {
+      unlinkSync(tempFile);
+    } catch (cleanupError) {
+      console.error("Failed to clean up temp file:", cleanupError);
+    }
     
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
@@ -436,6 +483,15 @@ export async function editItem(params: EditItemParams): Promise<{
       };
     }
   } catch (error: any) {
+    // Clean up temp file if it exists
+    if (tempFile) {
+      try {
+        unlinkSync(tempFile);
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
+    }
+    
     console.error("Error in editItem execution:", error);
     
     // Include more detailed error information

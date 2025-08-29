@@ -83,9 +83,15 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
-            tell newTask to add theTag
+            add theTag to tags of newTask
           on error
-            -- Ignore errors finding/adding tags
+            -- Tag might not exist, try to create it
+            try
+              set theTag to make new tag with properties {name:"${sanitizedTag}"}
+              add theTag to tags of newTask
+            on error
+              -- Could not create or add tag
+            end try
           end try`;
         }).join('\n') : ''}
         
