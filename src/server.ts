@@ -12,6 +12,8 @@ import * as editItemTool from './tools/definitions/editItem.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
+import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
+import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -74,6 +76,20 @@ server.tool(
   "Efficiently query OmniFocus database with powerful filters. Get specific tasks, projects, or folders without loading the entire database. Supports filtering by project, tags, status, due dates, and more. Much faster than dump_database for targeted queries.",
   queryOmniFocusTool.schema.shape,
   queryOmniFocusTool.handler
+);
+
+server.tool(
+  "list_perspectives",
+  "List all available perspectives in OmniFocus, including built-in perspectives (Inbox, Projects, Tags, etc.) and custom perspectives (Pro feature)",
+  listPerspectivesTool.schema.shape,
+  listPerspectivesTool.handler
+);
+
+server.tool(
+  "get_perspective_view",
+  "Get the items visible in a specific OmniFocus perspective. Shows what tasks and projects are displayed when viewing that perspective",
+  getPerspectiveViewTool.schema.shape,
+  getPerspectiveViewTool.handler
 );
 
 // Start the MCP server
