@@ -22,6 +22,7 @@ Some ways you could use it:
 - Enable the client to interact with perspectives
 - Benefit from MCP `resource` and `prompt` features
 - Add support for the new `planned` date type in Omnifocus 4.7
+- Support manipulating notifications for projects and tasks
 
 
 ## 🚀 Quick Start
