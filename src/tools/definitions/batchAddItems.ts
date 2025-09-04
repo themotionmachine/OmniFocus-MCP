@@ -15,11 +15,18 @@ export const schema = z.object({
     
     // Task-specific properties
     projectName: z.string().optional().describe("For tasks: The name of the project to add the task to"),
+    parentTaskId: z.string().optional().describe("For tasks: ID of the parent task"),
+    parentTaskName: z.string().optional().describe("For tasks: Name of the parent task (scoped to project when provided)"),
+    tempId: z.string().optional().describe("For tasks: Temporary ID for within-batch references"),
+    parentTempId: z.string().optional().describe("For tasks: Reference to parent's tempId within the batch"),
+    hierarchyLevel: z.number().int().min(0).optional().describe("Optional ordering hint (0=root, 1=child, ...)"),
     
     // Project-specific properties
     folderName: z.string().optional().describe("For projects: The name of the folder to add the project to"),
     sequential: z.boolean().optional().describe("For projects: Whether tasks in the project should be sequential")
   })).describe("Array of items (tasks or projects) to add")
+  ,
+  createSequentially: z.boolean().optional().describe("Process parents before children; when false, best-effort order will still try to resolve parents first")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
@@ -57,11 +64,22 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         }]
       };
     } else {
-      // Batch operation failed completely
+      console.error('[batch_add_items] failure result:', JSON.stringify(result));
+      // Batch operation failed completely or no items succeeded.
+      const failureDetails = (result.results && result.results.length > 0)
+        ? result.results.map((r, index) => {
+            const itemType = args.items[index].type;
+            const itemName = args.items[index].name;
+            return r.success
+              ? `- ✅ ${itemType}: \"${itemName}\"`
+              : `- ❌ ${itemType}: \"${itemName}\" - Error: ${r?.error || 'Unknown error'}`;
+          }).join('\\n')
+        : `No items processed. ${result.error || ''}`;
+
       return {
         content: [{
           type: "text" as const,
-          text: `Failed to process batch operation: ${result.error}`
+          text: `Failed to process batch operation.\\n\\n${failureDetails}`
         }],
         isError: true
       };
