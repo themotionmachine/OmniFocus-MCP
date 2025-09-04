@@ -1,5 +1,8 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
 const execAsync = promisify(exec);
 
@@ -20,14 +23,14 @@ export interface AddOmniFocusTaskParams {
  */
 function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = params.name.replace(/["\\]/g, '\\$&'); // Escape quotes and backslashes
+  const note = params.note?.replace(/["\\]/g, '\\$&') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
+  const projectName = params.projectName?.replace(/["\\]/g, '\\$&') || '';
   
   // Generate date constructions outside tell blocks
   let datePreScript = '';
@@ -59,7 +62,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
             set theProject to first flattened project where name = "${projectName}"
             set newTask to make new task with properties {name:"${name}"} at end of tasks of theProject
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}"
+            return "{\"success\":false,\"error\":\"Project not found: ${projectName}\"}"
           end try
         end if
         
@@ -79,7 +82,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+          const sanitizedTag = tag.replace(/["\\]/g, '\\$&');
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
@@ -96,11 +99,11 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         }).join('\n') : ''}
         
         -- Return success with task ID
-        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\"}"
+        return "{\"success\":true,\"taskId\":\"" & taskId & "\",\"name\":\"" & name & "\"}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "{\"success\":false,\"error\":\"" & errorMessage & "\"}"
   end try
   `;
   
@@ -111,20 +114,21 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
  * Add a task to OmniFocus
  */
 export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{success: boolean, taskId?: string, error?: string}> {
+  let tempFile: string | undefined;
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
     
-    console.error("Executing AppleScript directly...");
+    // Write script to temporary file to avoid shell escaping issues
+    tempFile = join(tmpdir(), `add_omnifocus_${Date.now()}.applescript`);
+    writeFileSync(tempFile, script);
     
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
+    // Execute AppleScript from file
+    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
     
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
     }
-    
-    console.error("AppleScript stdout:", stdout);
     
     // Parse the result
     try {
@@ -149,5 +153,14 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
       success: false,
       error: error?.message || "Unknown error in addOmniFocusTask"
     };
+  } finally {
+    // Clean up temp file
+    if (tempFile) {
+      try {
+        unlinkSync(tempFile);
+      } catch (cleanupError) {
+        console.error("Failed to clean up temp file:", cleanupError);
+      }
+    }
   }
-} 
+}
