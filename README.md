@@ -140,6 +140,8 @@ Parameters:
 - `flagged`: (Optional) Whether the task is flagged or not
 - `estimatedMinutes`: (Optional) Estimated time to complete the task
 - `tags`: (Optional) Tags to assign to the task
+ - `parentTaskId`: (Optional) Create under an existing parent task by ID
+ - `parentTaskName`: (Optional) Create under first matching parent task by name (fallback)
 
 ### `add_project`
 Add a new project to OmniFocus.
@@ -188,6 +190,22 @@ Parameters:
   - `projectName`: (Optional) For tasks: the project to add to
   - `folderName`: (Optional) For projects: the folder to add to
   - `sequential`: (Optional) For projects: whether tasks are sequential
+  - `parentTaskId`: (Optional, tasks): Parent task by ID
+  - `parentTaskName`: (Optional, tasks): Parent task by name (fallback)
+  - `tempId`: (Optional, tasks): Temporary ID for within-batch references
+  - `parentTempId`: (Optional, tasks): Reference to another item's `tempId` to establish hierarchy
+  - `hierarchyLevel`: (Optional, tasks): Ordering hint (0 for root, 1 for child, ...)
+
+Examples:
+```
+{
+  "items": [
+    { "type": "task", "name": "Parent", "projectName": "My Project", "tempId": "p1" },
+    { "type": "task", "name": "Child A", "parentTempId": "p1" },
+    { "type": "task", "name": "Child B", "parentTempId": "p1" }
+  ]
+}
+```
 
 ### `batch_remove_items`
 Remove multiple tasks or projects from OmniFocus in a single operation.

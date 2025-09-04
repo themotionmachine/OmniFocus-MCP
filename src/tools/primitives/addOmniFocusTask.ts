@@ -1,5 +1,8 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
 const execAsync = promisify(exec);
 
@@ -13,6 +16,10 @@ export interface AddOmniFocusTaskParams {
   estimatedMinutes?: number;
   tags?: string[]; // Tag names
   projectName?: string; // Project name to add task to
+  // Hierarchy support
+  parentTaskId?: string;
+  parentTaskName?: string;
+  hierarchyLevel?: number; // ignored for single add
 }
 
 /**
@@ -28,6 +35,8 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
   const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
+  const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
+  const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
   
   // Generate date constructions outside tell blocks
   let datePreScript = '';
@@ -49,18 +58,68 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   try
     tell application "OmniFocus"
       tell front document
-        -- Determine the container (inbox or project)
-        if "${projectName}" is "" then
-          -- Use inbox of the document
-          set newTask to make new inbox task with properties {name:"${name}"}
-        else
-          -- Use specified project
+        -- Resolve parent task if provided
+        set newTask to missing value
+        set parentTask to missing value
+        set placement to ""
+
+        if "${parentTaskId}" is not "" then
+          try
+            set parentTask to first flattened task where id = "${parentTaskId}"
+          end try
+          if parentTask is missing value then
+            try
+              set parentTask to first inbox task where id = "${parentTaskId}"
+            end try
+          end if
+          -- If projectName provided, ensure parent is within that project
+          if parentTask is not missing value and "${projectName}" is not "" then
+            try
+              set pproj to containing project of parentTask
+              if pproj is missing value or name of pproj is not "${projectName}" then set parentTask to missing value
+            end try
+          end if
+        end if
+
+        if parentTask is missing value and "${parentTaskName}" is not "" then
+          if "${projectName}" is not "" then
+            -- Find by name but constrain to the specified project
+            try
+              set parentTask to first flattened task where name = "${parentTaskName}"
+            end try
+            if parentTask is not missing value then
+              try
+                set pproj to containing project of parentTask
+                if pproj is missing value or name of pproj is not "${projectName}" then set parentTask to missing value
+              end try
+            end if
+          else
+            -- No project specified; allow global or inbox match by name
+            try
+              set parentTask to first flattened task where name = "${parentTaskName}"
+            end try
+            if parentTask is missing value then
+              try
+                set parentTask to first inbox task where name = "${parentTaskName}"
+              end try
+            end if
+          end if
+        end if
+
+        if parentTask is not missing value then
+          -- Create task under parent task
+          set newTask to make new task with properties {name:"${name}"} at end of tasks of parentTask
+        else if "${projectName}" is not "" then
+          -- Create under specified project
           try
             set theProject to first flattened project where name = "${projectName}"
             set newTask to make new task with properties {name:"${name}"} at end of tasks of theProject
           on error
             return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}"
           end try
+        else
+          -- Fallback to inbox
+          set newTask to make new inbox task with properties {name:"${name}"}
         end if
         
         -- Set task properties
@@ -74,6 +133,39 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         ${flagged ? `set flagged of newTask to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newTask to ${estimatedMinutes}` : ''}
         
+        -- Derive placement from container; distinguish real parent vs project root task
+        try
+          set placement to "inbox"
+          set ctr to container of newTask
+          set cclass to class of ctr as string
+          set ctrId to id of ctr as string
+          if cclass is "project" then
+            set placement to "project"
+          else if cclass is "task" then
+            if parentTask is not missing value then
+              set parentId to id of parentTask as string
+              if ctrId is equal to parentId then
+                set placement to "parent"
+              else
+                -- Likely the project's root task; treat as project
+                set placement to "project"
+              end if
+            else
+              -- No explicit parent requested; container is root task -> treat as project
+              set placement to "project"
+            end if
+          else
+            set placement to "inbox"
+          end if
+        on error
+          -- If container access fails (e.g., inbox), default based on projectName
+          if "${projectName}" is not "" then
+            set placement to "project"
+          else
+            set placement to "inbox"
+          end if
+        end try
+
         -- Get the task ID
         set taskId to id of newTask as string
         
@@ -95,8 +187,8 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
           end try`;
         }).join('\n') : ''}
         
-        -- Return success with task ID
-        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\"}"
+        -- Return success with task ID and placement
+        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\\",\\\"placement\\\":\\"" & placement & "\\"}"
       end tell
     end tell
   on error errorMessage
@@ -110,21 +202,27 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
 /**
  * Add a task to OmniFocus
  */
-export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{success: boolean, taskId?: string, error?: string}> {
+export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{success: boolean, taskId?: string, error?: string, placement?: 'parent' | 'project' | 'inbox'}> {
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
-    
-    console.error("Executing AppleScript directly...");
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
+    console.error("Executing AppleScript via temp file...");
+
+    // Write to a temporary AppleScript file to avoid shell escaping issues
+    const tempFile = join(tmpdir(), `omnifocus_add_${Date.now()}.applescript`);
+    writeFileSync(tempFile, script, { encoding: 'utf8' });
+
+    // Execute AppleScript from file
+    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
+
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
     }
     
     console.error("AppleScript stdout:", stdout);
+    
+    // Cleanup temp file
+    try { unlinkSync(tempFile); } catch {}
     
     // Parse the result
     try {
@@ -134,7 +232,8 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
       return {
         success: result.success,
         taskId: result.taskId,
-        error: result.error
+        error: result.error,
+        placement: result.placement
       };
     } catch (parseError) {
       console.error("Error parsing AppleScript result:", parseError);
