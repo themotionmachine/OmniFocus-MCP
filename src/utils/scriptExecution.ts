@@ -1,45 +1,22 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { writeFileSync, unlinkSync, readFileSync } from 'fs';
+import { exec, spawn } from 'child_process';
+import { readFileSync } from 'fs';
 import { join } from 'path';
-import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { existsSync } from 'fs';
 
-const execAsync = promisify(exec);
-
 // Helper function to execute OmniFocus scripts
 export async function executeJXA(script: string): Promise<any[]> {
   try {
-    // Write the script to a temporary file in the system temp directory
-    const tempFile = join(tmpdir(), `jxa_script_${Date.now()}.js`);
-    
-    // Write the script to the temporary file
-    writeFileSync(tempFile, script);
-    
-    // Execute the script using osascript
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`);
-    
-    if (stderr) {
-      console.error("Script stderr output:", stderr);
-    }
-    
-    // Clean up the temporary file
-    unlinkSync(tempFile);
-    
-    // Parse the output as JSON
+    const stdout = await runOsascript(script, { language: 'JavaScript' });
     try {
       const result = JSON.parse(stdout);
       return result;
     } catch (e) {
       console.error("Failed to parse script output as JSON:", e);
-      
-      // If this contains a "Found X tasks" message, treat it as a successful non-JSON response
       if (stdout.includes("Found") && stdout.includes("tasks")) {
         return [];
       }
-      
       return [];
     }
   } catch (error) {
@@ -76,9 +53,6 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     // Read the script file
     const scriptContent = readFileSync(actualPath, 'utf8');
     
-    // Create a temporary file for our JXA wrapper script
-    const tempFile = join(tmpdir(), `jxa_wrapper_${Date.now()}.js`);
-    
     // Escape the script content properly for use in JXA
     const escapedScript = scriptContent.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
     
@@ -99,21 +73,7 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
       }
     }
     `;
-    
-    // Write the JXA script to the temporary file
-    writeFileSync(tempFile, jxaScript);
-    
-    // Execute the JXA script using osascript
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`);
-    
-    // Clean up the temporary file
-    unlinkSync(tempFile);
-    
-    if (stderr) {
-      console.error("Script stderr output:", stderr);
-    }
-    
-    // Parse the output as JSON
+    const stdout = await runOsascript(jxaScript, { language: 'JavaScript' });
     try {
       return JSON.parse(stdout);
     } catch (parseError) {
@@ -124,5 +84,68 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     console.error("Failed to execute OmniFocus script:", error);
     throw error;
   }
+}
+
+// Execute a raw AppleScript via osascript using stdin.
+// Provides better control over stdio and supports timeouts.
+export function runAppleScript(script: string, options?: { timeoutMs?: number }): Promise<string> {
+  return runOsascript(script, { language: 'AppleScript', timeoutMs: options?.timeoutMs });
+}
+
+// Shared runner for osascript using stdin. Set language to 'JavaScript' for JXA.
+function runOsascript(script: string, opts?: { language?: 'JavaScript' | 'AppleScript'; timeoutMs?: number }): Promise<string> {
+  const timeoutMs = opts?.timeoutMs ?? 30000;
+  const args = ['-s', 'o'];
+  if (opts?.language === 'JavaScript') {
+    args.push('-l', 'JavaScript');
+  }
+  args.push('-');
+
+  return new Promise((resolve, reject) => {
+    const proc = spawn('osascript', args);
+
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        proc.kill('SIGKILL');
+        reject(new Error(`osascript timed out after ${timeoutMs}ms`));
+      }
+    }, timeoutMs);
+
+    proc.stdout.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+
+    proc.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+
+    proc.on('error', (err) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      }
+    });
+
+    proc.on('close', (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code !== 0) {
+        const msg = (stderr.trim() || stdout.trim() || `osascript exited with code ${code}`);
+        reject(new Error(msg));
+      } else {
+        resolve(stdout.trim());
+      }
+    });
+
+    proc.stdin.write(script);
+    proc.stdin.end();
+  });
 }
     
