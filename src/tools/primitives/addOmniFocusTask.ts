@@ -1,7 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { runAppleScript } from '../../utils/scriptExecution.js';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
-const execAsync = promisify(exec);
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -20,14 +18,14 @@ export interface AddOmniFocusTaskParams {
  */
 function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = params.name.replace(/["\\]/g, '\\$&'); // Escape quotes and backslashes
+  const note = params.note?.replace(/["\\]/g, '\\$&') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
+  const projectName = params.projectName?.replace(/["\\]/g, '\\$&') || '';
   
   // Generate date constructions outside tell blocks
   let datePreScript = '';
@@ -57,9 +55,9 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
           -- Use specified project
           try
             set theProject to first flattened project where name = "${projectName}"
-            set newTask to make new task with properties {name:"${name}"} at end of tasks of theProject
+            set newTask to make new task at end of tasks of theProject with properties {name:"${name}"}
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}"
+            return "ERROR: Project not found: ${projectName}"
           end try
         end if
         
@@ -79,7 +77,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+          const sanitizedTag = tag.replace(/["\\]/g, '\\$&');
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
@@ -95,12 +93,12 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
           end try`;
         }).join('\n') : ''}
         
-        -- Return success with task ID
-        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\"}"
+        -- Return success with task ID (plain string)
+        return taskId
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "ERROR: " & errorMessage
   end try
   `;
   
@@ -114,35 +112,11 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
-    
-    console.error("Executing AppleScript directly...");
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
+    const stdout = await runAppleScript(script);
+    if (stdout.startsWith('ERROR:')) {
+      return { success: false, error: stdout.slice(6).trim() };
     }
-    
-    console.error("AppleScript stdout:", stdout);
-    
-    // Parse the result
-    try {
-      const result = JSON.parse(stdout);
-      
-      // Return the result
-      return {
-        success: result.success,
-        taskId: result.taskId,
-        error: result.error
-      };
-    } catch (parseError) {
-      console.error("Error parsing AppleScript result:", parseError);
-      return {
-        success: false,
-        error: `Failed to parse result: ${stdout}`
-      };
-    }
+    return { success: true, taskId: stdout.trim() };
   } catch (error: any) {
     console.error("Error in addOmniFocusTask:", error);
     return {
@@ -150,4 +124,4 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
       error: error?.message || "Unknown error in addOmniFocusTask"
     };
   }
-} 
+}

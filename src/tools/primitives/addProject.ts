@@ -1,7 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { runAppleScript } from '../../utils/scriptExecution.js';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
-const execAsync = promisify(exec);
 
 // Interface for project creation parameters
 export interface AddProjectParams {
@@ -21,14 +19,14 @@ export interface AddProjectParams {
  */
 function generateAppleScript(params: AddProjectParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = params.name.replace(/["\\]/g, '\\$&'); // Escape only double quotes and backslashes
+  const note = params.note?.replace(/["\\]/g, '\\$&') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
+  const folderName = params.folderName?.replace(/["\\]/g, '\\$&') || '';
   const sequential = params.sequential === true;
   
   // Generate date constructions outside tell blocks
@@ -59,9 +57,9 @@ function generateAppleScript(params: AddProjectParams): string {
           -- Use specified folder
           try
             set theFolder to first flattened folder where name = "${folderName}"
-            set newProject to make new project with properties {name:"${name}"} at end of projects of theFolder
+            set newProject to make new project at end of projects of theFolder with properties {name:"${name}"}
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${folderName}\\\"}"
+            return "ERROR: Folder not found: ${folderName}"
           end try
         end if
         
@@ -98,12 +96,12 @@ function generateAppleScript(params: AddProjectParams): string {
           end try`;
         }).join('\n') : ''}
         
-        -- Return success with project ID
-        return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\",\\\"name\\\":\\"${name}\\"}"
+        -- Return success with project ID (plain string)
+        return projectId
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "ERROR: " & errorMessage
   end try
   `;
   
@@ -115,42 +113,14 @@ function generateAppleScript(params: AddProjectParams): string {
  */
 export async function addProject(params: AddProjectParams): Promise<{success: boolean, projectId?: string, error?: string}> {
   try {
-    // Generate AppleScript
     const script = generateAppleScript(params);
-    
-    console.error("Executing AppleScript directly...");
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
+    const stdout = await runAppleScript(script);
+    if (stdout.startsWith('ERROR:')) {
+      return { success: false, error: stdout.slice(6).trim() };
     }
-    
-    console.error("AppleScript stdout:", stdout);
-    
-    // Parse the result
-    try {
-      const result = JSON.parse(stdout);
-      
-      // Return the result
-      return {
-        success: result.success,
-        projectId: result.projectId,
-        error: result.error
-      };
-    } catch (parseError) {
-      console.error("Error parsing AppleScript result:", parseError);
-      return {
-        success: false,
-        error: `Failed to parse result: ${stdout}`
-      };
-    }
+    return { success: true, projectId: stdout.trim() };
   } catch (error: any) {
     console.error("Error in addProject:", error);
-    return {
-      success: false,
-      error: error?.message || "Unknown error in addProject"
-    };
+    return { success: false, error: error?.message || "Unknown error in addProject" };
   }
-} 
+}
