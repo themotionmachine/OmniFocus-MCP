@@ -25,7 +25,7 @@ const requestedLimit = ${limit};
 
 // Load and execute the getPerspectiveView script
 ${await import('fs').then(fs => 
-  fs.readFileSync('/Users/rjames/dev/OmniFocus-MCP/src/utils/omnifocusScripts/getPerspectiveView.js', 'utf8')
+  fs.readFileSync('../../utils/omnifocusScripts/getPerspectiveView.js', 'utf8')
 )}`;
     
     // Write temporary script and execute
