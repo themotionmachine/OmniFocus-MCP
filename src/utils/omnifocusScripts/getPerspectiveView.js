@@ -99,7 +99,6 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
     var evaluateActionIsLeaf = (task, value) => (!task.children || task.children.length === 0) === value;
     var evaluateActionHasNoProject = (task, value) => (task.containingProject === null) === value;
     var evaluateActionIsInSingleActionsList = (task, value) => {
-      // Check if task is in a single actions list (project with single action list status)
       const project = task.containingProject;
       return project && project.status === Project.Status.SingleActions === value;
     };
@@ -136,21 +135,17 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
     var evaluateActionWithinFocus = (task, value) => {
       if (!Array.isArray(value)) return false;
       
-      // Check if task is within any of the focus projects/folders at any depth
       function isWithinHierarchy(item) {
         if (!item) return false;
         
-        // Check if this item itself is in the focus list
         if (value.includes(item.id.primaryKey)) {
           return true;
         }
         
-        // For projects, check parent folder hierarchy
         if (item.parentFolder) {
           return isWithinHierarchy(item.parentFolder);
         }
         
-        // For folders, check parent folder hierarchy  
         if (item.parent && item.parent !== item) {
           return isWithinHierarchy(item.parent);
         }
@@ -158,12 +153,10 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
         return false;
       }
       
-      // Start with the task's containing project
       if (task.containingProject) {
         return isWithinHierarchy(task.containingProject);
       }
       
-      // If no containing project, check if task itself is somehow in focus
       return value.includes(task.id.primaryKey);
     };
     
@@ -173,7 +166,6 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       return value.some(term => searchText.includes(term.toLowerCase()));
     };
     
-    // Date evaluation functions
     var evaluateActionDateIsToday = (task, dateField) => {
       const fieldDate = task[dateField + 'Date']; // e.g., dueDate, deferDate
       if (!fieldDate) return false;
