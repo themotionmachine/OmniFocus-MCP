@@ -4,10 +4,8 @@
 
 function getPerspectiveViewByName(perspectiveName, limit = 100) {
   try {
-    // Get the specific perspective
     let currentPerspective = null;
     
-    // Check built-in perspectives first
     if (perspectiveName.toLowerCase() === "inbox") {
       currentPerspective = Perspective.BuiltIn.Inbox;
     } else if (perspectiveName.toLowerCase() === "projects") {
@@ -21,7 +19,6 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
     } else if (perspectiveName.toLowerCase() === "review") {
       currentPerspective = Perspective.BuiltIn.Review;
     } else {
-      // Look for custom perspective
       currentPerspective = Perspective.Custom.byName(perspectiveName);
     }
     
@@ -33,7 +30,6 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
     }
     let perspectiveDisplayName = "Unknown";
     
-    // Identify the perspective
     if (currentPerspective) {
       if (currentPerspective === Perspective.BuiltIn.Inbox) {
         perspectiveDisplayName = "Inbox";
@@ -52,7 +48,6 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       }
     }
 
-    // Complete rule evaluation functions based on the specification
     var evaluateActionAvailability = (task, value) => {
       let result;
       if (value === "remaining") {
@@ -62,8 +57,7 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       } else if (value === "dropped") {
         result = task.taskStatus === Task.Status.Dropped;
       } else if (value === "available") {
-        // "available" per OmniFocus glossary: Active and Available (not blocked, deferred, or on hold)
-        // Active = not completed/dropped, Available = not blocked/deferred
+        // "available" is defined here: https://support.omnigroup.com/documentation/omnifocus/universal/4.3.3/en/glossary/#view-options
         const isActive = !task.completed && task.taskStatus !== Task.Status.Dropped;
         const isAvailable = task.taskStatus !== Task.Status.Blocked && 
                            (!task.deferDate || task.deferDate <= new Date());
@@ -203,6 +197,7 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       return fieldDate.toDateString() === tomorrow.toDateString();
     };
 
+    // filter rules and values are defined here: https://omni-automation.com/omnifocus/perspective.html
     var possibleRuleTypes = {
         'actionAvailability': evaluateActionAvailability,
         'actionStatus': evaluateActionStatus,
@@ -287,13 +282,7 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       return date.toISOString();
     }
     
-    function getTaskDetails(task) {
-      // Helper to safely get string values
-      function safeString(value) {
-        if (value == null) return null;
-        return String(value).replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control characters
-      }
-      
+    function getTaskDetails(task) {      
       // Task status mapping to match queryOmnifocus.ts
       const taskStatusMap = {
         [Task.Status.Available]: "Available",
@@ -306,28 +295,26 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       };
       
       return {
-        id: safeString(task.id.primaryKey),
-        name: safeString(task.name),
+        id: task.id.primaryKey,
+        name: task.name,
         completed: Boolean(task.completed),
         flagged: Boolean(task.flagged),
-        note: safeString(task.note) || '',
+        note: task.note || '',
         dueDate: formatDate(task.dueDate),
         deferDate: formatDate(task.deferDate),
         completionDate: formatDate(task.completionDate),
         estimatedMinutes: task.estimatedMinutes ? Number(task.estimatedMinutes) : null,
         taskStatus: taskStatusMap[task.taskStatus] || "Unknown",
-        projectName: task.containingProject ? safeString(task.containingProject.name) : null,
-        tagNames: (task.tags || []).map(tag => safeString(tag.name)).filter(name => name)
+        projectName: task.containingProject ? task.containingProject.name : null,
+        tagNames: (task.tags || []).map(tag => tag.name).filter(name => name)
       };
     }
 
-    // Get perspective rules if available
     let perspectiveRules = null;
     let perspectiveAggregation = "all";
     let isCustomPerspective = false;
     
     try {
-      // Check if it's a custom perspective (not a built-in one)
       isCustomPerspective = currentPerspective && 
                            currentPerspective !== Perspective.BuiltIn.Inbox &&
                            currentPerspective !== Perspective.BuiltIn.Projects &&
@@ -337,7 +324,6 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
                            currentPerspective !== Perspective.BuiltIn.Review;
       
       if (isCustomPerspective && currentPerspective.archivedFilterRules) {
-        // Check if it's already an object or needs parsing
         if (typeof currentPerspective.archivedFilterRules === 'string') {
           perspectiveRules = JSON.parse(currentPerspective.archivedFilterRules);
         } else {
@@ -349,19 +335,10 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       // If we can't parse the rules, fall back to getting all available tasks
     }
 
-    // Filter tasks based on perspective rules
     let filteredTasks = [];
-    
-    // Ensure flattenedTasks is available
-    if (typeof flattenedTasks === 'undefined') {
-      return JSON.stringify({
-        success: false,
-        error: "flattenedTasks global variable is not available in OmniFocus context"
-      });
-    }
+  
     
     if (isCustomPerspective && perspectiveRules) {
-      // Use rule-based filtering for custom perspectives
       flattenedTasks.forEach(task => {
         if (evaluateTask(task, perspectiveRules, perspectiveAggregation)) {
           filteredTasks.push(getTaskDetails(task));
@@ -398,7 +375,6 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
           });
         });
       } else {
-        // Default: get available tasks
         flattenedTasks.forEach(task => {
           if (task.taskStatus === Task.Status.Available && !task.completed) {
             filteredTasks.push(getTaskDetails(task));
@@ -413,7 +389,7 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       isCustomPerspective: isCustomPerspective,
       rulesUsed: perspectiveRules !== null,
       aggregationType: perspectiveAggregation,
-      items: filteredTasks.slice(0, limit) // Use the provided limit
+      items: filteredTasks.slice(0, limit) 
     };
     
     try {
@@ -434,7 +410,6 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
   }
 }
 
-// Execute based on provided parameters or fallback to current window
 (() => {
   if (typeof perspectiveName !== 'undefined' && typeof requestedLimit !== 'undefined') {
     return getPerspectiveViewByName(perspectiveName, requestedLimit);
