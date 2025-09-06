@@ -17,22 +17,33 @@ export async function getPerspectiveView(params: GetPerspectiveViewParams): Prom
   const { perspectiveName, limit = 100, includeMetadata = true, fields } = params;
   
   try {
-    // Execute the OmniJS script to get perspective view
-    // Note: This gets the current perspective view, not a specific one
-    // OmniJS doesn't easily allow switching perspectives
-    const result = await executeOmniFocusScript('@getPerspectiveView.js');
+    // Create a simple script that calls the function with parameters
+    const scriptContent = `
+// Set parameters for perspective view
+const perspectiveName = "${perspectiveName}";
+const requestedLimit = ${limit};
+
+// Load and execute the getPerspectiveView script
+${await import('fs').then(fs => 
+  fs.readFileSync('/Users/rjames/dev/OmniFocus-MCP/src/utils/omnifocusScripts/getPerspectiveView.js', 'utf8')
+)}`;
     
+    // Write temporary script and execute
+    const tempFile = `/tmp/perspective_view_${Date.now()}.js`;
+    const fs = await import('fs');
+    fs.writeFileSync(tempFile, scriptContent);
+    
+    const result = await executeOmniFocusScript(tempFile);
+    
+    // Clean up temp file
+    fs.unlinkSync(tempFile);
+    
+    // The result is already parsed JSON from the script
     if (result.error) {
       return {
         success: false,
         error: result.error
       };
-    }
-    
-    // Check if the current perspective matches what was requested
-    const currentPerspective = result.perspectiveName;
-    if (currentPerspective && currentPerspective.toLowerCase() !== perspectiveName.toLowerCase()) {
-      console.warn(`Note: Current perspective is "${currentPerspective}", not "${perspectiveName}". OmniJS cannot easily switch perspectives.`);
     }
     
     // Filter and limit items
