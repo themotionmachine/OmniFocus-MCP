@@ -106,10 +106,12 @@ export async function executeOmniFocusScript(
     let wrappedScript = scriptContent;
 
     if (args && args.length > 0) {
-      const escapedArgs = args.map(escapeContent).join(", ");
+      const quotedArgs = args
+        .map((arg) => `"${escapeContent(arg)}"`)
+        .join(", ");
       wrappedScript = `
 // Set up arguments
-const argv = [${escapedArgs}];
+const argv = [${quotedArgs}];
 
 ${scriptContent}`;
     }
