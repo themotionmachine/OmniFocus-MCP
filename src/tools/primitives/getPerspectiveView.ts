@@ -17,26 +17,8 @@ export async function getPerspectiveView(params: GetPerspectiveViewParams): Prom
   const { perspectiveName, limit = 100, includeMetadata = true, fields } = params;
   
   try {
-    // Create a simple script that calls the function with parameters
-    const scriptContent = `
-// Set parameters for perspective view
-const perspectiveName = "${perspectiveName}";
-const requestedLimit = ${limit};
-
-// Load and execute the getPerspectiveView script
-${await import('fs').then(fs => 
-  fs.readFileSync('../../utils/omnifocusScripts/getPerspectiveView.js', 'utf8')
-)}`;
-    
-    // Write temporary script and execute
-    const tempFile = `/tmp/perspective_view_${Date.now()}.js`;
-    const fs = await import('fs');
-    fs.writeFileSync(tempFile, scriptContent);
-    
-    const result = await executeOmniFocusScript(tempFile);
-    
-    // Clean up temp file
-    fs.unlinkSync(tempFile);
+    // Execute the script with arguments using the @ shorthand
+    const result = await executeOmniFocusScript('@getPerspectiveView.js', [perspectiveName, limit.toString()]);
     
     // The result is already parsed JSON from the script
     if (result.error) {
@@ -62,7 +44,7 @@ ${await import('fs').then(fs =>
       });
     }
     
-    // Apply limit
+    // Apply limit (script already limits, but we may filter further)
     if (limit && items.length > limit) {
       items = items.slice(0, limit);
     }
