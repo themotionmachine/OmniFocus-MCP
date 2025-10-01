@@ -45,14 +45,14 @@ server.tool(
 
 server.tool(
   "remove_item",
-  "Remove a task or project from OmniFocus",
+  "PERMANENTLY DELETE a task or project from OmniFocus database. WARNING: This is destructive and cannot be undone. To mark tasks as done, use edit_item with newStatus='completed' instead. Only use this to delete items that were created by mistake or are duplicates.",
   removeItemTool.schema.shape,
   removeItemTool.handler
 );
 
 server.tool(
   "edit_item",
-  "Edit a task or project in OmniFocus",
+  "Edit a task or project in OmniFocus. Use this to mark tasks as completed (done) or dropped (abandoned), change properties, update dates, modify tags, set review intervals, etc. To mark a task as done, set newStatus='completed'. This is the primary tool for task management.",
   editItemTool.schema.shape,
   editItemTool.handler
 );

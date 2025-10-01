@@ -35,6 +35,8 @@ export interface EditItemParams {
   newSequential?: boolean;      // Whether the project should be sequential
   newFolderName?: string;       // New folder to move the project to
   newProjectStatus?: ProjectStatus; // New status for projects
+  newReviewInterval?: { steps: number; unit: string }; // New review interval for projects
+  markReviewed?: boolean;       // Mark project as reviewed (sets lastReviewDate to now)
 }
 
 /**
@@ -399,15 +401,42 @@ function generateAppleScript(params: EditItemParams): string {
         try
           set destFolder to first flattened folder where name = "${folderName}"
         end try
-        
+
         if destFolder is missing value then
           -- Create the folder if it doesn't exist
           set destFolder to make new folder with properties {name:"${folderName}"}
         end if
-        
+
         -- Move project to the folder
         move foundItem to destFolder
         set end of changedProperties to "folder"
+`;
+    }
+
+    // Set review interval
+    if (params.newReviewInterval !== undefined) {
+      const steps = params.newReviewInterval.steps;
+      const unit = params.newReviewInterval.unit;
+      script += `
+        -- Set review interval
+        set reviewIntervalObj to review interval of foundItem
+        if reviewIntervalObj is missing value then
+          set reviewIntervalObj to {steps:${steps}, unit:"${unit}"}
+        else
+          set steps of reviewIntervalObj to ${steps}
+          set unit of reviewIntervalObj to "${unit}"
+        end if
+        set review interval of foundItem to reviewIntervalObj
+        set end of changedProperties to "review interval"
+`;
+    }
+
+    // Mark as reviewed
+    if (params.markReviewed === true) {
+      script += `
+        -- Mark project as reviewed
+        mark complete foundItem
+        set end of changedProperties to "marked reviewed"
 `;
     }
   }

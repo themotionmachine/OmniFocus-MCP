@@ -77,6 +77,9 @@ export interface ProjectMinimal extends DatabaseObject {
   parentFolder: FolderMinimal | null;
   tags: TagMinimal[];
   tasks: TaskMinimal[];
+  reviewInterval: { steps: number; unit: string } | null;
+  nextReviewDate: Date | null;
+  lastReviewDate: Date | null;
 }
 export interface FolderMinimal extends DatabaseObject {
   name: string;

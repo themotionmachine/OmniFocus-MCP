@@ -15,14 +15,15 @@ export const schema = z.object({
     dueWithin: z.number().optional().describe("Returns items due from TODAY through N days in future. Example: 7 = items due within next week (today + 6 days)"),
     deferredUntil: z.number().optional().describe("Returns items CURRENTLY DEFERRED that will become available within N days. Example: 3 = items becoming available in next 3 days"),
     plannedWithin: z.number().optional().describe("Returns tasks planned from TODAY through N days in future. Example: 7 = tasks planned within next week (today + 6 days)"),
-    hasNote: z.boolean().optional().describe("Filter by note presence. true = items with non-empty notes (whitespace ignored), false = items with no notes or only whitespace")
+    hasNote: z.boolean().optional().describe("Filter by note presence. true = items with non-empty notes (whitespace ignored), false = items with no notes or only whitespace"),
+    reviewDue: z.enum(['overdue', 'today', 'this_week', 'this_month']).optional().describe("Filter projects by review status. 'overdue' = past due for review, 'today' = due today, 'this_week' = due within 7 days, 'this_month' = due this month")
   }).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies"),
   
-  fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
+  fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, reviewInterval, reviewIntervalSteps, reviewIntervalUnit, nextReviewDate, lastReviewDate, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
   
   limit: z.number().optional().describe("Maximum number of items to return. Useful for large result sets. Default: no limit"),
   
-  sortBy: z.string().optional().describe("Field to sort by. OPTIONS: name (alphabetical), dueDate (earliest first, null last), deferDate (earliest first, null last), modificationDate (most recent first), creationDate (oldest first), estimatedMinutes (shortest first), taskStatus (groups by status)"),
+  sortBy: z.string().optional().describe("Field to sort by. OPTIONS: name (alphabetical), dueDate (earliest first, null last), deferDate (earliest first, null last), plannedDate (earliest first, null last), nextReviewDate (earliest first, null last), modificationDate (most recent first), creationDate (oldest first), estimatedMinutes (shortest first), taskStatus (groups by status)"),
   
   sortOrder: z.enum(['asc', 'desc']).optional().describe("Sort order. 'asc' = ascending (A-Z, old-new, small-large), 'desc' = descending (Z-A, new-old, large-small). Default: 'asc'"),
   
@@ -196,8 +197,9 @@ function formatProjects(projects: any[]): string {
     const taskCount = project.taskCount !== undefined && project.taskCount !== null ? ` (${project.taskCount} tasks)` : '';
     const flagged = project.flagged ? '🚩 ' : '';
     const due = project.dueDate ? ` [due: ${formatDate(project.dueDate)}]` : '';
-    
-    return `P: ${flagged}${project.name}${status}${due}${folder}${taskCount}`;
+    const review = project.nextReviewDate ? ` [review: ${formatDate(project.nextReviewDate)}]` : '';
+
+    return `P: ${flagged}${project.name}${status}${due}${review}${folder}${taskCount}`;
   }).join('\n');
 }
 

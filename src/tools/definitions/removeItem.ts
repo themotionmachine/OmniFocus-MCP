@@ -3,9 +3,9 @@ import { removeItem, RemoveItemParams } from '../primitives/removeItem.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  id: z.string().optional().describe("The ID of the task or project to remove"),
-  name: z.string().optional().describe("The name of the task or project to remove (as fallback if ID not provided)"),
-  itemType: z.enum(['task', 'project']).describe("Type of item to remove ('task' or 'project')")
+  id: z.string().optional().describe("The ID of the task or project to permanently delete from database"),
+  name: z.string().optional().describe("The name of the task or project to permanently delete (as fallback if ID not provided)"),
+  itemType: z.enum(['task', 'project']).describe("Type of item to permanently delete ('task' or 'project'). WARNING: This deletes the item from the database. To mark items as done, use edit_item with newStatus='completed' instead.")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {

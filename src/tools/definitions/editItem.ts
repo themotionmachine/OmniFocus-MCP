@@ -17,7 +17,7 @@ export const schema = z.object({
   newEstimatedMinutes: z.number().optional().describe("New estimated minutes"),
 
   // Task-specific fields
-  newStatus: z.enum(['incomplete', 'completed', 'dropped']).optional().describe("New status for tasks (incomplete, completed, dropped)"),
+  newStatus: z.enum(['incomplete', 'completed', 'dropped']).optional().describe("New status for tasks. Use 'completed' to mark task as done (most common - when task is finished), 'dropped' to abandon a task you won't do, 'incomplete' to reopen a completed task. IMPORTANT: Use this instead of remove_item to mark tasks as done."),
   addTags: z.array(z.string()).optional().describe("Tags to add to the task"),
   removeTags: z.array(z.string()).optional().describe("Tags to remove from the task"),
   replaceTags: z.array(z.string()).optional().describe("Tags to replace all existing tags with"),
@@ -25,7 +25,12 @@ export const schema = z.object({
   // Project-specific fields
   newSequential: z.boolean().optional().describe("Whether the project should be sequential"),
   newFolderName: z.string().optional().describe("New folder to move the project to"),
-  newProjectStatus: z.enum(['active', 'completed', 'dropped', 'onHold']).optional().describe("New status for projects")
+  newProjectStatus: z.enum(['active', 'completed', 'dropped', 'onHold']).optional().describe("New status for projects. Use 'completed' when project is done, 'dropped' to abandon, 'onHold' to pause, 'active' to resume. IMPORTANT: Use this instead of remove_item to complete projects."),
+  newReviewInterval: z.object({
+    steps: z.number().int().positive().describe("Number of time units between reviews"),
+    unit: z.enum(['days', 'weeks', 'months', 'years']).describe("Time unit for review interval")
+  }).optional().describe("Set review interval for the project (projects only)"),
+  markReviewed: z.boolean().optional().describe("Mark project as reviewed - sets lastReviewDate to now and calculates next review date (projects only)")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {

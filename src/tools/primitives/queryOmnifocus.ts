@@ -13,6 +13,7 @@ export interface QueryOmnifocusParams {
     deferredUntil?: number;
     plannedWithin?: number;
     hasNote?: boolean;
+    reviewDue?: 'overdue' | 'today' | 'this_week' | 'this_month';
   };
   fields?: string[];
   limit?: number;
@@ -253,13 +254,37 @@ function generateFilterConditions(entity: string, filters: any): string {
     }
     
     if (filters.status && filters.status.length > 0) {
-      const statusCondition = filters.status.map((status: string) => 
+      const statusCondition = filters.status.map((status: string) =>
         `projectStatusMap[item.status] === "${status}"`
       ).join(' || ');
       conditions.push(`if (!(${statusCondition})) return false;`);
     }
+
+    if (filters.reviewDue) {
+      const reviewDue = filters.reviewDue;
+      conditions.push(`
+        if (!item.nextReviewDate) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const reviewDate = new Date(item.nextReviewDate);
+        reviewDate.setHours(0, 0, 0, 0);
+
+        if ("${reviewDue}" === "overdue") {
+          if (reviewDate >= today) return false;
+        } else if ("${reviewDue}" === "today") {
+          if (reviewDate.getTime() !== today.getTime()) return false;
+        } else if ("${reviewDue}" === "this_week") {
+          const weekEnd = new Date(today);
+          weekEnd.setDate(weekEnd.getDate() + 7);
+          if (reviewDate < today || reviewDate > weekEnd) return false;
+        } else if ("${reviewDue}" === "this_month") {
+          const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          if (reviewDate < today || reviewDate > monthEnd) return false;
+        }
+      `);
+    }
   }
-  
+
   return conditions.join('\n');
 }
 
@@ -311,7 +336,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
     } else if (entity === 'projects') {
       return `
         const taskArray = item.tasks || [];
-        return {
+        const obj = {
           id: item.id.primaryKey,
           name: item.name || "",
           status: projectStatusMap[item.status] || "Unknown",
@@ -319,8 +344,17 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
           taskCount: taskArray.length,
           flagged: item.flagged || false,
           dueDate: formatDate(item.dueDate),
-          deferDate: formatDate(item.deferDate)
+          deferDate: formatDate(item.deferDate),
+          nextReviewDate: formatDate(item.nextReviewDate),
+          lastReviewDate: formatDate(item.lastReviewDate)
         };
+        if (item.reviewInterval) {
+          obj.reviewInterval = {
+            steps: item.reviewInterval.steps,
+            unit: item.reviewInterval.unit
+          };
+        }
+        return obj;
       `;
     } else if (entity === 'folders') {
       return `
@@ -362,6 +396,16 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `effectiveDeferDate: formatDate(item.effectiveDeferDate)`;
     } else if (field === 'effectivePlannedDate') {
       return `effectivePlannedDate: formatDate(item.effectivePlannedDate)`;
+    } else if (field === 'nextReviewDate') {
+      return `nextReviewDate: formatDate(item.nextReviewDate)`;
+    } else if (field === 'lastReviewDate') {
+      return `lastReviewDate: formatDate(item.lastReviewDate)`;
+    } else if (field === 'reviewInterval') {
+      return `reviewInterval: item.reviewInterval ? {steps: item.reviewInterval.steps, unit: item.reviewInterval.unit} : null`;
+    } else if (field === 'reviewIntervalSteps') {
+      return `reviewIntervalSteps: item.reviewInterval ? item.reviewInterval.steps : null`;
+    } else if (field === 'reviewIntervalUnit') {
+      return `reviewIntervalUnit: item.reviewInterval ? item.reviewInterval.unit : null`;
     } else if (field === 'tagNames') {
       return `tagNames: item.tags ? item.tags.map(t => t.name) : []`;
     } else if (field === 'tags') {
