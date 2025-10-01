@@ -12,9 +12,10 @@ export const schema = z.object({
   newNote: z.string().optional().describe("New note for the item"),
   newDueDate: z.string().optional().describe("New due date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
   newDeferDate: z.string().optional().describe("New defer date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
+  newPlannedDate: z.string().optional().describe("New planned date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear (tasks only)"),
   newFlagged: z.boolean().optional().describe("Set flagged status (set to false for no flag, true for flag)"),
   newEstimatedMinutes: z.number().optional().describe("New estimated minutes"),
-  
+
   // Task-specific fields
   newStatus: z.enum(['incomplete', 'completed', 'dropped']).optional().describe("New status for tasks (incomplete, completed, dropped)"),
   addTags: z.array(z.string()).optional().describe("Tags to add to the task"),

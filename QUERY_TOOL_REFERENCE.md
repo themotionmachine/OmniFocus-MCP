@@ -14,6 +14,10 @@ All available fields you can request for tasks:
 | `taskStatus` | string | Current status | "Next", "Available", "Blocked" |
 | `dueDate` | string | Due date in ISO format | "2024-12-25T00:00:00Z" |
 | `deferDate` | string | Defer/start date in ISO format | "2024-12-20T00:00:00Z" |
+| `plannedDate` | string | Planned date in ISO format | "2024-12-22T00:00:00Z" |
+| `effectiveDueDate` | string | Inherited or set due date | "2024-12-25T00:00:00Z" |
+| `effectiveDeferDate` | string | Inherited or set defer date | "2024-12-20T00:00:00Z" |
+| `effectivePlannedDate` | string | Inherited or set planned date | "2024-12-22T00:00:00Z" |
 | `completionDate` | string | When task was completed | "2024-12-24T14:30:00Z" |
 | `estimatedMinutes` | number | Time estimate in minutes | 30 |
 | `tagNames` | string[] | Array of tag names | ["work", "urgent"] |
@@ -92,6 +96,15 @@ All available fields you can request for folders:
 ```json
 {
   "dueWithin": 1  // Tasks due today or tomorrow
+}
+```
+
+### `plannedWithin` Filter
+- **Behavior**: Returns tasks planned from now until N days in the future (inclusive)
+- **Example**: `"plannedWithin": 7` returns tasks planned today through 7 days from now
+```json
+{
+  "plannedWithin": 7  // Tasks planned within next week
 }
 ```
 
@@ -178,7 +191,8 @@ Within array filters (`status`, `tags`), **OR** logic applies:
 Common fields you can sort by:
 - `name` - Alphabetical by item name
 - `dueDate` - By due date (null dates sort last)
-- `deferDate` - By defer date (null dates sort last)  
+- `deferDate` - By defer date (null dates sort last)
+- `plannedDate` - By planned date (null dates sort last)
 - `modificationDate` - By last modified time
 - `creationDate` - By creation time
 - `estimatedMinutes` - By time estimate (shortest first with 'asc')

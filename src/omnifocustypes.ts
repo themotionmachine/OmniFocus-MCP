@@ -50,8 +50,10 @@ export interface TaskMinimal extends DatabaseObject {
   taskStatus: Task.Status;
   dueDate: Date | null;
   deferDate: Date | null;
+  plannedDate: Date | null;
   effectiveDueDate: Date | null;
   effectiveDeferDate: Date | null;
+  effectivePlannedDate: Date | null;
   estimatedMinutes: number | null;
   completedByChildren: boolean;
   sequential: boolean;
