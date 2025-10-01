@@ -43,7 +43,7 @@ const server = new McpServer({
 // Register tools
 server.tool(
   "dump_database",
-  "Gets the current state of your OmniFocus database",
+  "Gets the current state of your OmniFocus database. Note: For browsing the folder/project/task hierarchy, prefer using MCP resources (omnifocus://library, omnifocus://folder/{id}, etc.) instead - they provide better navigation and are easier to read.",
   dumpDatabaseTool.schema.shape,
   dumpDatabaseTool.handler
 );
@@ -113,7 +113,7 @@ server.tool(
 
 server.tool(
   "query_omnifocus",
-  "Efficiently query OmniFocus database with powerful filters. Returns only active items by default (excludes completed/dropped tasks, done/dropped projects, and dropped folders). Get specific tasks, projects, or folders without loading the entire database. Supports filtering by project, tags, status, due dates, and more. Much faster than dump_database for targeted queries.",
+  "Efficiently query OmniFocus database with powerful filters. Returns only active items by default (excludes completed/dropped tasks, done/dropped projects, and dropped folders). Get specific tasks, projects, or folders without loading the entire database. Supports filtering by project, tags, status, due dates, and more. Much faster than dump_database for targeted queries. Note: For browsing hierarchy (folders→projects→tasks), prefer MCP resources (omnifocus://library, omnifocus://folder/{id}, omnifocus://project/{id}) for better navigation.",
   queryOmniFocusTool.schema.shape,
   queryOmniFocusTool.handler
 );

@@ -50,12 +50,20 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         // Format the results in a compact, readable format
         const items = result.items || [];
         let output = formatQueryResults(items, args.entity, args.filters);
-        
+
+        // Add resource hint footer for navigation
+        if (items.length > 0) {
+          output += `\n\n💡 Tip: Use MCP resources to browse details:\n`;
+          output += `   • Tasks: omnifocus://task/{id}\n`;
+          output += `   • Projects: omnifocus://project/{id}\n`;
+          output += `   • Folders: omnifocus://folder/{id}`;
+        }
+
         // Add metadata about the query
         if (items.length === args.limit) {
           output += `\n\n⚠️ Results limited to ${args.limit} items. More may be available.`;
         }
-        
+
         return {
           content: [{
             type: "text" as const,
@@ -131,21 +139,21 @@ function formatFilters(filters: any): string {
 function formatTasks(tasks: any[]): string {
   return tasks.map(task => {
     const parts = [];
-    
+
     // Core display
     const flag = task.flagged ? '🚩 ' : '';
     parts.push(`• ${flag}${task.name || 'Unnamed'}`);
-    
+
     // Add ID if present
     if (task.id) {
       parts.push(`[${task.id}]`);
     }
-    
+
     // Project context
     if (task.projectName) {
       parts.push(`(${task.projectName})`);
     }
-    
+
     // Dates
     if (task.dueDate) {
       parts.push(`[due: ${formatDate(task.dueDate)}]`);
@@ -156,25 +164,25 @@ function formatTasks(tasks: any[]): string {
     if (task.plannedDate) {
       parts.push(`[planned: ${formatDate(task.plannedDate)}]`);
     }
-    
+
     // Time estimate
     if (task.estimatedMinutes) {
-      const hours = task.estimatedMinutes >= 60 
+      const hours = task.estimatedMinutes >= 60
         ? `${Math.floor(task.estimatedMinutes / 60)}h`
         : `${task.estimatedMinutes}m`;
       parts.push(`(${hours})`);
     }
-    
+
     // Tags
     if (task.tagNames?.length > 0) {
       parts.push(`<${task.tagNames.join(',')}>`);
     }
-    
+
     // Status
     if (task.taskStatus) {
       parts.push(`#${task.taskStatus.toLowerCase()}`);
     }
-    
+
     // Metadata dates if requested
     if (task.creationDate) {
       parts.push(`[created: ${formatDate(task.creationDate)}]`);
@@ -185,7 +193,7 @@ function formatTasks(tasks: any[]): string {
     if (task.completionDate) {
       parts.push(`[completed: ${formatDate(task.completionDate)}]`);
     }
-    
+
     return parts.join(' ');
   }).join('\n');
 }
