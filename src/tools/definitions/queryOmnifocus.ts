@@ -27,7 +27,7 @@ export const schema = z.object({
   
   sortOrder: z.enum(['asc', 'desc']).optional().describe("Sort order. 'asc' = ascending (A-Z, old-new, small-large), 'desc' = descending (Z-A, new-old, large-small). Default: 'asc'"),
   
-  includeCompleted: z.boolean().optional().describe("Include completed and dropped items. Default: false (active items only)"),
+  includeCompleted: z.boolean().optional().describe("Include completed/dropped items in results. Default: false (excludes: completed/dropped tasks, done/dropped projects, dropped folders). Set to true to see all items regardless of status."),
   
   summary: z.boolean().optional().describe("Return only count of matches, not full details. Efficient for statistics. Default: false")
 });
@@ -205,10 +205,35 @@ function formatProjects(projects: any[]): string {
 
 function formatFolders(folders: any[]): string {
   return folders.map(folder => {
-    const projectCount = folder.projectCount !== undefined ? ` (${folder.projectCount} projects)` : '';
-    const path = folder.path ? ` 📍 ${folder.path}` : '';
-    
-    return `F: ${folder.name}${projectCount}${path}`;
+    const parts = [];
+
+    // Name
+    parts.push(`F: ${folder.name}`);
+
+    // ID if present
+    if (folder.id) {
+      parts.push(`[${folder.id}]`);
+    }
+
+    // Parent folder info
+    if (folder.parentFolderName) {
+      parts.push(`(in: ${folder.parentFolderName})`);
+    } else if (folder.parentFolderId || folder.parentFolderID) {
+      const parentId = folder.parentFolderId || folder.parentFolderID;
+      parts.push(`(parent: ${parentId})`);
+    }
+
+    // Project count
+    if (folder.projectCount !== undefined) {
+      parts.push(`(${folder.projectCount} projects)`);
+    }
+
+    // Path
+    if (folder.path) {
+      parts.push(`📍 ${folder.path}`);
+    }
+
+    return parts.join(' ');
   }).join('\n');
 }
 

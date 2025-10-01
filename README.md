@@ -166,6 +166,50 @@ Parameters:
 - `tags`: (Optional) Tags to assign to the project
 - `sequential`: (Optional) Whether tasks in the project should be sequential
 
+### `add_folder` ⭐ NEW
+Create a new folder in OmniFocus. Folders help organize projects into logical groups.
+
+Parameters:
+- `name`: The name of the folder
+- `parentFolderName`: (Optional) Name of parent folder to nest this folder under (creates at root if not specified)
+
+Examples:
+```
+"Create a folder called Work"
+→ add_folder({name: "Work"})
+
+"Create a nested folder for Q4 projects under Work"
+→ add_folder({name: "Q4 2025", parentFolderName: "Work"})
+```
+
+### `edit_folder` ⭐ NEW
+Edit a folder in OmniFocus. Rename folders or move them to different parent folders.
+
+Parameters:
+- `id`: (Optional) The ID of the folder to edit (preferred)
+- `name`: (Optional) The name of the folder to edit (used if id not provided)
+- `newName`: (Optional) New name for the folder
+- `newParentFolderName`: (Optional) Move to this parent folder (use empty string to move to root)
+
+Examples:
+```
+"Rename the Work folder to Professional"
+→ edit_folder({name: "Work", newName: "Professional"})
+
+"Move Q4 2025 folder to root level"
+→ edit_folder({name: "Q4 2025", newParentFolderName: ""})
+
+"Nest Personal folder under Life"
+→ edit_folder({name: "Personal", newParentFolderName: "Life"})
+```
+
+### `remove_folder` ⭐ NEW
+Permanently delete a folder from OmniFocus. **WARNING**: This is destructive and cannot be undone. Any projects in the folder will be moved to the root level.
+
+Parameters:
+- `id`: (Optional) The ID of the folder to remove (preferred)
+- `name`: (Optional) The name of the folder to remove (used if id not provided)
+
 ### `remove_item`
 Remove a task or project from OmniFocus.
 

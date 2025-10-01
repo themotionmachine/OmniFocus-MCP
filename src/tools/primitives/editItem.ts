@@ -205,15 +205,15 @@ function generateJXAScript(params: EditItemParams): string {
     ` : ''}
 
     ${params.newFolderName !== undefined ? `
-    // Move to new folder
+    // Move to new folder using moveSections
     const folderName = ${JSON.stringify(params.newFolderName)};
     let destFolder = flattenedFolders.find(f => f.name === folderName);
 
     if (!destFolder) {
-      destFolder = new Folder(folderName);
+      destFolder = new Folder(folderName, library.ending);
     }
 
-    foundItem.moveTo(destFolder);
+    moveSections([foundItem], destFolder.beginning);
     changedProperties.push("folder");
     ` : ''}
 

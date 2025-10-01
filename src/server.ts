@@ -17,6 +17,9 @@ import * as batchEditItemsTool from './tools/definitions/batchEditItems.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
+import * as addFolderTool from './tools/definitions/addFolder.js';
+import * as editFolderTool from './tools/definitions/editFolder.js';
+import * as removeFolderTool from './tools/definitions/removeFolder.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -97,7 +100,7 @@ server.tool(
 
 server.tool(
   "query_omnifocus",
-  "Efficiently query OmniFocus database with powerful filters. Get specific tasks, projects, or folders without loading the entire database. Supports filtering by project, tags, status, due dates, and more. Much faster than dump_database for targeted queries.",
+  "Efficiently query OmniFocus database with powerful filters. Returns only active items by default (excludes completed/dropped tasks, done/dropped projects, and dropped folders). Get specific tasks, projects, or folders without loading the entire database. Supports filtering by project, tags, status, due dates, and more. Much faster than dump_database for targeted queries.",
   queryOmniFocusTool.schema.shape,
   queryOmniFocusTool.handler
 );
@@ -114,6 +117,27 @@ server.tool(
   "Get the items visible in a specific OmniFocus perspective. Shows what tasks and projects are displayed when viewing that perspective",
   getPerspectiveViewTool.schema.shape,
   getPerspectiveViewTool.handler
+);
+
+server.tool(
+  "add_folder",
+  "Create a new folder in OmniFocus. Folders help organize projects. Supports nested folders by specifying a parent folder.",
+  addFolderTool.schema.shape,
+  addFolderTool.handler
+);
+
+server.tool(
+  "edit_folder",
+  "Edit a folder in OmniFocus. Rename folders or move them to different parent folders (or to root level).",
+  editFolderTool.schema.shape,
+  editFolderTool.handler
+);
+
+server.tool(
+  "remove_folder",
+  "PERMANENTLY DELETE a folder from OmniFocus. WARNING: This is destructive and cannot be undone. Any projects in the folder will be moved to the root level.",
+  removeFolderTool.schema.shape,
+  removeFolderTool.handler
 );
 
 // Start the MCP server

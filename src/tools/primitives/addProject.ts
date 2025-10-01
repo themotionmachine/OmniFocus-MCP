@@ -37,8 +37,8 @@ function generateJXAScript(params: AddProjectParams): string {
 
     newProject = new Project(${JSON.stringify(params.name)}, theFolder);
     ` : `
-    // Create project at the root level
-    newProject = new Project(${JSON.stringify(params.name)});
+    // Create project at the root level (at end, less disruptive)
+    newProject = new Project(${JSON.stringify(params.name)}, library.ending);
     `}
 
     // Set project properties

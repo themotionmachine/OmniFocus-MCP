@@ -249,9 +249,9 @@ function generateEditCode(item: BatchEditItemParams, idx: number): string {
       const folderName${idx} = ${JSON.stringify(item.newFolderName)};
       let destFolder${idx} = flattenedFolders.find(f => f.name === folderName${idx});
       if (!destFolder${idx}) {
-        destFolder${idx} = new Folder(folderName${idx});
+        destFolder${idx} = new Folder(folderName${idx}, library.ending);
       }
-      item${idx}.moveTo(destFolder${idx});
+      moveSections([item${idx}], destFolder${idx}.beginning);
       changedProps${idx}.push("folder");`;
     }
 

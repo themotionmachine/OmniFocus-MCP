@@ -124,13 +124,17 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
         // Skip completed/dropped unless explicitly requested
         if (!${includeCompleted}) {
           if (entityType === "tasks") {
-            if (item.taskStatus === Task.Status.Completed || 
+            if (item.taskStatus === Task.Status.Completed ||
                 item.taskStatus === Task.Status.Dropped) {
               return false;
             }
           } else if (entityType === "projects") {
-            if (item.status === Project.Status.Done || 
+            if (item.status === Project.Status.Done ||
                 item.status === Project.Status.Dropped) {
+              return false;
+            }
+          } else if (entityType === "folders") {
+            if (item.status === Folder.Status.Dropped) {
               return false;
             }
           }
@@ -341,6 +345,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
           name: item.name || "",
           status: projectStatusMap[item.status] || "Unknown",
           folderName: item.parentFolder ? item.parentFolder.name : null,
+          folderId: item.parentFolder ? item.parentFolder.id.primaryKey : null,
           taskCount: taskArray.length,
           flagged: item.flagged || false,
           dueDate: formatDate(item.dueDate),
@@ -362,6 +367,8 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
         return {
           id: item.id.primaryKey,
           name: item.name || "",
+          parentFolderId: item.parent ? item.parent.id.primaryKey : null,
+          parentFolderName: item.parent ? item.parent.name : null,
           projectCount: projectArray.length,
           path: item.container ? item.container.name + "/" + item.name : item.name
         };
@@ -434,6 +441,10 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `projects: item.projects ? item.projects.map(p => p.id.primaryKey) : []`;
     } else if (field === 'subfolders') {
       return `subfolders: item.folders ? item.folders.map(f => f.id.primaryKey) : []`;
+    } else if (field === 'parentFolderID' || field === 'parentFolderId') {
+      return `parentFolderID: item.parent ? item.parent.id.primaryKey : null`;
+    } else if (field === 'parentFolderName') {
+      return `parentFolderName: item.parent ? item.parent.name : null`;
     } else if (field === 'path') {
       return `path: item.container ? item.container.name + "/" + item.name : item.name`;
     } else if (field === 'estimatedMinutes') {
