@@ -21,6 +21,19 @@ import * as addFolderTool from './tools/definitions/addFolder.js';
 import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 
+// Import resources
+import { getLibraryResource } from './resources/library.js';
+import { getInboxResource } from './resources/inbox.js';
+import { getFolderResource } from './resources/folder.js';
+import { getProjectResource } from './resources/project.js';
+import { getTaskResource } from './resources/task.js';
+
+// Import primitives for resource listing
+import { queryOmnifocus } from './tools/primitives/queryOmnifocus.js';
+
+// Import MCP types
+import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+
 // Create an MCP server
 const server = new McpServer({
   name: "OmniFocus MCP",
@@ -138,6 +151,135 @@ server.tool(
   "PERMANENTLY DELETE a folder from OmniFocus. WARNING: This is destructive and cannot be undone. Any projects in the folder will be moved to the root level.",
   removeFolderTool.schema.shape,
   removeFolderTool.handler
+);
+
+// Register resources
+server.resource(
+  "OmniFocus Library",
+  "omnifocus://library",
+  { description: "Root folders and projects" },
+  async (uri) => {
+    const content = await getLibraryResource();
+    return {
+      contents: [{
+        uri: uri.href,
+        text: content
+      }]
+    };
+  }
+);
+
+server.resource(
+  "Inbox",
+  "omnifocus://inbox",
+  { description: "Unsorted tasks" },
+  async (uri) => {
+    const content = await getInboxResource();
+    return {
+      contents: [{
+        uri: uri.href,
+        text: content
+      }]
+    };
+  }
+);
+
+// Register resource templates
+server.resource(
+  "Folder Contents",
+  new ResourceTemplate("omnifocus://folder/{folderId}", {
+    list: async () => {
+      // List all folders
+      const result = await queryOmnifocus({
+        entity: "folders",
+        fields: ["id", "name"]
+      });
+      return {
+        resources: (result.items || []).map((folder: any) => ({
+          uri: `omnifocus://folder/${folder.id}`,
+          name: folder.name,
+          description: `Folder: ${folder.name}`
+        }))
+      };
+    },
+    complete: undefined
+  }),
+  { description: "View folder hierarchy and projects" },
+  async (uri: any, variables: any) => {
+    const folderId = variables.folderId as string;
+    const content = await getFolderResource(folderId);
+    return {
+      contents: [{
+        uri: uri.href,
+        text: content
+      }]
+    };
+  }
+);
+
+server.resource(
+  "Project Details",
+  new ResourceTemplate("omnifocus://project/{projectId}", {
+    list: async () => {
+      // List all projects
+      const result = await queryOmnifocus({
+        entity: "projects",
+        fields: ["id", "name"]
+      });
+      return {
+        resources: (result.items || []).map((project: any) => ({
+          uri: `omnifocus://project/${project.id}`,
+          name: project.name,
+          description: `Project: ${project.name}`
+        }))
+      };
+    },
+    complete: undefined
+  }),
+  { description: "View project with all tasks" },
+  async (uri: any, variables: any) => {
+    const projectId = variables.projectId as string;
+    const content = await getProjectResource(projectId);
+    return {
+      contents: [{
+        uri: uri.href,
+        text: content
+      }]
+    };
+  }
+);
+
+server.resource(
+  "Task Details",
+  new ResourceTemplate("omnifocus://task/{taskId}", {
+    list: async () => {
+      // List all incomplete tasks
+      const result = await queryOmnifocus({
+        entity: "tasks",
+        fields: ["id", "name"],
+        filters: { status: ["available", "blocked"] }
+      });
+      return {
+        resources: (result.items || []).map((task: any) => ({
+          uri: `omnifocus://task/${task.id}`,
+          name: task.name,
+          description: `Task: ${task.name}`
+        }))
+      };
+    },
+    complete: undefined
+  }),
+  { description: "View task with subtasks and context" },
+  async (uri: any, variables: any) => {
+    const taskId = variables.taskId as string;
+    const content = await getTaskResource(taskId);
+    return {
+      contents: [{
+        uri: uri.href,
+        text: content
+      }]
+    };
+  }
 );
 
 // Start the MCP server

@@ -2,6 +2,21 @@ import { OmnifocusDatabase, OmnifocusTask, OmnifocusProject, OmnifocusFolder, Om
 import { executeOmniFocusScript } from '../utils/scriptExecution.js';
 
 import fs from 'fs';
+
+// Sanitize strings to remove invalid Unicode surrogate pairs
+// This fixes malformed UTF-16 while preserving valid emoji and characters
+function sanitizeString(str: string | null | undefined): string {
+  if (!str) return '';
+
+  // Replace only UNPAIRED surrogates (not valid surrogate pairs)
+  // Valid pairs: high surrogate (\uD800-\uDBFF) followed by low surrogate (\uDC00-\uDFFF)
+  // Replace unpaired high surrogates (not followed by low surrogate)
+  str = str.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '\uFFFD');
+  // Replace unpaired low surrogates (not preceded by high surrogate)
+  str = str.replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
+
+  return str;
+}
 // Define interfaces for the data returned from the script
 interface OmnifocusDumpTask {
   id: string;
@@ -105,8 +120,8 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
         
         return {
           id: String(task.id),
-          name: String(task.name),
-          note: String(task.note || ""),
+          name: sanitizeString(task.name),
+          note: sanitizeString(task.note),
           flagged: Boolean(task.flagged),
           completed: task.taskStatus === "Completed",
           completionDate: null, // Not available in the new format
@@ -126,7 +141,7 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
           sequential: Boolean(task.sequential),
           completedByChildren: Boolean(task.completedByChildren),
           isRepeating: false, // Not available in the new format
-          repetitionMethod: null, // Not available in the new format 
+          repetitionMethod: null, // Not available in the new format
           repetitionRule: null, // Not available in the new format
           attachments: [], // Default empty array
           linkedFileURLs: [], // Default empty array
@@ -141,7 +156,7 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
       for (const [id, project] of Object.entries(data.projects)) {
         database.projects[id] = {
           id: String(project.id),
-          name: String(project.name),
+          name: sanitizeString(project.name),
           status: String(project.status),
           folderID: project.folderID || null,
           sequential: Boolean(project.sequential),
@@ -151,7 +166,7 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
           deferDate: project.deferDate,
           completedByChildren: Boolean(project.completedByChildren),
           containsSingletonActions: Boolean(project.containsSingletonActions),
-          note: String(project.note || ""),
+          note: sanitizeString(project.note),
           tasks: project.tasks || [],
           flagged: false, // Default value
           estimatedMinutes: null // Default value
@@ -164,7 +179,7 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
       for (const [id, folder] of Object.entries(data.folders)) {
         database.folders[id] = {
           id: String(folder.id),
-          name: String(folder.name),
+          name: sanitizeString(folder.name),
           parentFolderID: folder.parentFolderID || null,
           status: String(folder.status),
           projects: folder.projects || [],
@@ -178,7 +193,7 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
       for (const [id, tag] of Object.entries(data.tags)) {
         database.tags[id] = {
           id: String(tag.id),
-          name: String(tag.name),
+          name: sanitizeString(tag.name),
           parentTagID: tag.parentTagID || null,
           active: Boolean(tag.active),
           allowsNextAction: Boolean(tag.allowsNextAction),
