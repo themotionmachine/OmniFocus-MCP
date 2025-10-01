@@ -82,7 +82,15 @@ List and view your perspectives:
 
 > "What perspectives do I have available?"
 > "Show me what's in my Inbox perspective"
-> "Get the flagged items from my current perspective" 
+> "Get the flagged items from my current perspective"
+
+### Reorganize Tasks
+
+Move tasks between projects or make them subtasks:
+
+> "Move all my inbox tasks about groceries to my Shopping project"
+> "Make the task 'Research options' a subtask of 'Buy new laptop'"
+> "Move the 'Review Q4 budget' task back to inbox - I need to think about it more"
 
 ### Process Transcripts or PDFs
 
@@ -175,6 +183,32 @@ Parameters:
 - `itemType`: The type of item to edit ('task' or 'project')
 - Various parameters for editing properties
 
+### `move_task` ⭐ NEW
+Move a task to a different location in OmniFocus. Supports moving tasks between projects, from inbox to projects, back to inbox, or making tasks subtasks of other tasks.
+
+Parameters:
+- **Source Task** (provide ONE):
+  - `taskId`: ID of the task to move (preferred)
+  - `taskName`: Name of the task to move
+- **Destination** (provide ONE):
+  - `toProjectId`: Move to this project (by ID, preferred)
+  - `toProjectName`: Move to this project (by name)
+  - `toTaskId`: Make subtask of this task (by ID)
+  - `toTaskName`: Make subtask of this task (by name)
+  - `toInbox`: Set to `true` to move back to inbox
+
+Examples:
+```
+"Move the 'Buy milk' task from inbox to my Shopping project"
+→ move_task({taskName: "Buy milk", toProjectName: "Shopping"})
+
+"Make 'Write intro' a subtask of 'Write documentation'"
+→ move_task({taskName: "Write intro", toTaskName: "Write documentation"})
+
+"Move task back to inbox for re-evaluation"
+→ move_task({taskId: "abc123", toInbox: true})
+```
+
 ### `batch_add_items`
 Add multiple tasks or projects to OmniFocus in a single operation.
 
@@ -218,6 +252,103 @@ Parameters:
   - `name`: (Optional) The name of the item to remove
   - `itemType`: The type of item ('task' or 'project')
 
+### `batch_move_tasks` ⭐ NEW
+Move multiple tasks to the same destination in a single operation. **Much faster than moving tasks one by one** (10x speedup).
+
+**Performance**: One batch operation takes ~230ms vs ~2.26s for 10 sequential moves.
+
+Parameters:
+- `tasks`: Array of tasks to move (minimum 1), where each task has:
+  - `taskId`: (Optional) ID of the task to move (preferred)
+  - `taskName`: (Optional) Name of the task to move
+- **Destination** (provide ONE):
+  - `toProjectId`: Move all tasks to this project (by ID)
+  - `toProjectName`: Move all tasks to this project (by name)
+  - `toTaskId`: Make all tasks subtasks of this task (by ID)
+  - `toTaskName`: Make all tasks subtasks of this task (by name)
+  - `toInbox`: Set to `true` to move all tasks to inbox
+
+Examples:
+```
+"Move all tasks starting with 'Buy' to my Shopping project"
+→ batch_move_tasks({
+    tasks: [{taskName: "Buy milk"}, {taskName: "Buy eggs"}],
+    toProjectName: "Shopping"
+  })
+
+"Move these 5 inbox tasks to be subtasks of 'Plan vacation'"
+→ batch_move_tasks({
+    tasks: [{taskId: "abc"}, {taskId: "def"}, ...],
+    toTaskName: "Plan vacation"
+  })
+```
+
+### `batch_edit_items` ⭐ NEW
+Edit multiple tasks or projects in a single operation. **Much faster than editing one by one** (10x speedup for 10 items, 45x speedup for 50 items).
+
+**Performance**: One batch operation takes ~230ms vs ~2.26s for 10 sequential edits, or ~11.3s for 50 sequential edits.
+
+Supports all editing operations:
+- Change properties (name, note, dates, flags, estimated time)
+- Update task status (complete, drop, reopen)
+- Modify tags (add, remove, or replace all)
+- Update project settings (sequential, status, folder, review interval)
+
+Parameters:
+- `items`: Array of items to edit (minimum 1), where each item has:
+  - **Identification** (provide ONE):
+    - `id`: ID of the task/project (preferred)
+    - `name`: Name of the task/project
+  - `itemType`: Type ('task' or 'project')
+  - **Common fields** (all optional):
+    - `newName`: New name
+    - `newNote`: New note
+    - `newDueDate`: New due date (ISO format or empty string to clear)
+    - `newDeferDate`: New defer date (ISO format or empty string to clear)
+    - `newPlannedDate`: New planned date (tasks only, ISO format or empty string to clear)
+    - `newFlagged`: Set flagged status (true/false)
+    - `newEstimatedMinutes`: Estimated completion time
+  - **Task-specific fields** (optional):
+    - `newStatus`: 'completed', 'dropped', or 'incomplete'
+    - `addTags`: Tags to add
+    - `removeTags`: Tags to remove
+    - `replaceTags`: Replace all existing tags
+  - **Project-specific fields** (optional):
+    - `newSequential`: Whether project is sequential
+    - `newFolderName`: Move project to folder
+    - `newProjectStatus`: 'active', 'completed', 'dropped', or 'onHold'
+    - `newReviewInterval`: {steps: number, unit: 'days'|'weeks'|'months'|'years'}
+    - `markReviewed`: Mark project as reviewed (sets lastReviewDate to now)
+
+Examples:
+```
+"Mark all my flagged tasks as completed"
+→ batch_edit_items({
+    items: [
+      {id: "abc", itemType: "task", newStatus: "completed"},
+      {id: "def", itemType: "task", newStatus: "completed"},
+      ...
+    ]
+  })
+
+"Add 'urgent' tag to all tasks due today"
+→ batch_edit_items({
+    items: [
+      {id: "abc", itemType: "task", addTags: ["urgent"]},
+      {id: "def", itemType: "task", addTags: ["urgent"]},
+      ...
+    ]
+  })
+
+"Update multiple project review intervals"
+→ batch_edit_items({
+    items: [
+      {name: "Work Project", itemType: "project", newReviewInterval: {steps: 1, unit: "weeks"}},
+      {name: "Home Project", itemType: "project", newReviewInterval: {steps: 2, unit: "weeks"}}
+    ]
+  })
+```
+
 ### `list_perspectives` ⭐ NEW
 List all available perspectives in OmniFocus, including built-in and custom perspectives.
 
@@ -245,7 +376,7 @@ Documentation to follow.
 
 ## How It Works
 
-This server uses AppleScript to communicate with OmniFocus, allowing it to interact with the application's native functionality. The server is built using the Model Context Protocol SDK, which provides a standardized way for AI models to interact with external tools and systems.
+This server uses OmniJS (OmniFocus's JavaScript automation API) to communicate with OmniFocus, allowing it to interact with the application's native functionality. OmniJS provides direct access to OmniFocus objects and methods, making the integration fast and maintainable. The server is built using the Model Context Protocol SDK, which provides a standardized way for AI models to interact with external tools and systems.
 
 ## 🤝 Contributing
 

@@ -1,7 +1,6 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
-const execAsync = promisify(exec);
+import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
+import { writeFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
 
 // Interface for project creation parameters
 export interface AddProjectParams {
@@ -17,135 +16,101 @@ export interface AddProjectParams {
 }
 
 /**
- * Generate pure AppleScript for project creation
+ * Generate OmniJS script for project creation
  */
-function generateAppleScript(params: AddProjectParams): string {
-  // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
-  const dueDate = params.dueDate || '';
-  const deferDate = params.deferDate || '';
-  const flagged = params.flagged === true;
-  const estimatedMinutes = params.estimatedMinutes?.toString() || '';
-  const tags = params.tags || [];
-  const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
-  const sequential = params.sequential === true;
-  
-  // Generate date constructions outside tell blocks
-  let datePreScript = '';
-  let dueDateVar = '';
-  let deferDateVar = '';
-  
-  if (dueDate) {
-    dueDateVar = `dueDate${Math.random().toString(36).substr(2, 9)}`;
-    datePreScript += createDateOutsideTellBlock(dueDate, dueDateVar) + '\n\n';
+function generateJXAScript(params: AddProjectParams): string {
+  return `(() => {
+  try {
+    let newProject = null;
+
+    ${params.folderName ? `
+    // Create in specified folder
+    const folderName = ${JSON.stringify(params.folderName)};
+    let theFolder = flattenedFolders.find(f => f.name === folderName);
+
+    if (!theFolder) {
+      return JSON.stringify({
+        success: false,
+        error: "Folder not found: " + folderName
+      });
+    }
+
+    newProject = new Project(${JSON.stringify(params.name)}, theFolder);
+    ` : `
+    // Create project at the root level
+    newProject = new Project(${JSON.stringify(params.name)});
+    `}
+
+    // Set project properties
+    ${params.note ? `newProject.note = ${JSON.stringify(params.note)};` : ''}
+    ${params.dueDate ? `newProject.dueDate = new Date(${JSON.stringify(params.dueDate)});` : ''}
+    ${params.deferDate ? `newProject.deferDate = new Date(${JSON.stringify(params.deferDate)});` : ''}
+    ${params.flagged ? `newProject.flagged = true;` : ''}
+    ${params.estimatedMinutes ? `newProject.estimatedMinutes = ${params.estimatedMinutes};` : ''}
+    ${params.sequential !== undefined ? `newProject.sequential = ${params.sequential};` : ''}
+
+    // Add tags if provided
+    ${params.tags && params.tags.length > 0 ? `
+    const tagNames = ${JSON.stringify(params.tags)};
+    tagNames.forEach(tagName => {
+      let tag = flattenedTags.find(t => t.name === tagName);
+      if (!tag) {
+        tag = new Tag(tagName);
+      }
+      newProject.addTag(tag);
+    });
+    ` : ''}
+
+    const projectId = newProject.id.primaryKey;
+
+    return JSON.stringify({
+      success: true,
+      projectId: projectId,
+      name: ${JSON.stringify(params.name)}
+    });
+
+  } catch (error) {
+    return JSON.stringify({
+      success: false,
+      error: error.toString()
+    });
   }
-  
-  if (deferDate) {
-    deferDateVar = `deferDate${Math.random().toString(36).substr(2, 9)}`;
-    datePreScript += createDateOutsideTellBlock(deferDate, deferDateVar) + '\n\n';
-  }
-  
-  // Construct AppleScript with error handling
-  let script = datePreScript + `
-  try
-    tell application "OmniFocus"
-      tell front document
-        -- Determine the container (root or folder)
-        if "${folderName}" is "" then
-          -- Create project at the root level
-          set newProject to make new project with properties {name:"${name}"}
-        else
-          -- Use specified folder
-          try
-            set theFolder to first flattened folder where name = "${folderName}"
-            set newProject to make new project with properties {name:"${name}"} at end of projects of theFolder
-          on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${folderName}\\\"}"
-          end try
-        end if
-        
-        -- Set project properties
-        ${note ? `set note of newProject to "${note}"` : ''}
-        ${dueDate ? `
-          -- Set due date
-          set due date of newProject to ` + dueDateVar : ''}
-        ${deferDate ? `
-          -- Set defer date
-          set defer date of newProject to ` + deferDateVar : ''}
-        ${flagged ? `set flagged of newProject to true` : ''}
-        ${estimatedMinutes ? `set estimated minutes of newProject to ${estimatedMinutes}` : ''}
-        ${`set sequential of newProject to ${sequential}`}
-        
-        -- Get the project ID
-        set projectId to id of newProject as string
-        
-        -- Add tags if provided
-        ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
-          return `
-          try
-            set theTag to first flattened tag where name = "${sanitizedTag}"
-            add theTag to tags of newProject
-          on error
-            -- Tag might not exist, try to create it
-            try
-              set theTag to make new tag with properties {name:"${sanitizedTag}"}
-              add theTag to tags of newProject
-            on error
-              -- Could not create or add tag
-            end try
-          end try`;
-        }).join('\n') : ''}
-        
-        -- Return success with project ID
-        return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\",\\\"name\\\":\\"${name}\\"}"
-      end tell
-    end tell
-  on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
-  end try
-  `;
-  
-  return script;
+})();`;
 }
 
 /**
- * Add a project to OmniFocus
+ * Add a project to OmniFocus using OmniJS
  */
 export async function addProject(params: AddProjectParams): Promise<{success: boolean, projectId?: string, error?: string}> {
   try {
-    // Generate AppleScript
-    const script = generateAppleScript(params);
-    
-    console.error("Executing AppleScript directly...");
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
-    }
-    
-    console.error("AppleScript stdout:", stdout);
-    
-    // Parse the result
-    try {
-      const result = JSON.parse(stdout);
-      
-      // Return the result
-      return {
-        success: result.success,
-        projectId: result.projectId,
-        error: result.error
-      };
-    } catch (parseError) {
-      console.error("Error parsing AppleScript result:", parseError);
+    // Generate OmniJS script
+    const script = generateJXAScript(params);
+
+    console.error("Executing OmniJS script for project creation...");
+
+    // Write to a temporary file
+    const tempFile = `${tmpdir()}/omnifocus_add_project_${Date.now()}.js`;
+    writeFileSync(tempFile, script, { encoding: 'utf8' });
+
+    // Execute the script
+    const result = await executeOmniFocusScript(tempFile);
+
+    // Cleanup temp file
+    try { unlinkSync(tempFile); } catch {}
+
+    if (result.error) {
       return {
         success: false,
-        error: `Failed to parse result: ${stdout}`
+        error: result.error
       };
     }
+
+    // Return the result
+    return {
+      success: result.success,
+      projectId: result.projectId,
+      error: result.error
+    };
   } catch (error: any) {
     console.error("Error in addProject:", error);
     return {
