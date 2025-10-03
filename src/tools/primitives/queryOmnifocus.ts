@@ -11,6 +11,7 @@ export interface QueryOmnifocusParams {
     flagged?: boolean;
     dueWithin?: number;
     deferredUntil?: number;
+    plannedWithin?: number;
     hasNote?: boolean;
   };
   fields?: string[];
@@ -224,7 +225,15 @@ function generateFilterConditions(entity: string, filters: any): string {
         }
       `);
     }
-    
+
+    if (filters.plannedWithin !== undefined) {
+      conditions.push(`
+        if (!item.plannedDate || !checkDateFilter(item.plannedDate, ${filters.plannedWithin})) {
+          return false;
+        }
+      `);
+    }
+
     if (filters.hasNote !== undefined) {
       conditions.push(`
         const hasNote = item.note && item.note.trim().length > 0;
@@ -291,6 +300,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
           taskStatus: taskStatusMap[item.taskStatus] || "Unknown",
           dueDate: formatDate(item.dueDate),
           deferDate: formatDate(item.deferDate),
+          plannedDate: formatDate(item.plannedDate),
           tagNames: item.tags ? item.tags.map(t => t.name) : [],
           projectName: item.containingProject ? item.containingProject.name : (item.inInbox ? "Inbox" : null),
           estimatedMinutes: item.estimatedMinutes || null
@@ -344,10 +354,14 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `dueDate: formatDate(item.dueDate)`;
     } else if (field === 'deferDate') {
       return `deferDate: formatDate(item.deferDate)`;
+    } else if (field === 'plannedDate') {
+      return `plannedDate: formatDate(item.plannedDate)`;
     } else if (field === 'effectiveDueDate') {
       return `effectiveDueDate: formatDate(item.effectiveDueDate)`;
     } else if (field === 'effectiveDeferDate') {
       return `effectiveDeferDate: formatDate(item.effectiveDeferDate)`;
+    } else if (field === 'effectivePlannedDate') {
+      return `effectivePlannedDate: formatDate(item.effectivePlannedDate)`;
     } else if (field === 'tagNames') {
       return `tagNames: item.tags ? item.tags.map(t => t.name) : []`;
     } else if (field === 'tags') {

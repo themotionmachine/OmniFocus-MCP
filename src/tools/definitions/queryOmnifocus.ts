@@ -14,10 +14,11 @@ export const schema = z.object({
     flagged: z.boolean().optional().describe("Filter by flagged status. true = only flagged items, false = only unflagged items"),
     dueWithin: z.number().optional().describe("Returns items due from TODAY through N days in future. Example: 7 = items due within next week (today + 6 days)"),
     deferredUntil: z.number().optional().describe("Returns items CURRENTLY DEFERRED that will become available within N days. Example: 3 = items becoming available in next 3 days"),
+    plannedWithin: z.number().optional().describe("Returns tasks planned from TODAY through N days in future. Example: 7 = tasks planned within next week (today + 6 days)"),
     hasNote: z.boolean().optional().describe("Filter by note presence. true = items with non-empty notes (whitespace ignored), false = items with no notes or only whitespace")
   }).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies"),
   
-  fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
+  fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
   
   limit: z.number().optional().describe("Maximum number of items to return. Useful for large result sets. Default: no limit"),
   
@@ -150,6 +151,9 @@ function formatTasks(tasks: any[]): string {
     }
     if (task.deferDate) {
       parts.push(`[defer: ${formatDate(task.deferDate)}]`);
+    }
+    if (task.plannedDate) {
+      parts.push(`[planned: ${formatDate(task.plannedDate)}]`);
     }
     
     // Time estimate

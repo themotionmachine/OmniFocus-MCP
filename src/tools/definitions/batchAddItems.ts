@@ -9,10 +9,11 @@ export const schema = z.object({
     note: z.string().optional().describe("Additional notes for the item"),
     dueDate: z.string().optional().describe("The due date in ISO format (YYYY-MM-DD or full ISO date)"),
     deferDate: z.string().optional().describe("The defer date in ISO format (YYYY-MM-DD or full ISO date)"),
+    plannedDate: z.string().optional().describe("The planned date in ISO format (YYYY-MM-DD or full ISO date) - tasks only"),
     flagged: z.boolean().optional().describe("Whether the item is flagged or not"),
     estimatedMinutes: z.number().optional().describe("Estimated time to complete the item, in minutes"),
     tags: z.array(z.string()).optional().describe("Tags to assign to the item"),
-    
+
     // Task-specific properties
     projectName: z.string().optional().describe("For tasks: The name of the project to add the task to"),
     parentTaskId: z.string().optional().describe("For tasks: ID of the parent task"),

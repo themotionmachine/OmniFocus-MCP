@@ -8,6 +8,7 @@ export type BatchAddItemsParams = {
   note?: string;
   dueDate?: string;
   deferDate?: string;
+  plannedDate?: string; // For tasks
   flagged?: boolean;
   estimatedMinutes?: number;
   tags?: string[];
@@ -155,6 +156,7 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
             note: item.note,
             dueDate: item.dueDate,
             deferDate: item.deferDate,
+            plannedDate: item.plannedDate,
             flagged: item.flagged,
             estimatedMinutes: item.estimatedMinutes,
             tags: item.tags,

@@ -21,6 +21,7 @@ export interface EditItemParams {
   newNote?: string;             // New note for the item
   newDueDate?: string;          // New due date in ISO format (empty string to clear)
   newDeferDate?: string;        // New defer date in ISO format (empty string to clear)
+  newPlannedDate?: string;      // New planned date in ISO format (empty string to clear, tasks only)
   newFlagged?: boolean;         // New flagged status (false to remove flag, true to add flag)
   newEstimatedMinutes?: number; // New estimated minutes
   
@@ -70,6 +71,15 @@ function generateAppleScript(params: EditItemParams): string {
       datePreScripts.push(deferDateParts.preScript);
     }
     dateAssignments['defer date'] = deferDateParts.assignmentScript;
+  }
+
+  // Process planned date if provided (tasks only)
+  const plannedDateParts = generateDateAssignmentV2('foundItem', 'planned date', params.newPlannedDate);
+  if (plannedDateParts) {
+    if (plannedDateParts.preScript) {
+      datePreScripts.push(plannedDateParts.preScript);
+    }
+    dateAssignments['planned date'] = plannedDateParts.assignmentScript;
   }
   
   // Build the complete script
@@ -236,7 +246,15 @@ function generateAppleScript(params: EditItemParams): string {
         set end of changedProperties to "defer date"
 `;
   }
-  
+
+  if (dateAssignments['planned date']) {
+    script += `
+        -- Update planned date
+        ${dateAssignments['planned date']}
+        set end of changedProperties to "planned date"
+`;
+  }
+
   if (params.newFlagged !== undefined) {
     script += `
         -- Update flagged status
