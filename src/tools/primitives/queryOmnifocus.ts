@@ -293,9 +293,9 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
           deferDate: formatDate(item.deferDate),
           tagNames: item.tags ? item.tags.map(t => t.name) : [],
           projectName: item.containingProject ? item.containingProject.name : (item.inInbox ? "Inbox" : null),
-          estimatedMinutes: item.estimatedMinutes || null
+          estimatedMinutes: item.estimatedMinutes || null,
+          note: item.note || ""
         };
-        if (item.note && item.note.trim()) obj.note = item.note;
         return obj;
       `;
     } else if (entity === 'projects') {
@@ -309,7 +309,8 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
           taskCount: taskArray.length,
           flagged: item.flagged || false,
           dueDate: formatDate(item.dueDate),
-          deferDate: formatDate(item.deferDate)
+          deferDate: formatDate(item.deferDate),
+          note: item.note || ""
         };
       `;
     } else if (entity === 'folders') {
@@ -380,6 +381,8 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `path: item.container ? item.container.name + "/" + item.name : item.name`;
     } else if (field === 'estimatedMinutes') {
       return `estimatedMinutes: item.estimatedMinutes || null`;
+    } else if (field === 'note') {
+      return `note: item.note || ""`;
     } else {
       // Default: try to access the field directly
       return `${field}: item.${field} !== undefined ? item.${field} : null`;

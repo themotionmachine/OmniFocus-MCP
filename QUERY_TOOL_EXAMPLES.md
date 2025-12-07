@@ -91,6 +91,29 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 }
 ```
 
+### Get tasks with notes
+```json
+{
+  "entity": "tasks",
+  "filters": {
+    "hasNote": true
+  },
+  "fields": ["name", "note", "projectName"]
+}
+```
+
+### Get tasks without notes (for review)
+```json
+{
+  "entity": "tasks",
+  "filters": {
+    "hasNote": false,
+    "status": ["Available", "Next"]
+  },
+  "sortBy": "modificationDate"
+}
+```
+
 ## Performance Optimization
 
 ### Get only specific fields (reduces response size)
@@ -100,7 +123,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
   "filters": {
     "flagged": true
   },
-  "fields": ["name", "dueDate", "projectName"],
+  "fields": ["name", "note", "dueDate", "projectName"],
   "limit": 10
 }
 ```
@@ -279,7 +302,7 @@ See what's in your inbox:
   "filters": {
     "projectName": "inbox"
   },
-  "fields": ["name", "flagged", "dueDate", "tagNames"]
+  "fields": ["name", "note", "flagged", "dueDate", "tagNames"]
 }
 ```
 
