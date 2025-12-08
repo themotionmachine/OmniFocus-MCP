@@ -40,9 +40,20 @@ export function writeSecureTempFile(
     discardDescriptor: false, // Keep fd for writing
   });
 
-  // Write content using the secure file descriptor
-  writeSync(file.fd, content, 0, 'utf8');
-  closeSync(file.fd);
+  try {
+    // Write content using the secure file descriptor
+    writeSync(file.fd, content, 0, 'utf8');
+    closeSync(file.fd);
+  } catch (error) {
+    // Clean up the file if write fails to prevent resource leaks
+    try {
+      closeSync(file.fd);
+    } catch {
+      // Ignore close errors during cleanup
+    }
+    file.removeCallback();
+    throw error;
+  }
 
   return {
     path: file.name,
