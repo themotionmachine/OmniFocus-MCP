@@ -1,15 +1,20 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with
+code in this repository.
 
 ## Development Philosophy
 
 ### Core Principles
 
-- **Learn before changing** - Read existing implementations before modifying. Find similar tools and follow their patterns.
-- **Incremental progress over big bangs** - Small changes that compile and pass. Commit working code frequently.
-- **JXA is fragile** - Syntax errors fail silently. Test scripts in isolation before integrating.
-- **Type safety prevents runtime surprises** - Trust TypeScript. If it compiles, you're halfway there.
+- **Learn before changing** - Read existing implementations before modifying.
+  Find similar tools and follow their patterns.
+- **Incremental progress over big bangs** - Small changes that compile and
+  pass. Commit working code frequently.
+- **JXA is fragile** - Syntax errors fail silently. Test scripts in isolation
+  before integrating.
+- **Type safety prevents runtime surprises** - Trust TypeScript. If it
+  compiles, you're halfway there.
 - **Explicit over implicit** - Clear data flow, obvious dependencies, boring solutions.
 
 ### Simplicity
@@ -21,12 +26,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### JXA-Specific Mindset
 
-JXA (JavaScript for Automation) is the critical path for all OmniFocus interactions. Approach it with caution:
+JXA (JavaScript for Automation) is the critical path for all OmniFocus
+interactions. Approach it with caution:
 
-- **Silent failures are the norm** - JXA errors often produce empty results, not error messages
+- **Silent failures are the norm** - JXA errors often produce empty results,
+  not error messages
 - **Test in Script Editor first** - Never trust JXA until you've run it manually
-- **String building is error-prone** - Template literals inside generated JXA need careful escaping
-- **OmniFocus has its own object model** - Learn `.tasks.whose()` syntax; it's not SQL
+- **String building is error-prone** - Template literals inside generated JXA
+  need careful escaping
+- **OmniFocus has its own object model** - Learn `.tasks.whose()` syntax;
+  it's not SQL
 
 ### When to Ask vs. Proceed
 
@@ -49,6 +58,8 @@ JXA (JavaScript for Automation) is the critical path for all OmniFocus interacti
 
 ### NEVER
 
+- Open PRs against `themotionmachine/OmniFocus-MCP` — this is the upstream
+  fork, not our repo
 - Use `--no-verify` to bypass commit hooks
 - Skip the build step - server runs from `dist/`, not `src/`
 - Test JXA only through the MCP server - always test in Script Editor first
@@ -94,17 +105,21 @@ JXA (JavaScript for Automation) is the critical path for all OmniFocus interacti
 When developing this MCP server, use these tools effectively:
 
 - **Context7** - Validate current MCP SDK documentation, check for API changes
-- **Tavily** - Research JXA patterns, OmniFocus automation techniques, AppleScript/JXA conversion
+- **Tavily** - Research JXA patterns, OmniFocus automation techniques,
+  AppleScript/JXA conversion
 - **Serena** - Navigate large refactorings with semantic code understanding
 - **Web Search** - Debug obscure JXA errors, find OmniGroup forum discussions
 
 ### Serena MCP Tools - Detailed Guide
 
-Serena provides semantic code understanding tools that are essential for efficient codebase navigation and manipulation. **Use Serena tools instead of reading entire files whenever possible.**
+Serena provides semantic code understanding tools that are essential for
+efficient codebase navigation and manipulation. **Use Serena tools instead of
+reading entire files whenever possible.**
 
 #### Memory Tools (CRITICAL for Long Conversations)
 
-**IMPORTANT**: As context window approaches compaction, actively use memory tools to preserve critical information.
+**IMPORTANT**: As context window approaches compaction, actively use memory
+tools to preserve critical information.
 
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
@@ -126,9 +141,12 @@ Serena provides semantic code understanding tools that are essential for efficie
 **Memory Best Practices:**
 
 1. **Read relevant memories early** - Check `list_memories` at conversation start
-2. **Write before compaction** - If working on complex task and context is large, save findings to memory
-3. **Be specific in memory names** - Use descriptive names like `authentication_flow` not `notes`
-4. **Update memories when patterns change** - Use `edit_memory` to keep information current
+2. **Write before compaction** - If working on complex task and context is
+   large, save findings to memory
+3. **Be specific in memory names** - Use descriptive names like
+   `authentication_flow` not `notes`
+4. **Update memories when patterns change** - Use `edit_memory` to keep
+   information current
 5. **Never read same memory twice** - Serena tracks what you've read in the conversation
 
 #### Code Navigation Tools
@@ -145,9 +163,12 @@ Serena provides semantic code understanding tools that are essential for efficie
 **Navigation Best Practices:**
 
 1. **Use `get_symbols_overview` before reading files** - Understand structure first
-2. **Use `find_symbol` with `include_body=False` first** - Get locations before reading bodies
-3. **Use `depth` parameter wisely** - `depth=1` gets immediate children (e.g., class methods)
-4. **Prefer symbolic tools over `search_for_pattern`** - Faster and more accurate for code
+2. **Use `find_symbol` with `include_body=False` first** - Get locations
+   before reading bodies
+3. **Use `depth` parameter wisely** - `depth=1` gets immediate children
+   (e.g., class methods)
+4. **Prefer symbolic tools over `search_for_pattern`** - Faster and more
+   accurate for code
 
 #### Code Editing Tools
 
@@ -163,7 +184,8 @@ Serena provides semantic code understanding tools that are essential for efficie
 1. **Always call `think_about_task_adherence` before editing** - Required by Serena
 2. **Use `find_referencing_symbols` before modifying** - Understand impact
 3. **Prefer symbolic editing over file-based** - More precise, less error-prone
-4. **Don't use symbolic editing for partial changes** - Use file-based editing for small inline changes
+4. **Don't use symbolic editing for partial changes** - Use file-based
+   editing for small inline changes
 
 #### Thinking Tools (Required Checkpoints)
 
@@ -204,7 +226,9 @@ Serena provides semantic code understanding tools that are essential for efficie
 
 ## Project Overview
 
-OmniFocus MCP Server is a Model Context Protocol (MCP) server that bridges AI assistants with OmniFocus task management. It uses JXA (JavaScript for Automation) via AppleScript to interact with OmniFocus on macOS.
+OmniFocus MCP Server is a Model Context Protocol (MCP) server that bridges AI
+assistants with OmniFocus task management. It uses JXA (JavaScript for
+Automation) via AppleScript to interact with OmniFocus on macOS.
 
 ## Build and Development Commands
 
@@ -243,7 +267,8 @@ The build process:
 
 #### Script Execution (`src/utils/scriptExecution.ts`)
 
-- `executeJXA()`: Writes JXA scripts to temp files and executes via `osascript -l JavaScript`
+- `executeJXA()`: Writes JXA scripts to temp files and executes via
+  `osascript -l JavaScript`
 - All OmniFocus interactions go through JXA, not direct AppleScript
 - Returns parsed JSON results
 
@@ -271,14 +296,18 @@ The build process:
 
 #### Hierarchy Management
 
-- Tasks can reference parents via `parentTaskId` (existing ID) or `parentTaskName` (name lookup)
-- Batch operations support `parentTempId` to reference items being created in same batch
+- Tasks can reference parents via `parentTaskId` (existing ID) or
+  `parentTaskName` (name lookup)
+- Batch operations support `parentTempId` to reference items being created in
+  same batch
 - Cycle detection prevents infinite loops in parent-child relationships
 
 #### Type System (`src/omnifocustypes.ts`)
 
-- Defines TypeScript enums matching OmniFocus object model (Task.Status, Project.Status, etc.)
-- Minimal interfaces for core objects (TaskMinimal, ProjectMinimal, FolderMinimal, TagMinimal)
+- Defines TypeScript enums matching OmniFocus object model (Task.Status,
+  Project.Status, etc.)
+- Minimal interfaces for core objects (TaskMinimal, ProjectMinimal,
+  FolderMinimal, TagMinimal)
 - Used for type safety when building JXA queries and parsing results
 
 ### Tool Categories
@@ -288,7 +317,8 @@ The build process:
 - `query_omnifocus`: Targeted queries with filters, sorting, field selection
 - `dump_database`: Full database export (warning: can timeout on large databases)
 - `list_perspectives`: List available perspectives
-- `get_perspective_view`: Get items in a perspective (requires perspective to be open)
+- `get_perspective_view`: Get items in a perspective (requires perspective to
+  be open)
 
 #### Single Item Operations
 
@@ -306,7 +336,8 @@ The build process:
 
 ### JXA Script Generation
 
-When modifying query logic, the JXA is built as a string in `src/tools/primitives/queryOmnifocus.ts`. Key considerations:
+When modifying query logic, the JXA is built as a string in
+`src/tools/primitives/queryOmnifocus.ts`. Key considerations:
 
 - Use template literals carefully (backticks inside JXA need escaping)
 - OmniFocus object model uses methods like `.tasks.whose()`, not SQL
@@ -342,11 +373,15 @@ For MCP tool handlers:
 
 ### Perspective Limitations
 
-`get_perspective_view` cannot programmatically switch perspectives due to OmniJS limitations. The user must manually switch to the desired perspective before calling the tool, or the tool will return items from whatever perspective is currently active.
+`get_perspective_view` cannot programmatically switch perspectives due to
+OmniJS limitations. The user must manually switch to the desired perspective
+before calling the tool, or the tool will return items from whatever
+perspective is currently active.
 
 ### Database Size Issues
 
-The `dump_database` tool can timeout on very large OmniFocus databases. For large databases:
+The `dump_database` tool can timeout on very large OmniFocus databases. For
+large databases:
 
 - Use `query_omnifocus` with filters instead
 - Enable `hideCompleted` and `hideRecurringDuplicates` options
@@ -369,7 +404,8 @@ When creating nested tasks:
 - Use `tempId` and `parentTempId` for within-batch hierarchy
 - Use `hierarchyLevel` to provide ordering hints (0 for root, 1 for child, etc.)
 - Validate that parent references exist before batch submission
-- Remember: `parentTaskId` is for existing tasks, `parentTempId` is for batch-local references
+- Remember: `parentTaskId` is for existing tasks, `parentTempId` is for
+  batch-local references
 
 ## Testing Approach
 

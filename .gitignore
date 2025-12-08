@@ -32,3 +32,4 @@ coverage/
 
 # Optional eslint cache
 .eslintcache
+/.claude/tsc-cache

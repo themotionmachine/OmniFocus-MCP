@@ -15,14 +15,14 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.24.3",
-    "zod": "^4.1.0"
+    "zod": "^4.1.13"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=24.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.19",
-    "typescript": "^5.3.3"
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3"
   },
   "repository": {
     "type": "git",
