@@ -1,70 +1,141 @@
 # OmniFocus MCP Server Pro
 
-A professional-grade Model Context Protocol (MCP) server that provides comprehensive OmniFocus integration with 62 automation tools. Built for power users who need advanced features like Perspectives management, Review system, TaskPaper import/export, Forecast, Window/UI control, and bulk operations.
+> **⚠️ WORK IN PROGRESS - NOT FOR PRODUCTION USE**
+>
+> This project is undergoing a major refactor and expansion. The codebase
+> is actively being restructured and many features are incomplete or
+> untested. **Do not use this in production environments.** Check the
+> roadmap below for current progress.
+
+A professional-grade Model Context Protocol (MCP) server that provides
+comprehensive OmniFocus integration with 62 automation tools. Built for
+power users who need advanced features like Perspectives management,
+Review system, TaskPaper import/export, Forecast, Window/UI control,
+and bulk operations.
 
 ![OmniFocus MCP](assets/omnifocus-mcp-logo.png)
 
+---
+
+## Development Roadmap
+
+This project is being expanded from 22 to 62 tools across 14
+implementation phases.
+
+### Current Progress
+
+| Phase | Category                                  | Tools | Status   |
+| ----- | ----------------------------------------- | ----- | -------- |
+| 0     | Tooling Setup (pnpm, tsup, Vitest, Biome) | -     | Pending  |
+| 0.5   | MCP SDK Upgrade to 1.24.x                 | -     | Complete |
+| 1     | Folders                                   | 5     | Pending  |
+| 2     | Tags                                      | 6     | Pending  |
+| 3     | **Review System**                         | 3     | Pending  |
+| 4     | Notifications                             | 5     | Pending  |
+| 5     | Repetition                                | 4     | Pending  |
+| 6     | **Perspectives**                          | 4     | Pending  |
+| 7     | **Search & Database**                     | 9     | Pending  |
+| 8     | **Bulk Operations**                       | 5     | Pending  |
+| 9     | Attachments & Linked Files                | 4     | Pending  |
+| 10    | **TaskPaper Import/Export**               | 3     | Pending  |
+| 11    | **Task Status & Project Types**           | 6     | Pending  |
+| 12    | **Window & UI Control** (OF4)             | 6     | Pending  |
+| 13    | **Forecast**                              | 2     | Pending  |
+| 14    | **Settings**                              | 2     | Pending  |
+| 15    | MCP Resources & Prompts                   | -     | Pending  |
+| 16    | Planned Date Support (OF 4.7)             | 1     | Pending  |
+| 17    | **Hybrid Script Execution**               | 1     | Pending  |
+| 18    | **GTD + OmniFocus Claude Skill**          | -     | Pending  |
+
+### Key New Features
+
+Bold items in the table above represent new capabilities:
+
+- **Review System** - Get projects for review, mark reviewed, set intervals
+- **Perspectives** - List, get details, switch perspectives, export configs
+- **Search & Database** - Smart search across all item types, DB utilities
+- **Bulk Operations** - Move, duplicate, convert, and batch update items
+- **TaskPaper** - Import/export TaskPaper format for interoperability
+- **Window & UI Control** - Reveal, expand, collapse, focus items (OF4+)
+- **Forecast** - Get forecast data and navigate to specific days
+- **Hybrid Script Execution** - Execute OmniAutomation scripts for complex
+  operations
+- **GTD + OmniFocus Claude Skill** - Intelligent workflow automation
+
+---
+
 ## Overview
 
-This MCP server creates a bridge between AI assistants (like Claude) and your OmniFocus task management system. It gives AI models the ability to view, create, edit, and remove tasks and projects in your OmniFocus database through natural language conversations.
-Some ways you could use it: 
+This MCP server creates a bridge between AI assistants (like Claude) and
+your OmniFocus task management system. It gives AI models the ability to
+view, create, edit, and remove tasks and projects in your OmniFocus
+database through natural language conversations.
 
-- Translate the PDF of a syllabus into a fully specificed project with tasks, tags, defer dates, and due dates.
+Some ways you could use it:
+
+- Translate the PDF of a syllabus into a fully specified project with
+  tasks, tags, defer dates, and due dates.
 - Turn a meeting transcript into a list of actions
 - Create visualizations of your tasks, projects, and tags
 - Process multiple tasks or projects in a single operation
 - Bulk manage your OmniFocus items efficiently
 
-**Known Issues**
-- Dump_database tool currently fails for very large omnifocus databases. 
+### Known Issues
 
-## Roadmap
-- ~~Enable the client to interact with perspectives~~ ✅ (Added list_perspectives and get_perspective_view)
-- Benefit from MCP `resource` and `prompt` features
-- Add support for the new `planned` date type in Omnifocus 4.7
-- Support manipulating notifications for projects and tasks
-
+- Dump_database tool currently fails for very large omnifocus databases.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - macOS with OmniFocus installed
 
 ### Connecting to Claude
 
 1. In Claude Desktop, add this MCP server to your configuration file at:
-```
-~/Library/Application Support/Claude/claude_desktop_config.json
-```
 
-2. Add the following configuration:
-```json
-{
-  "mcpServers": {
-    "omnifocus-pro": {
-      "command": "npx",
-      "args": ["-y", "omnifocus-mcp-pro"]
-    }
-  }
-}
-```
+   ```text
+   ~/Library/Application Support/Claude/claude_desktop_config.json
+   ```
 
-3. Restart Claude Desktop
+1. Add the following configuration:
+
+   ```json
+   {
+     "mcpServers": {
+       "omnifocus-pro": {
+         "command": "npx",
+         "args": ["-y", "omnifocus-mcp-pro"]
+       }
+     }
+   }
+   ```
+
+1. Restart Claude Desktop
 
 ## Use Cases
 
 ### Efficient Task Queries
+
 Use the new `query_omnifocus` tool for fast, targeted searches:
+
 > "Show me tasks due today"
-> "Get all flagged items in my Work project"  
+> "Get all flagged items in my Work project"
 > "Count how many tasks are in each project"
 
 ### Reorganize your projects, tasks, and tags
-> "I want every task to have an energy level tag. Show me a list of all the tasks that don't have an energy level tag and your suggestions for what tag to add. I'll make any changes I think are appropriate. Then make the changes in OmniFocus."
+
+> "I want every task to have an energy level tag. Show me a list of all
+> the tasks that don't have an energy level tag and your suggestions for
+> what tag to add. I'll make any changes I think are appropriate. Then
+> make the changes in OmniFocus."
 
 ### Add tasks from any conversation
 
-> "Ok, thanks for the detailed explanation of why the rule of law is important. Add a recurring task to my activism project that reminds me to call my representative weekly. Include a summary of this conversation in the notes field."
+> "Ok, thanks for the detailed explanation of why the rule of law is
+> important. Add a recurring task to my activism project that reminds me
+> to call my representative weekly. Include a summary of this
+> conversation in the notes field."
 
 ### Quick, Virtual Perspectives
 
@@ -82,30 +153,36 @@ List and view your perspectives:
 
 > "What perspectives do I have available?"
 > "Show me what's in my Inbox perspective"
-> "Get the flagged items from my current perspective" 
+> "Get the flagged items from my current perspective"
 
 ### Process Transcripts or PDFs
 
-Extract action items from meeting transcripts, academic research articles, or notes:
+Extract action items from meeting transcripts, academic research
+articles, or notes:
 
-> "I'm pasting in the transcript from today's meeting. Please analyze it and create tasks in OmniFocus for any action items assigned to me. Put them in my 'Product Development' project."
-
+> "I'm pasting in the transcript from today's meeting. Please analyze it
+> and create tasks in OmniFocus for any action items assigned to me. Put
+> them in my 'Product Development' project."
 
 ## 🔧 Available Tools
 
 The server currently provides these tools:
 
 ### `query_omnifocus` ⭐ NEW
-Efficiently query your OmniFocus database with powerful filters. Get specific tasks, projects, or folders without loading the entire database.
+
+Efficiently query your OmniFocus database with powerful filters. Get
+specific tasks, projects, or folders without loading the entire database.
 
 Key Features:
-- **Filter by multiple criteria**: project, tags, status, due dates, flags, and more
-- **Request specific fields**: Reduce response size by only getting the data you need
+
+- **Filter by multiple criteria**: project, tags, status, due dates, etc.
+- **Request specific fields**: Reduce response size by getting only needed data
 - **Sort and limit results**: Control the output format
 - **Much faster than dump_database** for targeted queries
 
 Common Uses:
-```
+
+```text
 "Show me all flagged tasks due this week"
 "Get next actions from my Work project"
 "Count tasks in each project" (use with summary: true)
@@ -113,8 +190,9 @@ Common Uses:
 ```
 
 Parameters:
+
 - `entity`: Type to query ('tasks', 'projects', or 'folders')
-- `filters`: (Optional) Narrow results by project, tags, status, dates, etc.
+- `filters`: (Optional) Narrow results by project, tags, status, dates
 - `fields`: (Optional) Specific fields to return (id, name, dueDate, etc.)
 - `limit`: (Optional) Maximum items to return
 - `sortBy`: (Optional) Field to sort by
@@ -122,16 +200,21 @@ Parameters:
 - `summary`: (Optional) Return only count instead of full details
 
 ### `dump_database`
-Gets the complete current state of your OmniFocus database. Best for comprehensive analysis or when you need everything.
+
+Gets the complete current state of your OmniFocus database. Best for
+comprehensive analysis or when you need everything.
 
 Parameters:
+
 - `hideCompleted`: (Optional) Hide completed/dropped tasks (default: true)
-- `hideRecurringDuplicates`: (Optional) Hide duplicate recurring tasks (default: true)
+- `hideRecurringDuplicates`: (Optional) Hide duplicate recurring tasks
 
 ### `add_omnifocus_task`
+
 Add a new task to OmniFocus.
 
 Parameters:
+
 - `name`: The name of the task
 - `projectName`: (Optional) The name of the project to add the task to
 - `note`: (Optional) Additional notes for the task
@@ -140,13 +223,15 @@ Parameters:
 - `flagged`: (Optional) Whether the task is flagged or not
 - `estimatedMinutes`: (Optional) Estimated time to complete the task
 - `tags`: (Optional) Tags to assign to the task
- - `parentTaskId`: (Optional) Create under an existing parent task by ID
- - `parentTaskName`: (Optional) Create under first matching parent task by name (fallback)
+- `parentTaskId`: (Optional) Create under an existing parent task by ID
+- `parentTaskName`: (Optional) Create under first matching parent task
 
 ### `add_project`
+
 Add a new project to OmniFocus.
 
 Parameters:
+
 - `name`: The name of the project
 - `folderName`: (Optional) The name of the folder to add the project to
 - `note`: (Optional) Additional notes for the project
@@ -158,26 +243,32 @@ Parameters:
 - `sequential`: (Optional) Whether tasks in the project should be sequential
 
 ### `remove_item`
+
 Remove a task or project from OmniFocus.
 
 Parameters:
+
 - `id`: (Optional) The ID of the task or project to remove
 - `name`: (Optional) The name of the task or project to remove
 - `itemType`: The type of item to remove ('task' or 'project')
 
 ### `edit_item`
+
 Edit a task or project in OmniFocus.
 
 Parameters:
+
 - `id`: (Optional) The ID of the task or project to edit
 - `name`: (Optional) The name of the task or project to edit
 - `itemType`: The type of item to edit ('task' or 'project')
 - Various parameters for editing properties
 
 ### `batch_add_items`
+
 Add multiple tasks or projects to OmniFocus in a single operation.
 
 Parameters:
+
 - `items`: Array of items to add, where each item can be:
   - `type`: The type of item ('task' or 'project')
   - `name`: The name of the item
@@ -193,14 +284,20 @@ Parameters:
   - `parentTaskId`: (Optional, tasks): Parent task by ID
   - `parentTaskName`: (Optional, tasks): Parent task by name (fallback)
   - `tempId`: (Optional, tasks): Temporary ID for within-batch references
-  - `parentTempId`: (Optional, tasks): Reference to another item's `tempId` to establish hierarchy
-  - `hierarchyLevel`: (Optional, tasks): Ordering hint (0 for root, 1 for child, ...)
+  - `parentTempId`: (Optional, tasks): Reference to another item's tempId
+  - `hierarchyLevel`: (Optional, tasks): Ordering hint (0=root, 1=child)
 
 Examples:
-```
+
+```json
 {
   "items": [
-    { "type": "task", "name": "Parent", "projectName": "My Project", "tempId": "p1" },
+    {
+      "type": "task",
+      "name": "Parent",
+      "projectName": "My Project",
+      "tempId": "p1"
+    },
     { "type": "task", "name": "Child A", "parentTempId": "p1" },
     { "type": "task", "name": "Child B", "parentTempId": "p1" }
   ]
@@ -208,34 +305,45 @@ Examples:
 ```
 
 ### `batch_remove_items`
+
 Remove multiple tasks or projects from OmniFocus in a single operation.
 
 Parameters:
+
 - `items`: Array of items to remove, where each item can be:
   - `id`: (Optional) The ID of the item to remove
   - `name`: (Optional) The name of the item to remove
   - `itemType`: The type of item ('task' or 'project')
 
 ### `list_perspectives` ⭐ NEW
-List all available perspectives in OmniFocus, including built-in and custom perspectives.
+
+List all available perspectives in OmniFocus, including built-in and
+custom perspectives.
 
 Parameters:
-- `includeBuiltIn`: (Optional) Include built-in perspectives like Inbox, Projects, Tags (default: true)
-- `includeCustom`: (Optional) Include custom perspectives (Pro feature) (default: true)
+
+- `includeBuiltIn`: (Optional) Include built-in perspectives like Inbox,
+  Projects, Tags (default: true)
+- `includeCustom`: (Optional) Include custom perspectives (Pro feature)
 
 Returns:
-- List of perspectives with their names, types (builtin/custom), and whether they can be modified
+
+- List of perspectives with their names, types, and modification status
 
 ### `get_perspective_view` ⭐ NEW
-Get the items visible in the current OmniFocus perspective. Shows what tasks and projects are displayed.
+
+Get the items visible in the current OmniFocus perspective. Shows what
+tasks and projects are displayed.
 
 Parameters:
-- `perspectiveName`: Name of the perspective to view (e.g., 'Inbox', 'Projects', 'Flagged')
+
+- `perspectiveName`: Name of the perspective to view (e.g., 'Inbox')
 - `limit`: (Optional) Maximum number of items to return (default: 100)
-- `includeMetadata`: (Optional) Include additional metadata like tags and dates (default: true)
+- `includeMetadata`: (Optional) Include additional metadata (default: true)
 - `fields`: (Optional) Specific fields to include in the response
 
-Note: This tool returns the content of the current perspective window. Due to OmniJS limitations, it cannot programmatically switch perspectives.
+Note: This tool returns the content of the current perspective window.
+Due to OmniJS limitations, it cannot programmatically switch perspectives.
 
 ## Development
 
@@ -243,7 +351,10 @@ Documentation to follow.
 
 ## How It Works
 
-This server uses AppleScript to communicate with OmniFocus, allowing it to interact with the application's native functionality. The server is built using the Model Context Protocol SDK, which provides a standardized way for AI models to interact with external tools and systems.
+This server uses AppleScript to communicate with OmniFocus, allowing it
+to interact with the application's native functionality. The server is
+built using the Model Context Protocol SDK, which provides a standardized
+way for AI models to interact with external tools and systems.
 
 ## 🤝 Contributing
 
