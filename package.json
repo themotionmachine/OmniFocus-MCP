@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.24.3",
+    "tmp": "^0.2.5",
     "zod": "^4.1.13"
   },
   "engines": {
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@types/tmp": "^0.2.6",
     "typescript": "^5.9.3"
   },
   "repository": {

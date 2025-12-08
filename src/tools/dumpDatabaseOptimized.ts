@@ -2,6 +2,7 @@ import { OmnifocusDatabase } from '../types.js';
 import { executeOmniFocusScript } from '../utils/scriptExecution.js';
 import { getCacheManager } from '../utils/cacheManager.js';
 import { dumpDatabase as originalDumpDatabase } from './dumpDatabase.js';
+import { writeSecureTempFile } from '../utils/secureTempFile.js';
 
 /**
  * Optimized version of dumpDatabase that uses caching
@@ -15,9 +16,9 @@ export async function dumpDatabaseOptimized(options?: {
     ttlSeconds: 300, // 5 minute cache
     useChecksum: true // Validate with database checksum
   });
-  
+
   const cacheKey = options?.cacheKey || 'full-dump';
-  
+
   // Check if we should force a refresh
   if (!options?.forceRefresh) {
     const cached = await cacheManager.get(cacheKey);
@@ -27,16 +28,16 @@ export async function dumpDatabaseOptimized(options?: {
       return cached;
     }
   }
-  
+
   cacheManager.trackMiss();
   console.log(`Cache miss for ${cacheKey}. Fetching fresh data...`);
-  
+
   // Fetch fresh data using the original implementation
   const freshData = await originalDumpDatabase();
-  
+
   // Store in cache for next time
   await cacheManager.set(cacheKey, freshData);
-  
+
   return freshData;
 }
 
@@ -62,29 +63,29 @@ export async function getDatabaseStats(): Promise<{
       try {
         // Calculate statistics without fetching full data
         const allTasks = flattenedTasks;
-        const activeTasks = allTasks.filter(task => 
-          task.taskStatus !== Task.Status.Completed && 
+        const activeTasks = allTasks.filter(task =>
+          task.taskStatus !== Task.Status.Completed &&
           task.taskStatus !== Task.Status.Dropped
         );
-        
+
         const allProjects = flattenedProjects;
         const activeProjects = allProjects.filter(project =>
           project.status === Project.Status.Active
         );
-        
+
         // Count specific task statuses
-        const overdueCount = activeTasks.filter(task => 
+        const overdueCount = activeTasks.filter(task =>
           task.taskStatus === Task.Status.Overdue
         ).length;
-        
-        const nextActionCount = activeTasks.filter(task => 
+
+        const nextActionCount = activeTasks.filter(task =>
           task.taskStatus === Task.Status.Next
         ).length;
-        
+
         const flaggedCount = activeTasks.filter(task => task.flagged).length;
-        
+
         const inboxCount = activeTasks.filter(task => task.inInbox).length;
-        
+
         // Get latest modification time
         let lastModified = new Date(0);
         allTasks.forEach(task => {
@@ -92,7 +93,7 @@ export async function getDatabaseStats(): Promise<{
             lastModified = task.modificationDate;
           }
         });
-        
+
         return JSON.stringify({
           taskCount: allTasks.length,
           activeTaskCount: activeTasks.length,
@@ -106,7 +107,7 @@ export async function getDatabaseStats(): Promise<{
           inboxCount: inboxCount,
           lastModified: lastModified.toISOString()
         });
-        
+
       } catch (error) {
         return JSON.stringify({
           error: "Failed to get database stats: " + error.toString()
@@ -114,20 +115,34 @@ export async function getDatabaseStats(): Promise<{
       }
     })();
   `;
-  
-  // Write script to temp file and execute
-  const fs = await import('fs');
-  const tempFile = `/tmp/omnifocus_stats_${Date.now()}.js`;
-  fs.writeFileSync(tempFile, script);
-  
-  const result = await executeOmniFocusScript(tempFile);
-  fs.unlinkSync(tempFile);
-  
-  if (result.error) {
-    throw new Error(result.error);
+
+  // Write script to secure temp file and execute
+  const tempFile = writeSecureTempFile(script, 'omnifocus_stats', '.js');
+
+  try {
+    const result = await executeOmniFocusScript(tempFile.path) as {
+      error?: string;
+      taskCount: number;
+      activeTaskCount: number;
+      projectCount: number;
+      activeProjectCount: number;
+      folderCount: number;
+      tagCount: number;
+      overdueCount: number;
+      nextActionCount: number;
+      flaggedCount: number;
+      inboxCount: number;
+      lastModified: string;
+    };
+
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    return result;
+  } finally {
+    tempFile.cleanup();
   }
-  
-  return result;
 }
 
 /**
@@ -135,39 +150,39 @@ export async function getDatabaseStats(): Promise<{
  * Much more efficient for periodic updates
  */
 export async function getChangesSince(since: Date): Promise<{
-  newTasks: any[];
-  updatedTasks: any[];
-  completedTasks: any[];
-  newProjects: any[];
-  updatedProjects: any[];
+  newTasks: unknown[];
+  updatedTasks: unknown[];
+  completedTasks: unknown[];
+  newProjects: unknown[];
+  updatedProjects: unknown[];
 }> {
   const script = `
     (() => {
       try {
         const sinceDate = new Date("${since.toISOString()}");
-        
+
         // Find tasks that changed since the given date
         const allTasks = flattenedTasks;
-        
-        const newTasks = allTasks.filter(task => 
+
+        const newTasks = allTasks.filter(task =>
           task.creationDate && task.creationDate > sinceDate
         ).map(task => ({
           id: task.id.primaryKey,
           name: task.name,
           creationDate: task.creationDate.toISOString()
         }));
-        
-        const updatedTasks = allTasks.filter(task => 
-          task.modificationDate && 
+
+        const updatedTasks = allTasks.filter(task =>
+          task.modificationDate &&
           task.modificationDate > sinceDate &&
-          task.creationDate && 
+          task.creationDate &&
           task.creationDate <= sinceDate
         ).map(task => ({
           id: task.id.primaryKey,
           name: task.name,
           modificationDate: task.modificationDate.toISOString()
         }));
-        
+
         const completedTasks = allTasks.filter(task =>
           task.completionDate &&
           task.completionDate > sinceDate
@@ -176,10 +191,10 @@ export async function getChangesSince(since: Date): Promise<{
           name: task.name,
           completionDate: task.completionDate.toISOString()
         }));
-        
+
         // Find projects that changed
         const allProjects = flattenedProjects;
-        
+
         const newProjects = allProjects.filter(project =>
           project.creationDate && project.creationDate > sinceDate
         ).map(project => ({
@@ -187,7 +202,7 @@ export async function getChangesSince(since: Date): Promise<{
           name: project.name,
           creationDate: project.creationDate.toISOString()
         }));
-        
+
         const updatedProjects = allProjects.filter(project =>
           project.modificationDate &&
           project.modificationDate > sinceDate &&
@@ -198,7 +213,7 @@ export async function getChangesSince(since: Date): Promise<{
           name: project.name,
           modificationDate: project.modificationDate.toISOString()
         }));
-        
+
         return JSON.stringify({
           newTasks: newTasks,
           updatedTasks: updatedTasks,
@@ -206,7 +221,7 @@ export async function getChangesSince(since: Date): Promise<{
           newProjects: newProjects,
           updatedProjects: updatedProjects
         });
-        
+
       } catch (error) {
         return JSON.stringify({
           error: "Failed to get changes: " + error.toString()
@@ -214,18 +229,26 @@ export async function getChangesSince(since: Date): Promise<{
       }
     })();
   `;
-  
-  // Write script to temp file and execute
-  const fs = await import('fs');
-  const tempFile = `/tmp/omnifocus_changes_${Date.now()}.js`;
-  fs.writeFileSync(tempFile, script);
-  
-  const result = await executeOmniFocusScript(tempFile);
-  fs.unlinkSync(tempFile);
-  
-  if (result.error) {
-    throw new Error(result.error);
+
+  // Write script to secure temp file and execute
+  const tempFile = writeSecureTempFile(script, 'omnifocus_changes', '.js');
+
+  try {
+    const result = await executeOmniFocusScript(tempFile.path) as {
+      error?: string;
+      newTasks: unknown[];
+      updatedTasks: unknown[];
+      completedTasks: unknown[];
+      newProjects: unknown[];
+      updatedProjects: unknown[];
+    };
+
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    return result;
+  } finally {
+    tempFile.cleanup();
   }
-  
-  return result;
 }

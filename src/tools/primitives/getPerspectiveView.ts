@@ -20,21 +20,25 @@ export async function getPerspectiveView(params: GetPerspectiveViewParams): Prom
     // Execute the OmniJS script to get perspective view
     // Note: This gets the current perspective view, not a specific one
     // OmniJS doesn't easily allow switching perspectives
-    const result = await executeOmniFocusScript('@getPerspectiveView.js');
-    
+    const result = await executeOmniFocusScript('@getPerspectiveView.js') as {
+      error?: string;
+      perspectiveName?: string;
+      items?: any[];
+    };
+
     if (result.error) {
       return {
         success: false,
         error: result.error
       };
     }
-    
+
     // Check if the current perspective matches what was requested
     const currentPerspective = result.perspectiveName;
     if (currentPerspective && currentPerspective.toLowerCase() !== perspectiveName.toLowerCase()) {
       console.warn(`Note: Current perspective is "${currentPerspective}", not "${perspectiveName}". OmniJS cannot easily switch perspectives.`);
     }
-    
+
     // Filter and limit items
     let items = result.items || [];
     

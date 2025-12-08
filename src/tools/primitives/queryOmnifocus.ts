@@ -1,4 +1,5 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
+import { writeSecureTempFile } from '../../utils/secureTempFile.js';
 
 export interface QueryOmnifocusParams {
   entity: 'tasks' | 'projects' | 'folders';
@@ -23,34 +24,29 @@ export interface QueryOmnifocusParams {
 
 interface QueryResult {
   success: boolean;
-  items?: any[];
+  items?: unknown[];
   count?: number;
   error?: string;
 }
 
 export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<QueryResult> {
+  const jxaScript = generateQueryScript(params);
+  const tempFile = writeSecureTempFile(jxaScript, 'omnifocus_query', '.js');
+
   try {
-    // Create JXA script for the query
-    const jxaScript = generateQueryScript(params);
-    
-    // Write script to temp file and execute
-    const tempFile = `/tmp/omnifocus_query_${Date.now()}.js`;
-    const fs = await import('fs');
-    fs.writeFileSync(tempFile, jxaScript);
-    
-    // Execute the script
-    const result = await executeOmniFocusScript(tempFile);
-    
-    // Clean up temp file
-    fs.unlinkSync(tempFile);
-    
+    const result = await executeOmniFocusScript(tempFile.path) as {
+      error?: string;
+      items?: unknown[];
+      count?: number;
+    };
+
     if (result.error) {
       return {
         success: false,
         error: result.error
       };
     }
-    
+
     return {
       success: true,
       items: params.summary ? undefined : result.items,
@@ -62,23 +58,25 @@ export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<Quer
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
+  } finally {
+    tempFile.cleanup();
   }
 }
 
 function generateQueryScript(params: QueryOmnifocusParams): string {
   const { entity, filters = {}, fields, limit, sortBy, sortOrder, includeCompleted = false, summary = false } = params;
-  
+
   // Build the JXA script based on the entity type and filters
   return `(() => {
     try {
       const startTime = new Date();
-      
+
       // Helper function to format dates
       function formatDate(date) {
         if (!date) return null;
         return date.toISOString();
       }
-      
+
       // Helper to check date filters
       function checkDateFilter(itemDate, daysFromNow) {
         if (!itemDate) return false;
@@ -86,29 +84,29 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
         futureDate.setDate(futureDate.getDate() + daysFromNow);
         return itemDate <= futureDate;
       }
-      
+
       // Status mappings
       const taskStatusMap = {
         [Task.Status.Available]: "Available",
-        [Task.Status.Blocked]: "Blocked", 
+        [Task.Status.Blocked]: "Blocked",
         [Task.Status.Completed]: "Completed",
         [Task.Status.Dropped]: "Dropped",
         [Task.Status.DueSoon]: "DueSoon",
         [Task.Status.Next]: "Next",
         [Task.Status.Overdue]: "Overdue"
       };
-      
+
       const projectStatusMap = {
         [Project.Status.Active]: "Active",
         [Project.Status.Done]: "Done",
         [Project.Status.Dropped]: "Dropped",
         [Project.Status.OnHold]: "OnHold"
       };
-      
+
       // Get the appropriate collection based on entity type
       let items = [];
       const entityType = "${entity}";
-      
+
       if (entityType === "tasks") {
         items = flattenedTasks;
       } else if (entityType === "projects") {
@@ -116,36 +114,36 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
       } else if (entityType === "folders") {
         items = flattenedFolders;
       }
-      
+
       // Apply filters
       let filtered = items.filter(item => {
         // Skip completed/dropped unless explicitly requested
         if (!${includeCompleted}) {
           if (entityType === "tasks") {
-            if (item.taskStatus === Task.Status.Completed || 
+            if (item.taskStatus === Task.Status.Completed ||
                 item.taskStatus === Task.Status.Dropped) {
               return false;
             }
           } else if (entityType === "projects") {
-            if (item.status === Project.Status.Done || 
+            if (item.status === Project.Status.Done ||
                 item.status === Project.Status.Dropped) {
               return false;
             }
           }
         }
-        
+
         // Apply specific filters
         ${generateFilterConditions(entity, filters)}
-        
+
         return true;
       });
-      
+
       // Apply sorting if specified
       ${sortBy ? generateSortLogic(sortBy, sortOrder) : ''}
-      
+
       // Apply limit if specified
       ${limit ? `filtered = filtered.slice(0, ${limit});` : ''}
-      
+
       // If summary mode, just return count
       if (${summary}) {
         return JSON.stringify({
@@ -153,18 +151,18 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
           error: null
         });
       }
-      
+
       // Transform items to return only requested fields
       const results = filtered.map(item => {
         ${generateFieldMapping(entity, fields)}
       });
-      
+
       return JSON.stringify({
         items: results,
         count: results.length,
         error: null
       });
-      
+
     } catch (error) {
       return JSON.stringify({
         error: "Script execution error: " + error.toString(),
@@ -175,11 +173,11 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
   })();`;
 }
 
-function generateFilterConditions(entity: string, filters: any): string {
+function generateFilterConditions(entity: string, filters: QueryOmnifocusParams['filters']): string {
   const conditions: string[] = [];
-  
+
   if (entity === 'tasks') {
-    if (filters.projectName) {
+    if (filters?.projectName) {
       conditions.push(`
         if (item.containingProject) {
           const projectName = item.containingProject.name.toLowerCase();
@@ -189,84 +187,84 @@ function generateFilterConditions(entity: string, filters: any): string {
         }
       `);
     }
-    
-    if (filters.projectId) {
+
+    if (filters?.projectId) {
       conditions.push(`
-        if (!item.containingProject || 
+        if (!item.containingProject ||
             item.containingProject.id.primaryKey !== "${filters.projectId}") {
           return false;
         }
       `);
     }
-    
-    if (filters.tags && filters.tags.length > 0) {
-      const tagCondition = filters.tags.map((tag: string) => 
+
+    if (filters?.tags && filters.tags.length > 0) {
+      const tagCondition = filters.tags.map((tag: string) =>
         `item.tags.some(t => t.name === "${tag}")`
       ).join(' || ');
       conditions.push(`if (!(${tagCondition})) return false;`);
     }
-    
-    if (filters.status && filters.status.length > 0) {
-      const statusCondition = filters.status.map((status: string) => 
+
+    if (filters?.status && filters.status.length > 0) {
+      const statusCondition = filters.status.map((status: string) =>
         `taskStatusMap[item.taskStatus] === "${status}"`
       ).join(' || ');
       conditions.push(`if (!(${statusCondition})) return false;`);
     }
-    
-    if (filters.flagged !== undefined) {
+
+    if (filters?.flagged !== undefined) {
       conditions.push(`if (item.flagged !== ${filters.flagged}) return false;`);
     }
-    
-    if (filters.dueWithin !== undefined) {
+
+    if (filters?.dueWithin !== undefined) {
       conditions.push(`
         if (!item.dueDate || !checkDateFilter(item.dueDate, ${filters.dueWithin})) {
           return false;
         }
       `);
     }
-    
-    if (filters.hasNote !== undefined) {
+
+    if (filters?.hasNote !== undefined) {
       conditions.push(`
         const hasNote = item.note && item.note.trim().length > 0;
         if (hasNote !== ${filters.hasNote}) return false;
       `);
     }
   }
-  
+
   if (entity === 'projects') {
-    if (filters.folderId) {
+    if (filters?.folderId) {
       conditions.push(`
-        if (!item.parentFolder || 
+        if (!item.parentFolder ||
             item.parentFolder.id.primaryKey !== "${filters.folderId}") {
           return false;
         }
       `);
     }
-    
-    if (filters.status && filters.status.length > 0) {
-      const statusCondition = filters.status.map((status: string) => 
+
+    if (filters?.status && filters.status.length > 0) {
+      const statusCondition = filters.status.map((status: string) =>
         `projectStatusMap[item.status] === "${status}"`
       ).join(' || ');
       conditions.push(`if (!(${statusCondition})) return false;`);
     }
   }
-  
+
   return conditions.join('\n');
 }
 
 function generateSortLogic(sortBy: string, sortOrder?: string): string {
   const order = sortOrder === 'desc' ? -1 : 1;
-  
+
   return `
     filtered.sort((a, b) => {
       let aVal = a.${sortBy};
       let bVal = b.${sortBy};
-      
+
       // Handle null/undefined values
       if (aVal == null && bVal == null) return 0;
       if (aVal == null) return 1;
       if (bVal == null) return -1;
-      
+
       // Compare based on type
       if (typeof aVal === 'string') {
         return aVal.localeCompare(bVal) * ${order};
@@ -324,7 +322,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       `;
     }
   }
-  
+
   // Generate mapping for specific fields
   const mappings = fields!.map(field => {
     // Handle special field mappings based on entity type
@@ -385,7 +383,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `${field}: item.${field} !== undefined ? item.${field} : null`;
     }
   }).join(',\n          ');
-  
+
   return `
     return {
       ${mappings}

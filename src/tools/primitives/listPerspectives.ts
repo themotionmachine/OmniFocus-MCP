@@ -18,15 +18,18 @@ export async function listPerspectives(params: ListPerspectivesParams = {}): Pro
   try {
     // Execute the OmniJS script to list perspectives
     // This uses the built-in OmniFocus JavaScript API
-    const result = await executeOmniFocusScript('@listPerspectives.js');
-    
+    const result = await executeOmniFocusScript('@listPerspectives.js') as {
+      error?: string;
+      perspectives?: any[];
+    };
+
     if (result.error) {
       return {
         success: false,
         error: result.error
       };
     }
-    
+
     // Filter perspectives based on parameters
     let perspectives = result.perspectives || [];
     
