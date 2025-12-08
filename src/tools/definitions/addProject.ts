@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { addProject, AddProjectParams } from '../primitives/addProject.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   name: z.string().describe("The name of the project"),
@@ -14,7 +15,7 @@ export const schema = z.object({
   sequential: z.boolean().optional().describe("Whether tasks in the project should be sequential (default: false)")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     // Call the addProject function 
     const result = await addProject(args as AddProjectParams);

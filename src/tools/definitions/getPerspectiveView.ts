@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getPerspectiveView } from '../primitives/getPerspectiveView.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   perspectiveName: z.string().describe("Name of the perspective to view (e.g., 'Inbox', 'Projects', 'Flagged', or custom perspective name)"),
@@ -12,7 +13,7 @@ export const schema = z.object({
   fields: z.array(z.string()).optional().describe("Specific fields to include in the response. Reduces response size. Available fields: id, name, note, flagged, dueDate, deferDate, completionDate, taskStatus, projectName, tagNames, estimatedMinutes")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     const result = await getPerspectiveView({
       perspectiveName: args.perspectiveName,

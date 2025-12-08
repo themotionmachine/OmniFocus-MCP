@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { addOmniFocusTask, AddOmniFocusTaskParams } from '../primitives/addOmniFocusTask.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   name: z.string().describe("The name of the task"),
@@ -17,7 +18,7 @@ export const schema = z.object({
   hierarchyLevel: z.number().int().min(0).optional().describe("Explicit level indicator for ordering in batch workflows (0=root) - ignored in single add")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     // Call the addOmniFocusTask function 
     const result = await addOmniFocusTask(args as AddOmniFocusTaskParams);

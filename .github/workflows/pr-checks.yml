@@ -1,0 +1,148 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# SECURITY: Restrict permissions to minimum required
+permissions:
+  contents: read
+  pull-requests: write  # For commenting on PRs
+
+jobs:
+  build-and-validate:
+    name: Build and Validate
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Verify JXA scripts
+        run: |
+          # Verify all JXA scripts are valid JavaScript
+          for script in src/utils/omnifocusScripts/*.js; do
+            if [ -f "$script" ]; then
+              node --check "$script" || {
+                echo "❌ Invalid JavaScript syntax in $script"
+                exit 1
+              }
+            fi
+          done
+          echo "✅ All JXA scripts have valid syntax"
+
+      - name: Check for console.log statements
+        run: |
+          # Check for console.log in production code (excluding comments)
+          CONSOLE_LOGS=$(grep -r "console\.log" src/ --include="*.ts" --exclude-dir=node_modules | grep -v "// console.log" | grep -v "//" || true)
+
+          if [ -n "$CONSOLE_LOGS" ]; then
+            echo "⚠️  Found console.log statements in source code:"
+            echo "$CONSOLE_LOGS"
+            echo ""
+            echo "Consider using console.error for debugging or removing before merge"
+          fi
+
+  validate-changeset:
+    name: Validate Changes
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for sensitive files
+        run: |
+          # Check if PR modifies sensitive configuration
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+
+          # Files that require extra scrutiny
+          SENSITIVE_FILES="package.json package-lock.json tsconfig.json"
+
+          for file in $SENSITIVE_FILES; do
+            if echo "$CHANGED_FILES" | grep -q "^$file$"; then
+              echo "⚠️  PR modifies $file - ensure changes are intentional"
+            fi
+          done
+
+      - name: Check for large files
+        run: |
+          # Find files larger than 100KB in the changeset
+          LARGE_FILES=$(git diff --name-only origin/main...HEAD | xargs -I {} find {} -type f -size +100k 2>/dev/null || true)
+
+          if [ -n "$LARGE_FILES" ]; then
+            echo "⚠️  Large files detected in PR:"
+            echo "$LARGE_FILES"
+            echo ""
+            echo "Consider if these files should be in the repository"
+          fi
+
+      - name: Verify CLAUDE.md updates
+        run: |
+          # If tool definitions changed, check if CLAUDE.md was updated
+          TOOLS_CHANGED=$(git diff --name-only origin/main...HEAD | grep "src/tools/" || true)
+          CLAUDE_CHANGED=$(git diff --name-only origin/main...HEAD | grep "CLAUDE.md" || true)
+
+          if [ -n "$TOOLS_CHANGED" ] && [ -z "$CLAUDE_CHANGED" ]; then
+            echo "⚠️  Tool definitions changed but CLAUDE.md not updated"
+            echo "Consider updating CLAUDE.md if new tools were added or signatures changed"
+          fi
+
+  security-check:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Audit dependencies
+        run: |
+          # Run npm audit but allow high/critical in dev dependencies
+          npm audit --omit=dev || {
+            echo "⚠️  Security vulnerabilities found in production dependencies"
+            npm audit --omit=dev
+            exit 1
+          }
+
+      - name: Check for secrets
+        run: |
+          # Basic check for common secret patterns
+          SECRETS=$(git diff origin/main...HEAD | grep -E "(api[_-]?key|password|secret|token|credential)" -i || true)
+
+          if [ -n "$SECRETS" ]; then
+            echo "⚠️  Possible secrets detected in diff:"
+            echo "$SECRETS"
+            echo ""
+            echo "Review carefully to ensure no sensitive data is committed"
+            exit 1
+          fi

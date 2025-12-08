@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { batchRemoveItems, BatchRemoveItemsParams } from '../primitives/batchRemoveItems.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   items: z.array(z.object({
@@ -10,7 +11,7 @@ export const schema = z.object({
   })).describe("Array of items (tasks or projects) to remove")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     // Validate that each item has at least an ID or name
     for (const item of args.items) {

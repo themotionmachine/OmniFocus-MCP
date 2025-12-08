@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package*.json'
+      - 'tsconfig.json'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package*.json'
+      - 'tsconfig.json'
+      - '.github/workflows/ci.yml'
+
+# SECURITY: Restrict permissions to minimum required (least privilege principle)
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Verify JXA scripts copied
+        run: |
+          if [ ! -d "dist/utils/omnifocusScripts" ]; then
+            echo "❌ JXA scripts directory not found"
+            exit 1
+          fi
+
+          if [ ! -f "dist/utils/omnifocusScripts/omnifocusDump.js" ]; then
+            echo "❌ omnifocusDump.js not copied"
+            exit 1
+          fi
+
+          echo "✅ JXA scripts copied successfully"
+
+      - name: Check for TypeScript errors
+        run: npx tsc --noEmit
+
+  validate-structure:
+    name: Validate Project Structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify required files
+        run: |
+          # Check for required source files
+          [ -f "src/server.ts" ] || { echo "❌ src/server.ts missing"; exit 1; }
+          [ -f "src/omnifocustypes.ts" ] || { echo "❌ src/omnifocustypes.ts missing"; exit 1; }
+          [ -d "src/tools" ] || { echo "❌ src/tools directory missing"; exit 1; }
+          [ -d "src/utils" ] || { echo "❌ src/utils directory missing"; exit 1; }
+
+          # Check for JXA scripts
+          [ -d "src/utils/omnifocusScripts" ] || { echo "❌ JXA scripts directory missing"; exit 1; }
+          [ -f "src/utils/omnifocusScripts/omnifocusDump.js" ] || { echo "❌ omnifocusDump.js missing"; exit 1; }
+
+          # Check for required config files
+          [ -f "package.json" ] || { echo "❌ package.json missing"; exit 1; }
+          [ -f "tsconfig.json" ] || { echo "❌ tsconfig.json missing"; exit 1; }
+          [ -f "CLAUDE.md" ] || { echo "❌ CLAUDE.md missing"; exit 1; }
+
+          echo "✅ All required files present"
+
+      - name: Verify package.json scripts
+        run: |
+          # Verify required npm scripts exist
+          node -e "
+            const pkg = require('./package.json');
+            const required = ['build', 'start', 'copy-files'];
+            const missing = required.filter(s => !pkg.scripts[s]);
+            if (missing.length) {
+              console.error('❌ Missing scripts:', missing.join(', '));
+              process.exit(1);
+            }
+            console.log('✅ All required scripts present');
+          "
+
+  validate-mcp-schema:
+    name: Validate MCP Tool Schemas
+    runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Check for tool definitions
+        run: |
+          if [ ! -d "src/tools/definitions" ]; then
+            echo "❌ Tool definitions directory missing"
+            exit 1
+          fi
+
+          TOOL_COUNT=$(find src/tools/definitions -name "*.ts" | wc -l)
+          echo "Found $TOOL_COUNT tool definition files"
+
+          if [ "$TOOL_COUNT" -lt 1 ]; then
+            echo "❌ No tool definitions found"
+            exit 1
+          fi
+
+          echo "✅ Tool definitions present"

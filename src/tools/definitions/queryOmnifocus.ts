@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { queryOmnifocus, QueryOmnifocusParams } from '../primitives/queryOmnifocus.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   entity: z.enum(['tasks', 'projects', 'folders']).describe("Type of entity to query. Choose 'tasks' for individual tasks, 'projects' for projects, or 'folders' for folder organization"),
@@ -30,7 +31,7 @@ export const schema = z.object({
   summary: z.boolean().optional().describe("Return only count of matches, not full details. Efficient for statistics. Default: false")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     // Call the queryOmniFocus function
     const result = await queryOmnifocus(args as QueryOmnifocusParams);

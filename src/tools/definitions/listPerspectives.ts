@@ -1,13 +1,14 @@
 import { z } from 'zod';
 import { listPerspectives } from '../primitives/listPerspectives.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   includeBuiltIn: z.boolean().optional().describe("Include built-in perspectives (Inbox, Projects, Tags, etc.). Default: true"),
   includeCustom: z.boolean().optional().describe("Include custom perspectives (Pro feature). Default: true")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     const result = await listPerspectives({
       includeBuiltIn: args.includeBuiltIn ?? true,

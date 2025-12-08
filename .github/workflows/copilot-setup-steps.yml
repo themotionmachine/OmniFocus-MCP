@@ -1,0 +1,88 @@
+name: "Copilot Setup Steps"
+
+# Automatically run the setup steps when they are changed to allow for easy validation,
+# and allow manual testing through the repository's "Actions" tab
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+
+    # Set the permissions to the lowest permissions possible needed for your steps.
+    # Copilot will be given its own token for its operations.
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify build tools
+        run: |
+          echo "Node version: $(node --version)"
+          echo "npm version: $(npm --version)"
+          echo "TypeScript version: $(npx tsc --version)"
+
+      - name: Build MCP server
+        run: npm run build
+
+      - name: Verify build artifacts
+        run: |
+          # Verify dist directory exists
+          [ -d "dist" ] || { echo "❌ dist directory not found"; exit 1; }
+
+          # Verify server.js exists
+          [ -f "dist/server.js" ] || { echo "❌ dist/server.js not found"; exit 1; }
+
+          # Verify JXA scripts copied
+          [ -d "dist/utils/omnifocusScripts" ] || { echo "❌ JXA scripts not copied"; exit 1; }
+          [ -f "dist/utils/omnifocusScripts/omnifocusDump.js" ] || { echo "❌ omnifocusDump.js missing"; exit 1; }
+
+          echo "✅ All build artifacts verified"
+
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Verify package.json structure
+        run: |
+          # Verify required npm scripts exist
+          node -e "
+            const pkg = require('./package.json');
+            const required = ['build', 'start', 'copy-files'];
+            const missing = required.filter(s => !pkg.scripts[s]);
+            if (missing.length) {
+              console.error('❌ Missing scripts:', missing.join(', '));
+              process.exit(1);
+            }
+            console.log('✅ All required scripts present');
+          "
+
+      - name: Verify MCP server structure
+        run: |
+          # Check for required source files
+          [ -f "src/server.ts" ] || { echo "❌ src/server.ts missing"; exit 1; }
+          [ -d "src/tools/definitions" ] || { echo "❌ src/tools/definitions directory missing"; exit 1; }
+          [ -d "src/tools/primitives" ] || { echo "❌ src/tools/primitives directory missing"; exit 1; }
+          [ -d "src/utils/omnifocusScripts" ] || { echo "❌ JXA scripts directory missing"; exit 1; }
+
+          echo "✅ MCP server structure validated"
