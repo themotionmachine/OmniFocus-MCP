@@ -97,7 +97,7 @@ jobs:
           echo "pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
 
       - name: Update release with npm link
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const pkgName = '${{ steps.verify.outputs.pkg_name }}';
