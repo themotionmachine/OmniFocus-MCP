@@ -1,0 +1,74 @@
+version: 2
+
+updates:
+  # npm dependencies for MCP server
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # Group production dependencies
+      production:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group development dependencies
+      development:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group TypeScript type definitions
+      types:
+        patterns:
+          - "@types/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group MCP SDK ecosystem
+      mcp:
+        patterns:
+          - "@modelcontextprotocol/*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Ignore major updates for core dependencies (review manually)
+      - dependency-name: "@modelcontextprotocol/sdk"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

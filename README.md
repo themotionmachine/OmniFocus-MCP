@@ -1,6 +1,6 @@
-# OmniFocus MCP Server
+# OmniFocus MCP Server Pro
 
-A Model Context Protocol (MCP) server that integrates with OmniFocus to enable Claude (or other MCP-compatible clients) to interact with your tasks and projects.
+A professional-grade Model Context Protocol (MCP) server that provides comprehensive OmniFocus integration with 62 automation tools. Built for power users who need advanced features like Perspectives management, Review system, TaskPaper import/export, Forecast, Window/UI control, and bulk operations.
 
 ![OmniFocus MCP](assets/omnifocus-mcp-logo.png)
 
@@ -41,9 +41,9 @@ Some ways you could use it:
 ```json
 {
   "mcpServers": {
-    "omnifocus": {
+    "omnifocus-pro": {
       "command": "npx",
-      "args": ["-y", "omnifocus-mcp"]
+      "args": ["-y", "omnifocus-mcp-pro"]
     }
   }
 }

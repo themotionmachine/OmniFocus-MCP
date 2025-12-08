@@ -1,0 +1,35 @@
+{
+	"mcpServers": {
+		"eslint": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"@eslint/mcp@latest"
+			]
+		},
+		"sequential-thinking": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-sequential-thinking"
+			],
+			"env": {}
+		},
+		"serena": {
+			"type": "stdio",
+			"command": "uvx",
+			"args": [
+				"--from",
+				"git+https://github.com/oraios/serena",
+				"serena",
+				"start-mcp-server",
+				"--context",
+				"ide-assistant",
+				"--project",
+				"."
+			],
+			"env": {}
+		}
+	}
+}

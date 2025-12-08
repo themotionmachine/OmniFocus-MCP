@@ -1,0 +1,232 @@
+{
+    "version": "1.0",
+    "description": "Skill activation triggers for OmniFocus MCP Server. Controls when skills automatically suggest or block actions.",
+    "skills": {
+        "skill-developer": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Meta-skill for creating and managing Claude Code skills",
+            "promptTriggers": {
+                "keywords": [
+                    "skill system",
+                    "create skill",
+                    "add skill",
+                    "skill triggers",
+                    "skill rules",
+                    "hook system",
+                    "skill development",
+                    "skill-rules.json"
+                ],
+                "intentPatterns": [
+                    "(how do|how does|explain).*?skill",
+                    "(create|add|modify|build).*?skill",
+                    "skill.*?(work|trigger|activate|system)"
+                ]
+            }
+        },
+        "speckit-autopilot": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Monitors for spec-kit workflow triggers and suggests appropriate /speckit.* commands. Detects: tech pivots, requirement changes, principle additions, ambiguities, task breakdown, consistency checks, issue conversion, implementation starts, and requirements quality validation.",
+            "promptTriggers": {
+                "keywords": [
+                    "we should always",
+                    "add rule",
+                    "establish pattern",
+                    "make it a standard",
+                    "from now on",
+                    "project-wide",
+                    "new feature",
+                    "add feature",
+                    "add capability",
+                    "users should be able",
+                    "user story",
+                    "requirements for",
+                    "define the feature",
+                    "not sure about",
+                    "need to decide",
+                    "which approach",
+                    "unclear requirement",
+                    "what if",
+                    "edge case",
+                    "how should we handle",
+                    "what happens when",
+                    "switch to",
+                    "use instead",
+                    "migrate to",
+                    "replace with",
+                    "technical decision",
+                    "change approach",
+                    "break down",
+                    "task list",
+                    "implementation order",
+                    "what are the steps",
+                    "step by step",
+                    "dependencies between",
+                    "check consistency",
+                    "verify alignment",
+                    "in sync",
+                    "cross-reference",
+                    "validate artifacts",
+                    "convert to issues",
+                    "github issue",
+                    "create issues",
+                    "turn into tickets",
+                    "start implementation",
+                    "begin building",
+                    "start coding",
+                    "execute the plan",
+                    "checklist for",
+                    "quality check",
+                    "requirements quality",
+                    "validate requirements",
+                    "review checklist",
+                    "spec quality",
+                    "requirements complete",
+                    "is the spec ready"
+                ],
+                "intentPatterns": [
+                    "(switch|change|migrate|pivot).*?(to|from)",
+                    "(add|create|implement|build).*?(feature|capability)",
+                    "(we should|always|establish).*?(rule|pattern|principle)",
+                    "(not sure|unclear|undecided).*?(about|how|which)",
+                    "(break down|decompose|tasks for).*?(feature|implementation)",
+                    "(check|verify|validate).*?(consistency|alignment|specs)",
+                    "(convert|turn|create).*?(issues|tickets)",
+                    "(start|begin|execute).*?(implement|building|coding|plan)",
+                    "(what|how).*?(if|happens|should).*?(when|handle)",
+                    "(create|generate|make).*?(checklist|quality check)",
+                    "(validate|review|check).*?(requirements|spec|specification).*?(quality|complete|ready)",
+                    "(requirements|spec).*?(quality|complete|clear|ready)"
+                ]
+            }
+        },
+        "research-specialist": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Comprehensive research agent that intelligently routes to appropriate MCP servers. MUST BE USED PROACTIVELY when needing: library documentation (Context7), AWS service info, debugging solutions, framework documentation (Astro/Tailwind/shadcn), technical comparisons, or web research.",
+            "promptTriggers": {
+                "keywords": [
+                    "look up",
+                    "find documentation",
+                    "research",
+                    "how does",
+                    "what is the",
+                    "documentation for",
+                    "api reference",
+                    "library docs",
+                    "aws service",
+                    "lambda",
+                    "s3",
+                    "cloudfront",
+                    "amplify",
+                    "cdk pattern",
+                    "cloudformation",
+                    "debug this",
+                    "error message",
+                    "stack overflow",
+                    "github issue",
+                    "community solution",
+                    "best practice for",
+                    "compare",
+                    "alternatives to",
+                    "pros and cons",
+                    "react hooks",
+                    "motion api",
+                    "astro integration",
+                    "tailwind utility",
+                    "shadcn component",
+                    "implementation example",
+                    "code example"
+                ],
+                "intentPatterns": [
+                    "(look up|find|get|research).*?(documentation|docs|api|reference)",
+                    "(how do|how does|what is).*?(work|function|behave)",
+                    "(debug|fix|resolve).*?(error|issue|problem)",
+                    "(compare|versus|vs|alternative).*?(library|approach|solution)",
+                    "(aws|lambda|s3|cloudfront|amplify|cdk).*?(documentation|pattern|example)",
+                    "(react|astro|tailwind|shadcn|motion).*?(documentation|api|example|pattern)",
+                    "(find|search|look for).*?(example|pattern|solution|workaround)",
+                    "(need|want).*?(more context|information|documentation|research)"
+                ]
+            }
+        },
+        "mcp-builder": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Guide for creating high-quality MCP servers. MUST BE USED when adding new MCP tools, modifying tool schemas, designing MCP server architecture, implementing tool handlers, or working with MCP SDK patterns.",
+            "promptTriggers": {
+                "keywords": [
+                    "add tool",
+                    "new tool",
+                    "create tool",
+                    "mcp tool",
+                    "tool schema",
+                    "tool handler",
+                    "mcp server",
+                    "mcp sdk",
+                    "tool definition",
+                    "zod schema",
+                    "tool parameters",
+                    "tool response",
+                    "stdio transport",
+                    "server transport",
+                    "list tools",
+                    "register tool",
+                    "tool validation",
+                    "mcp best practices",
+                    "mcp patterns",
+                    "model context protocol"
+                ],
+                "intentPatterns": [
+                    "(add|create|implement|build).*?(tool|mcp tool|mcp server)",
+                    "(modify|update|change).*?(tool|schema|handler)",
+                    "(how to|best practice).*?(mcp|tool|server)",
+                    "(tool|mcp).*?(design|pattern|architecture)",
+                    "(validate|test).*?(tool|mcp server)",
+                    "(improve|enhance|refactor).*?(tool|mcp server)"
+                ]
+            },
+            "fileTriggers": {
+                "pathPatterns": [
+                    "src/server.ts",
+                    "src/tools/definitions/**/*",
+                    "src/tools/primitives/**/*",
+                    "src/tools/**/*.ts"
+                ],
+                "contentPatterns": [
+                    "server\\.tool\\(",
+                    "@modelcontextprotocol/sdk",
+                    "StdioServerTransport",
+                    "z\\.object\\(",
+                    "zod",
+                    "tool.*schema",
+                    "tool.*handler"
+                ]
+            }
+        }
+    },
+    "notes": {
+        "enforcement_types": {
+            "suggest": "Skill suggestion appears but doesn't block execution",
+            "block": "Requires skill to be used before proceeding (guardrail)",
+            "warn": "Shows warning but allows proceeding"
+        },
+        "priority_levels": {
+            "critical": "Highest - Always trigger when matched",
+            "high": "Important - Trigger for most matches",
+            "medium": "Moderate - Trigger for clear matches",
+            "low": "Optional - Trigger only for explicit matches"
+        },
+        "project_structure": {
+            "src": "TypeScript source code for MCP server",
+            "src/tools": "MCP tool definitions and implementations",
+            "src/utils": "Utility functions and JXA scripts",
+            "dist": "Compiled JavaScript (generated by build)"
+        }
+    }
+}

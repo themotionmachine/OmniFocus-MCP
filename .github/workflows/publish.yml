@@ -1,0 +1,112 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]  # Trigger when a GitHub release is published
+
+# SECURITY: Restrict permissions to minimum required
+permissions:
+  contents: write  # Required for release comments
+  id-token: write  # Required for npm provenance
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Extract version from release
+        id: version
+        run: |
+          # Extract version from release tag (remove 'v' prefix if present)
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing version: $VERSION from release: ${{ github.event.release.name }}"
+
+      - name: Verify package.json version matches release
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          RELEASE_VERSION="${{ steps.version.outputs.version }}"
+
+          if [ "$PKG_VERSION" != "$RELEASE_VERSION" ]; then
+            echo "❌ Version mismatch:"
+            echo "   package.json:    $PKG_VERSION"
+            echo "   Release tag:     ${{ github.event.release.tag_name }}"
+            echo "   Expected:        v$PKG_VERSION"
+            echo ""
+            echo "Please create release with tag matching package.json version"
+            exit 1
+          fi
+
+          echo "✅ Version matches: $PKG_VERSION"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify build artifacts
+        run: |
+          # Verify dist directory exists
+          [ -d "dist" ] || { echo "❌ dist directory not found"; exit 1; }
+
+          # Verify server.js exists and is executable
+          [ -f "dist/server.js" ] || { echo "❌ dist/server.js not found"; exit 1; }
+          [ -x "dist/server.js" ] || { echo "❌ dist/server.js not executable"; exit 1; }
+
+          # Verify JXA scripts copied
+          [ -d "dist/utils/omnifocusScripts" ] || { echo "❌ JXA scripts not copied"; exit 1; }
+          [ -f "dist/utils/omnifocusScripts/omnifocusDump.js" ] || { echo "❌ omnifocusDump.js missing"; exit 1; }
+
+          echo "✅ Build artifacts verified"
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify published package
+        id: verify
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+
+          echo "Waiting 30 seconds for npm to propagate..."
+          sleep 30
+
+          # Verify package is available on npm
+          npm view "$PKG_NAME@$PKG_VERSION" version || {
+            echo "❌ Package not found on npm registry"
+            exit 1
+          }
+
+          echo "✅ Package published successfully: $PKG_NAME@$PKG_VERSION"
+          echo "pkg_name=$PKG_NAME" >> $GITHUB_OUTPUT
+          echo "pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update release with npm link
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pkgName = '${{ steps.verify.outputs.pkg_name }}';
+            const pkgVersion = '${{ steps.verify.outputs.pkg_version }}';
+            const npmUrl = `https://www.npmjs.com/package/${pkgName}/v/${pkgVersion}`;
+
+            await github.rest.repos.createReleaseComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ github.event.release.id }},
+              body: `✅ Successfully published to npm: [${pkgName}@${pkgVersion}](${npmUrl})\n\nInstall with:\n\`\`\`bash\nnpm install -g ${pkgName}\n\`\`\``
+            });

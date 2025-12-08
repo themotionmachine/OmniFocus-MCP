@@ -1,11 +1,11 @@
 {
-  "name": "omnifocus-mcp",
+  "name": "omnifocus-mcp-pro",
   "type": "module",
   "version": "1.2.3",
-  "description": "Model Context Protocol (MCP) server that integrates with OmniFocus for AI assistant interaction",
+  "description": "Professional-grade MCP server for OmniFocus with 62 automation tools including Perspectives, Review system, TaskPaper, Forecast, Window/UI control, and advanced bulk operations",
   "main": "dist/server.js",
   "bin": {
-    "omnifocus-mcp": "./cli.cjs"
+    "omnifocus-mcp-pro": "./cli.cjs"
   },
   "scripts": {
     "build": "tsc && npm run copy-files && chmod 755 dist/server.js",
@@ -17,20 +17,33 @@
     "@modelcontextprotocol/sdk": "^1.8.0",
     "zod": "^3.22.4"
   },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "devDependencies": {
-    "@types/node": "^20.11.19",
+    "@types/node": "^22.0.0",
     "typescript": "^5.3.3"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/themotionmachine/omnifocus-mcp-server.git"
+    "url": "https://github.com/fgabelmannjr/omnifocus-mcp-pro.git"
   },
-  "homepage": "https://github.com/themotionmachine/omnifocus-mcp-server",
+  "homepage": "https://github.com/fgabelmannjr/omnifocus-mcp-pro",
   "keywords": [
     "omnifocus",
     "mcp",
+    "model-context-protocol",
     "claude",
     "task-management",
+    "productivity",
+    "gtd",
+    "automation",
+    "perspectives",
+    "taskpaper",
+    "review-system",
+    "forecast",
+    "professional",
+    "power-tools",
     "ai"
   ],
   "license": "MIT"
