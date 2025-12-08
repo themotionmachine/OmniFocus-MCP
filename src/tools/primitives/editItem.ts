@@ -1,8 +1,8 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { generateDateAssignmentV2 } from '../../utils/dateFormatting.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped';
@@ -442,8 +442,8 @@ export async function editItem(params: EditItemParams): Promise<{
   const tempFile = writeSecureTempFile(script, 'edit_omnifocus', '.applescript');
 
   try {
-    // Execute AppleScript from file
-    const { stdout, stderr } = await execAsync(`osascript ${tempFile.path}`);
+    // Execute AppleScript from file (execFile prevents command injection)
+    const { stdout, stderr } = await execFileAsync('osascript', [tempFile.path]);
 
     if (stderr) {
       console.error("AppleScript stderr:", stderr);

@@ -1,6 +1,7 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
-const execAsync = promisify(exec);
+import { writeSecureTempFile } from '../../utils/secureTempFile.js';
+const execFileAsync = promisify(execFile);
 
 // Interface for item removal parameters
 export interface RemoveItemParams {
@@ -141,30 +142,33 @@ function generateAppleScript(params: RemoveItemParams): string {
  * Remove a task or project from OmniFocus
  */
 export async function removeItem(params: RemoveItemParams): Promise<{success: boolean, id?: string, name?: string, error?: string}> {
+  // Generate AppleScript
+  const script = generateAppleScript(params);
+
+  console.error("Executing AppleScript for removal...");
+  console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
+
+  // Log a preview of the script for debugging (first few lines)
+  const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
+  console.error("AppleScript preview:\n", scriptPreview);
+
+  // Write script to secure temporary file
+  const tempFile = writeSecureTempFile(script, 'remove_omnifocus', '.applescript');
+
   try {
-    // Generate AppleScript
-    const script = generateAppleScript(params);
-    
-    console.error("Executing AppleScript for removal...");
-    console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
-    
-    // Log a preview of the script for debugging (first few lines)
-    const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
-    console.error("AppleScript preview:\n", scriptPreview);
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
+    // Execute AppleScript from file (execFile prevents command injection)
+    const { stdout, stderr } = await execFileAsync('osascript', [tempFile.path]);
+
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
     }
-    
+
     console.error("AppleScript stdout:", stdout);
-    
+
     // Parse the result
     try {
       const result = JSON.parse(stdout);
-      
+
       // Return the result
       return {
         success: result.success,
@@ -179,17 +183,21 @@ export async function removeItem(params: RemoveItemParams): Promise<{success: bo
         error: `Failed to parse result: ${stdout}`
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in removeItem execution:", error);
-    
+
     // Include more detailed error information
-    if (error.message && error.message.includes('syntax error')) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('syntax error')) {
       console.error("This appears to be an AppleScript syntax error. Review the script generation logic.");
     }
-    
+
     return {
       success: false,
-      error: error?.message || "Unknown error in removeItem"
+      error: errorMessage || "Unknown error in removeItem"
     };
+  } finally {
+    // Clean up temp file
+    tempFile.cleanup();
   }
 } 

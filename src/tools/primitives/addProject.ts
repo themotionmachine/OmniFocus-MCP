@@ -1,7 +1,8 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
-const execAsync = promisify(exec);
+import { writeSecureTempFile } from '../../utils/secureTempFile.js';
+const execFileAsync = promisify(execFile);
 
 // Interface for project creation parameters
 export interface AddProjectParams {
@@ -114,25 +115,28 @@ function generateAppleScript(params: AddProjectParams): string {
  * Add a project to OmniFocus
  */
 export async function addProject(params: AddProjectParams): Promise<{success: boolean, projectId?: string, error?: string}> {
+  // Generate AppleScript
+  const script = generateAppleScript(params);
+
+  console.error("Executing AppleScript via temp file...");
+
+  // Write script to secure temporary file
+  const tempFile = writeSecureTempFile(script, 'add_project', '.applescript');
+
   try {
-    // Generate AppleScript
-    const script = generateAppleScript(params);
-    
-    console.error("Executing AppleScript directly...");
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
+    // Execute AppleScript from file (execFile prevents command injection)
+    const { stdout, stderr } = await execFileAsync('osascript', [tempFile.path]);
+
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
     }
-    
+
     console.error("AppleScript stdout:", stdout);
-    
+
     // Parse the result
     try {
       const result = JSON.parse(stdout);
-      
+
       // Return the result
       return {
         success: result.success,
@@ -146,11 +150,15 @@ export async function addProject(params: AddProjectParams): Promise<{success: bo
         error: `Failed to parse result: ${stdout}`
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in addProject:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,
-      error: error?.message || "Unknown error in addProject"
+      error: errorMessage || "Unknown error in addProject"
     };
+  } finally {
+    // Clean up temp file
+    tempFile.cleanup();
   }
 } 

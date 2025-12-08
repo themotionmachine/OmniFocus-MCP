@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -7,15 +7,15 @@ import { dirname } from 'path';
 import { existsSync } from 'fs';
 import { writeSecureTempFile } from './secureTempFile.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // Helper function to execute OmniFocus scripts
 export async function executeJXA(script: string): Promise<unknown[]> {
   const tempFile = writeSecureTempFile(script, 'jxa_script', '.js');
 
   try {
-    // Execute the script using osascript
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile.path}`);
+    // Execute the script using osascript (execFile prevents command injection)
+    const { stdout, stderr } = await execFileAsync('osascript', ['-l', 'JavaScript', tempFile.path]);
 
     if (stderr) {
       console.error("Script stderr output:", stderr);
@@ -97,8 +97,8 @@ export async function executeOmniFocusScript(scriptPath: string, args?: unknown)
     // Write the JXA script to a secure temporary file
     tempFile = writeSecureTempFile(jxaScript, 'jxa_wrapper', '.js');
 
-    // Execute the JXA script using osascript
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile.path}`);
+    // Execute the JXA script using osascript (execFile prevents command injection)
+    const { stdout, stderr } = await execFileAsync('osascript', ['-l', 'JavaScript', tempFile.path]);
 
     if (stderr) {
       console.error("Script stderr output:", stderr);
