@@ -1,5 +1,5 @@
+import { closeSync, writeSync } from 'node:fs';
 import tmp from 'tmp';
-import { writeSync, closeSync } from 'fs';
 
 // Ensure temp files are cleaned up on process exit
 tmp.setGracefulCleanup();
@@ -37,7 +37,7 @@ export function writeSecureTempFile(
     prefix: `${prefix}_`,
     postfix: extension,
     mode: 0o600, // Read/write for owner only
-    discardDescriptor: false, // Keep fd for writing
+    discardDescriptor: false // Keep fd for writing
   });
 
   try {
@@ -57,6 +57,6 @@ export function writeSecureTempFile(
 
   return {
     path: file.name,
-    cleanup: () => file.removeCallback(),
+    cleanup: () => file.removeCallback()
   };
 }

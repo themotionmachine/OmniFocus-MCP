@@ -3,15 +3,31 @@
   "type": "module",
   "version": "1.2.3",
   "description": "Professional-grade MCP server for OmniFocus with 62 automation tools including Perspectives, Review system, TaskPaper, Forecast, Window/UI control, and advanced bulk operations",
-  "main": "dist/server.js",
+  "main": "./dist/server.cjs",
+  "module": "./dist/server.js",
+  "types": "./dist/server.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js",
+      "require": "./dist/server.cjs"
+    }
+  },
   "bin": {
     "omnifocus-mcp-pro": "./cli.cjs"
   },
   "scripts": {
-    "build": "tsc && npm run copy-files && chmod 755 dist/server.js",
-    "copy-files": "mkdir -p dist/utils/omnifocusScripts && cp src/utils/omnifocusScripts/*.js dist/utils/omnifocusScripts/",
+    "build": "tsup && chmod 755 dist/server.js",
     "start": "node dist/server.js",
-    "dev": "tsc -w"
+    "dev": "tsx watch src/server.ts",
+    "lint": "biome check ./src ./.claude",
+    "lint:fix": "biome check --write ./src ./.claude",
+    "format": "biome format --write ./src ./.claude",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepare": "husky"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.24.3",
@@ -22,9 +38,16 @@
     "node": ">=24.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
     "@types/node": "^24.0.0",
     "@types/tmp": "^0.2.6",
-    "typescript": "^5.9.3"
+    "@vitest/coverage-v8": "^4.0.15",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
   },
   "repository": {
     "type": "git",
@@ -48,5 +71,15 @@
     "power-tools",
     "ai"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "biome check --write"
+    ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }

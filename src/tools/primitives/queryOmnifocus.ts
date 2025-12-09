@@ -24,9 +24,9 @@ export interface QueryOmnifocusParams {
 
 interface QueryResult {
   success: boolean;
-  items?: unknown[];
-  count?: number;
-  error?: string;
+  items?: unknown[] | undefined;
+  count?: number | undefined;
+  error?: string | undefined;
 }
 
 export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<QueryResult> {
@@ -34,7 +34,7 @@ export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<Quer
   const tempFile = writeSecureTempFile(jxaScript, 'omnifocus_query', '.js');
 
   try {
-    const result = await executeOmniFocusScript(tempFile.path) as {
+    const result = (await executeOmniFocusScript(tempFile.path)) as {
       error?: string;
       items?: unknown[];
       count?: number;
@@ -64,7 +64,16 @@ export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<Quer
 }
 
 function generateQueryScript(params: QueryOmnifocusParams): string {
-  const { entity, filters = {}, fields, limit, sortBy, sortOrder, includeCompleted = false, summary = false } = params;
+  const {
+    entity,
+    filters = {},
+    fields,
+    limit,
+    sortBy,
+    sortOrder,
+    includeCompleted = false,
+    summary = false
+  } = params;
 
   // Build the JXA script based on the entity type and filters
   return `(() => {
@@ -173,7 +182,10 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
   })();`;
 }
 
-function generateFilterConditions(entity: string, filters: QueryOmnifocusParams['filters']): string {
+function generateFilterConditions(
+  entity: string,
+  filters: QueryOmnifocusParams['filters']
+): string {
   const conditions: string[] = [];
 
   if (entity === 'tasks') {
@@ -198,16 +210,16 @@ function generateFilterConditions(entity: string, filters: QueryOmnifocusParams[
     }
 
     if (filters?.tags && filters.tags.length > 0) {
-      const tagCondition = filters.tags.map((tag: string) =>
-        `item.tags.some(t => t.name === "${tag}")`
-      ).join(' || ');
+      const tagCondition = filters.tags
+        .map((tag: string) => `item.tags.some(t => t.name === "${tag}")`)
+        .join(' || ');
       conditions.push(`if (!(${tagCondition})) return false;`);
     }
 
     if (filters?.status && filters.status.length > 0) {
-      const statusCondition = filters.status.map((status: string) =>
-        `taskStatusMap[item.taskStatus] === "${status}"`
-      ).join(' || ');
+      const statusCondition = filters.status
+        .map((status: string) => `taskStatusMap[item.taskStatus] === "${status}"`)
+        .join(' || ');
       conditions.push(`if (!(${statusCondition})) return false;`);
     }
 
@@ -242,9 +254,9 @@ function generateFilterConditions(entity: string, filters: QueryOmnifocusParams[
     }
 
     if (filters?.status && filters.status.length > 0) {
-      const statusCondition = filters.status.map((status: string) =>
-        `projectStatusMap[item.status] === "${status}"`
-      ).join(' || ');
+      const statusCondition = filters.status
+        .map((status: string) => `projectStatusMap[item.status] === "${status}"`)
+        .join(' || ');
       conditions.push(`if (!(${statusCondition})) return false;`);
     }
   }
@@ -324,65 +336,67 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
   }
 
   // Generate mapping for specific fields
-  const mappings = fields!.map(field => {
-    // Handle special field mappings based on entity type
-    if (field === 'id') {
-      return `id: item.id.primaryKey`;
-    } else if (field === 'taskStatus') {
-      return `taskStatus: taskStatusMap[item.taskStatus]`;
-    } else if (field === 'status') {
-      return `status: projectStatusMap[item.status]`;
-    } else if (field === 'modificationDate' || field === 'modified') {
-      return `modificationDate: formatDate(item.modified)`;
-    } else if (field === 'creationDate' || field === 'added') {
-      return `creationDate: formatDate(item.added)`;
-    } else if (field === 'completionDate') {
-      return `completionDate: item.completionDate ? formatDate(item.completionDate) : null`;
-    } else if (field === 'dueDate') {
-      return `dueDate: formatDate(item.dueDate)`;
-    } else if (field === 'deferDate') {
-      return `deferDate: formatDate(item.deferDate)`;
-    } else if (field === 'effectiveDueDate') {
-      return `effectiveDueDate: formatDate(item.effectiveDueDate)`;
-    } else if (field === 'effectiveDeferDate') {
-      return `effectiveDeferDate: formatDate(item.effectiveDeferDate)`;
-    } else if (field === 'tagNames') {
-      return `tagNames: item.tags ? item.tags.map(t => t.name) : []`;
-    } else if (field === 'tags') {
-      return `tags: item.tags ? item.tags.map(t => t.id.primaryKey) : []`;
-    } else if (field === 'projectName') {
-      return `projectName: item.containingProject ? item.containingProject.name : (item.inInbox ? "Inbox" : null)`;
-    } else if (field === 'projectId') {
-      return `projectId: item.containingProject ? item.containingProject.id.primaryKey : null`;
-    } else if (field === 'parentId') {
-      return `parentId: item.parent ? item.parent.id.primaryKey : null`;
-    } else if (field === 'childIds') {
-      return `childIds: item.children ? item.children.map(c => c.id.primaryKey) : []`;
-    } else if (field === 'hasChildren') {
-      return `hasChildren: item.children ? item.children.length > 0 : false`;
-    } else if (field === 'folderName') {
-      return `folderName: item.parentFolder ? item.parentFolder.name : null`;
-    } else if (field === 'folderID') {
-      return `folderID: item.parentFolder ? item.parentFolder.id.primaryKey : null`;
-    } else if (field === 'taskCount') {
-      return `taskCount: item.tasks ? item.tasks.length : 0`;
-    } else if (field === 'tasks') {
-      return `tasks: item.tasks ? item.tasks.map(t => t.id.primaryKey) : []`;
-    } else if (field === 'projectCount') {
-      return `projectCount: item.projects ? item.projects.length : 0`;
-    } else if (field === 'projects') {
-      return `projects: item.projects ? item.projects.map(p => p.id.primaryKey) : []`;
-    } else if (field === 'subfolders') {
-      return `subfolders: item.folders ? item.folders.map(f => f.id.primaryKey) : []`;
-    } else if (field === 'path') {
-      return `path: item.container ? item.container.name + "/" + item.name : item.name`;
-    } else if (field === 'estimatedMinutes') {
-      return `estimatedMinutes: item.estimatedMinutes || null`;
-    } else {
-      // Default: try to access the field directly
-      return `${field}: item.${field} !== undefined ? item.${field} : null`;
-    }
-  }).join(',\n          ');
+  const mappings = fields
+    ?.map((field) => {
+      // Handle special field mappings based on entity type
+      if (field === 'id') {
+        return `id: item.id.primaryKey`;
+      } else if (field === 'taskStatus') {
+        return `taskStatus: taskStatusMap[item.taskStatus]`;
+      } else if (field === 'status') {
+        return `status: projectStatusMap[item.status]`;
+      } else if (field === 'modificationDate' || field === 'modified') {
+        return `modificationDate: formatDate(item.modified)`;
+      } else if (field === 'creationDate' || field === 'added') {
+        return `creationDate: formatDate(item.added)`;
+      } else if (field === 'completionDate') {
+        return `completionDate: item.completionDate ? formatDate(item.completionDate) : null`;
+      } else if (field === 'dueDate') {
+        return `dueDate: formatDate(item.dueDate)`;
+      } else if (field === 'deferDate') {
+        return `deferDate: formatDate(item.deferDate)`;
+      } else if (field === 'effectiveDueDate') {
+        return `effectiveDueDate: formatDate(item.effectiveDueDate)`;
+      } else if (field === 'effectiveDeferDate') {
+        return `effectiveDeferDate: formatDate(item.effectiveDeferDate)`;
+      } else if (field === 'tagNames') {
+        return `tagNames: item.tags ? item.tags.map(t => t.name) : []`;
+      } else if (field === 'tags') {
+        return `tags: item.tags ? item.tags.map(t => t.id.primaryKey) : []`;
+      } else if (field === 'projectName') {
+        return `projectName: item.containingProject ? item.containingProject.name : (item.inInbox ? "Inbox" : null)`;
+      } else if (field === 'projectId') {
+        return `projectId: item.containingProject ? item.containingProject.id.primaryKey : null`;
+      } else if (field === 'parentId') {
+        return `parentId: item.parent ? item.parent.id.primaryKey : null`;
+      } else if (field === 'childIds') {
+        return `childIds: item.children ? item.children.map(c => c.id.primaryKey) : []`;
+      } else if (field === 'hasChildren') {
+        return `hasChildren: item.children ? item.children.length > 0 : false`;
+      } else if (field === 'folderName') {
+        return `folderName: item.parentFolder ? item.parentFolder.name : null`;
+      } else if (field === 'folderID') {
+        return `folderID: item.parentFolder ? item.parentFolder.id.primaryKey : null`;
+      } else if (field === 'taskCount') {
+        return `taskCount: item.tasks ? item.tasks.length : 0`;
+      } else if (field === 'tasks') {
+        return `tasks: item.tasks ? item.tasks.map(t => t.id.primaryKey) : []`;
+      } else if (field === 'projectCount') {
+        return `projectCount: item.projects ? item.projects.length : 0`;
+      } else if (field === 'projects') {
+        return `projects: item.projects ? item.projects.map(p => p.id.primaryKey) : []`;
+      } else if (field === 'subfolders') {
+        return `subfolders: item.folders ? item.folders.map(f => f.id.primaryKey) : []`;
+      } else if (field === 'path') {
+        return `path: item.container ? item.container.name + "/" + item.name : item.name`;
+      } else if (field === 'estimatedMinutes') {
+        return `estimatedMinutes: item.estimatedMinutes || null`;
+      } else {
+        // Default: try to access the field directly
+        return `${field}: item.${field} !== undefined ? item.${field} : null`;
+      }
+    })
+    .join(',\n          ');
 
   return `
     return {

@@ -1,7 +1,6 @@
-import { OmnifocusDatabase, OmnifocusTask, OmnifocusProject, OmnifocusFolder, OmnifocusTag } from '../types.js';
+import type { OmnifocusDatabase } from '../types.js';
 import { executeOmniFocusScript } from '../utils/scriptExecution.js';
 
-import fs from 'fs';
 // Define interfaces for the data returned from the script
 interface OmnifocusDumpTask {
   id: string;
@@ -67,13 +66,12 @@ interface OmnifocusDumpData {
 
 // Main function to dump the database
 export async function dumpDatabase(): Promise<OmnifocusDatabase> {
-  
   try {
     // Execute the OmniFocus script
-    const data = await executeOmniFocusScript('@omnifocusDump.js') as OmnifocusDumpData;
+    const data = (await executeOmniFocusScript('@omnifocusDump.js')) as OmnifocusDumpData;
     // wait 1 second
-    await new Promise(resolve => setTimeout(resolve, 1000));
- 
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Create an empty database if no data returned
     if (!data) {
       return {
@@ -84,7 +82,7 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
         tags: {}
       };
     }
-    
+
     // Initialize the database object
     const database: OmnifocusDatabase = {
       exportDate: data.exportDate,
@@ -93,26 +91,26 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
       folders: {},
       tags: {}
     };
-    
+
     // Process tasks
     if (data.tasks && Array.isArray(data.tasks)) {
       // Convert the tasks to our OmnifocusTask format
       database.tasks = data.tasks.map((task: OmnifocusDumpTask) => {
         // Get tag names from the tag IDs
-        const tagNames = (task.tags || []).map(tagId => {
+        const tagNames = (task.tags || []).map((tagId) => {
           return data.tags[tagId]?.name || 'Unknown Tag';
         });
-        
+
         return {
           id: String(task.id),
           name: String(task.name),
-          note: String(task.note || ""),
+          note: String(task.note || ''),
           flagged: Boolean(task.flagged),
-          completed: task.taskStatus === "Completed",
+          completed: task.taskStatus === 'Completed',
           completionDate: null, // Not available in the new format
           dropDate: null, // Not available in the new format
           taskStatus: String(task.taskStatus),
-          active: task.taskStatus !== "Completed" && task.taskStatus !== "Dropped",
+          active: task.taskStatus !== 'Completed' && task.taskStatus !== 'Dropped',
           dueDate: task.dueDate,
           deferDate: task.deferDate,
           estimatedMinutes: task.estimatedMinutes ? Number(task.estimatedMinutes) : null,
@@ -126,7 +124,7 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
           sequential: Boolean(task.sequential),
           completedByChildren: Boolean(task.completedByChildren),
           isRepeating: false, // Not available in the new format
-          repetitionMethod: null, // Not available in the new format 
+          repetitionMethod: null, // Not available in the new format
           repetitionRule: null, // Not available in the new format
           attachments: [], // Default empty array
           linkedFileURLs: [], // Default empty array
@@ -135,7 +133,7 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
         };
       });
     }
-    
+
     // Process projects
     if (data.projects) {
       for (const [id, project] of Object.entries(data.projects)) {
@@ -151,14 +149,14 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
           deferDate: project.deferDate,
           completedByChildren: Boolean(project.completedByChildren),
           containsSingletonActions: Boolean(project.containsSingletonActions),
-          note: String(project.note || ""),
+          note: String(project.note || ''),
           tasks: project.tasks || [],
           flagged: false, // Default value
           estimatedMinutes: null // Default value
         };
       }
     }
-    
+
     // Process folders
     if (data.folders) {
       for (const [id, folder] of Object.entries(data.folders)) {
@@ -172,7 +170,7 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
         };
       }
     }
-    
+
     // Process tags
     if (data.tags) {
       for (const [id, tag] of Object.entries(data.tags)) {
@@ -186,11 +184,10 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
         };
       }
     }
-    
+
     return database;
   } catch (error) {
-    console.error("Error in dumpDatabase:", error);
+    console.error('Error in dumpDatabase:', error);
     throw error;
   }
 }
-

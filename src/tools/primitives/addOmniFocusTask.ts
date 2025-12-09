@@ -1,23 +1,24 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
+
 const execFileAsync = promisify(execFile);
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
   name: string;
-  note?: string;
-  dueDate?: string; // ISO date string
-  deferDate?: string; // ISO date string
-  flagged?: boolean;
-  estimatedMinutes?: number;
-  tags?: string[]; // Tag names
-  projectName?: string; // Project name to add task to
+  note?: string | undefined;
+  dueDate?: string | undefined; // ISO date string
+  deferDate?: string | undefined; // ISO date string
+  flagged?: boolean | undefined;
+  estimatedMinutes?: number | undefined;
+  tags?: string[] | undefined; // Tag names
+  projectName?: string | undefined; // Project name to add task to
   // Hierarchy support
-  parentTaskId?: string;
-  parentTaskName?: string;
-  hierarchyLevel?: number; // ignored for single add
+  parentTaskId?: string | undefined;
+  parentTaskName?: string | undefined;
+  hierarchyLevel?: number | undefined; // ignored for single add
 }
 
 /**
@@ -43,16 +44,18 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
 
   if (dueDate) {
     dueDateVar = `dueDate${Math.random().toString(36).substr(2, 9)}`;
-    datePreScript += createDateOutsideTellBlock(dueDate, dueDateVar) + '\n\n';
+    datePreScript += `${createDateOutsideTellBlock(dueDate, dueDateVar)}\n\n`;
   }
 
   if (deferDate) {
     deferDateVar = `deferDate${Math.random().toString(36).substr(2, 9)}`;
-    datePreScript += createDateOutsideTellBlock(deferDate, deferDateVar) + '\n\n';
+    datePreScript += `${createDateOutsideTellBlock(deferDate, deferDateVar)}\n\n`;
   }
 
   // Construct AppleScript with error handling
-  let script = datePreScript + `
+  const script =
+    datePreScript +
+    `
   try
     tell application "OmniFocus"
       tell front document
@@ -113,7 +116,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
             set theProject to first flattened project where name = "${projectName}"
             set newTask to make new task with properties {name:"${name}"} at end of tasks of theProject
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}"
+            return "{\\"success\\":false,\\"error\\":\\"Project not found: ${projectName}\\"}"
           end try
         else
           -- Fallback to inbox
@@ -122,12 +125,20 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
 
         -- Set task properties
         ${note ? `set note of newTask to "${note}"` : ''}
-        ${dueDate ? `
+        ${
+          dueDate
+            ? `
           -- Set due date
-          set due date of newTask to ` + dueDateVar : ''}
-        ${deferDate ? `
+          set due date of newTask to ${dueDateVar}`
+            : ''
+        }
+        ${
+          deferDate
+            ? `
           -- Set defer date
-          set defer date of newTask to ` + deferDateVar : ''}
+          set defer date of newTask to ${deferDateVar}`
+            : ''
+        }
         ${flagged ? `set flagged of newTask to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newTask to ${estimatedMinutes}` : ''}
 
@@ -168,9 +179,12 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         set taskId to id of newTask as string
 
         -- Add tags if provided
-        ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
-          return `
+        ${
+          tags.length > 0
+            ? tags
+                .map((tag) => {
+                  const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+                  return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
             add theTag to tags of newTask
@@ -183,14 +197,17 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
               -- Could not create or add tag
             end try
           end try`;
-        }).join('\n') : ''}
+                })
+                .join('\n')
+            : ''
+        }
 
         -- Return success with task ID and placement
-        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\\",\\\"placement\\\":\\"" & placement & "\\"}"
+        return "{\\"success\\":true,\\"taskId\\":\\"" & taskId & "\\",\\"name\\":\\"${name}\\",\\"placement\\":\\"" & placement & "\\"}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "{\\"success\\":false,\\"error\\":\\"" & errorMessage & "\\"}"
   end try
   `;
 
@@ -200,10 +217,15 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
 /**
  * Add a task to OmniFocus
  */
-export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{success: boolean, taskId?: string, error?: string, placement?: 'parent' | 'project' | 'inbox'}> {
+export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{
+  success: boolean;
+  taskId?: string;
+  error?: string;
+  placement?: 'parent' | 'project' | 'inbox';
+}> {
   // Generate AppleScript
   const script = generateAppleScript(params);
-  console.error("Executing AppleScript via temp file...");
+  console.error('Executing AppleScript via temp file...');
 
   // Write to a secure temporary file
   const tempFile = writeSecureTempFile(script, 'omnifocus_add', '.applescript');
@@ -213,10 +235,10 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     const { stdout, stderr } = await execFileAsync('osascript', [tempFile.path]);
 
     if (stderr) {
-      console.error("AppleScript stderr:", stderr);
+      console.error('AppleScript stderr:', stderr);
     }
 
-    console.error("AppleScript stdout:", stdout);
+    console.error('AppleScript stdout:', stdout);
 
     // Parse the result
     try {
@@ -230,18 +252,18 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
         placement: result.placement
       };
     } catch (parseError) {
-      console.error("Error parsing AppleScript result:", parseError);
+      console.error('Error parsing AppleScript result:', parseError);
       return {
         success: false,
         error: `Failed to parse result: ${stdout}`
       };
     }
   } catch (error: unknown) {
-    console.error("Error in addOmniFocusTask:", error);
+    console.error('Error in addOmniFocusTask:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,
-      error: errorMessage || "Unknown error in addOmniFocusTask"
+      error: errorMessage || 'Unknown error in addOmniFocusTask'
     };
   } finally {
     // Cleanup temp file

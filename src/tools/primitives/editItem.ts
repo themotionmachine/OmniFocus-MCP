@@ -1,7 +1,8 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { generateDateAssignmentV2 } from '../../utils/dateFormatting.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
+
 const execFileAsync = promisify(execFile);
 
 // Status options for tasks and projects
@@ -10,27 +11,27 @@ type ProjectStatus = 'active' | 'completed' | 'dropped' | 'onHold';
 
 // Interface for item edit parameters
 export interface EditItemParams {
-  id?: string;                  // ID of the task or project to edit
-  name?: string;                // Name of the task or project to edit (as fallback if ID not provided)
+  id?: string; // ID of the task or project to edit
+  name?: string; // Name of the task or project to edit (as fallback if ID not provided)
   itemType: 'task' | 'project'; // Type of item to edit
 
   // Common editable fields
-  newName?: string;             // New name for the item
-  newNote?: string;             // New note for the item
-  newDueDate?: string;          // New due date in ISO format (empty string to clear)
-  newDeferDate?: string;        // New defer date in ISO format (empty string to clear)
-  newFlagged?: boolean;         // New flagged status (false to remove flag, true to add flag)
+  newName?: string; // New name for the item
+  newNote?: string; // New note for the item
+  newDueDate?: string; // New due date in ISO format (empty string to clear)
+  newDeferDate?: string; // New defer date in ISO format (empty string to clear)
+  newFlagged?: boolean; // New flagged status (false to remove flag, true to add flag)
   newEstimatedMinutes?: number; // New estimated minutes
 
   // Task-specific fields
-  newStatus?: TaskStatus;       // New status for tasks (incomplete, completed, dropped)
-  addTags?: string[];           // Tags to add to the task
-  removeTags?: string[];        // Tags to remove from the task
-  replaceTags?: string[];       // Tags to replace all existing tags with
+  newStatus?: TaskStatus; // New status for tasks (incomplete, completed, dropped)
+  addTags?: string[]; // Tags to add to the task
+  removeTags?: string[]; // Tags to remove from the task
+  replaceTags?: string[]; // Tags to replace all existing tags with
 
   // Project-specific fields
-  newSequential?: boolean;      // Whether the project should be sequential
-  newFolderName?: string;       // New folder to move the project to
+  newSequential?: boolean; // Whether the project should be sequential
+  newFolderName?: string; // New folder to move the project to
   newProjectStatus?: ProjectStatus; // New status for projects
 }
 
@@ -45,7 +46,7 @@ function generateAppleScript(params: EditItemParams): string {
 
   // Verify we have at least one identifier
   if (!id && !name) {
-    return `return "{\\\"success\\\":false,\\\"error\\\":\\\"Either id or name must be provided\\\"}"`;
+    return `return "{\\"success\\":false,\\"error\\":\\"Either id or name must be provided\\"}"`;
   }
 
   // Collect all date constructions that need to happen outside tell blocks
@@ -75,7 +76,7 @@ function generateAppleScript(params: EditItemParams): string {
 
   // Add date constructions outside tell blocks
   if (datePreScripts.length > 0) {
-    script += datePreScripts.join('\n') + '\n\n';
+    script += `${datePreScripts.join('\n')}\n\n`;
   }
 
   // Start the main script
@@ -279,7 +280,9 @@ function generateAppleScript(params: EditItemParams): string {
 
     // Handle tag operations
     if (params.replaceTags && params.replaceTags.length > 0) {
-      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(", ");
+      const tagsList = params.replaceTags
+        .map((tag) => `"${tag.replace(/['"\\]/g, '\\$&')}"`)
+        .join(', ');
       script += `
         -- Replace all tags
         set tagNames to {${tagsList}}
@@ -308,7 +311,9 @@ function generateAppleScript(params: EditItemParams): string {
     } else {
       // Add tags if specified
       if (params.addTags && params.addTags.length > 0) {
-        const tagsList = params.addTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(", ");
+        const tagsList = params.addTags
+          .map((tag) => `"${tag.replace(/['"\\]/g, '\\$&')}"`)
+          .join(', ');
         script += `
         -- Add tags
         set tagNames to {${tagsList}}
@@ -330,7 +335,9 @@ function generateAppleScript(params: EditItemParams): string {
 
       // Remove tags if specified
       if (params.removeTags && params.removeTags.length > 0) {
-        const tagsList = params.removeTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(", ");
+        const tagsList = params.removeTags
+          .map((tag) => `"${tag.replace(/['"\\]/g, '\\$&')}"`)
+          .join(', ');
         script += `
         -- Remove tags
         set tagNames to {${tagsList}}
@@ -359,10 +366,14 @@ function generateAppleScript(params: EditItemParams): string {
 
     // Update project status
     if (params.newProjectStatus !== undefined) {
-      const statusValue = params.newProjectStatus === 'active' ? 'active status' :
-                          params.newProjectStatus === 'completed' ? 'done status' :
-                          params.newProjectStatus === 'dropped' ? 'dropped status' :
-                          'on hold status';
+      const statusValue =
+        params.newProjectStatus === 'active'
+          ? 'active status'
+          : params.newProjectStatus === 'completed'
+            ? 'done status'
+            : params.newProjectStatus === 'dropped'
+              ? 'dropped status'
+              : 'on hold status';
       script += `
         -- Update project status
         set status of foundItem to ${statusValue}
@@ -403,15 +414,15 @@ function generateAppleScript(params: EditItemParams): string {
         end repeat
 
         -- Return success with details
-        return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & itemName & "\\",\\\"changedProperties\\\":\\"" & changedPropsText & "\\"}"
+        return "{\\"success\\":true,\\"id\\":\\"" & itemId & "\\",\\"name\\":\\"" & itemName & "\\",\\"changedProperties\\":\\"" & changedPropsText & "\\"}"
       else
         -- Item not found
-        return "{\\\"success\\\":false,\\\"error\\\":\\\"Item not found\\"}"
+        return "{\\"success\\":false,\\"error\\":\\"Item not found\\"}"
       end if
     end tell
   end tell
 on error errorMessage
-  return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+  return "{\\"success\\":false,\\"error\\":\\"" & errorMessage & "\\"}"
 end try
 `;
 
@@ -422,21 +433,23 @@ end try
  * Edit a task or project in OmniFocus
  */
 export async function editItem(params: EditItemParams): Promise<{
-  success: boolean,
-  id?: string,
-  name?: string,
-  changedProperties?: string,
-  error?: string
+  success: boolean;
+  id?: string;
+  name?: string;
+  changedProperties?: string;
+  error?: string;
 }> {
   // Generate AppleScript
   const script = generateAppleScript(params);
 
-  console.error("Executing AppleScript for editing (V2)...");
-  console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
+  console.error('Executing AppleScript for editing (V2)...');
+  console.error(
+    `Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`
+  );
 
   // Log a preview of the script for debugging (first few lines)
-  const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
-  console.error("AppleScript preview:\n", scriptPreview);
+  const scriptPreview = `${script.split('\n').slice(0, 10).join('\n')}\n...`;
+  console.error('AppleScript preview:\n', scriptPreview);
 
   // Write script to secure temporary file
   const tempFile = writeSecureTempFile(script, 'edit_omnifocus', '.applescript');
@@ -446,10 +459,10 @@ export async function editItem(params: EditItemParams): Promise<{
     const { stdout, stderr } = await execFileAsync('osascript', [tempFile.path]);
 
     if (stderr) {
-      console.error("AppleScript stderr:", stderr);
+      console.error('AppleScript stderr:', stderr);
     }
 
-    console.error("AppleScript stdout:", stdout);
+    console.error('AppleScript stdout:', stdout);
 
     // Parse the result
     try {
@@ -464,24 +477,26 @@ export async function editItem(params: EditItemParams): Promise<{
         error: result.error
       };
     } catch (parseError) {
-      console.error("Error parsing AppleScript result:", parseError);
+      console.error('Error parsing AppleScript result:', parseError);
       return {
         success: false,
         error: `Failed to parse result: ${stdout}`
       };
     }
   } catch (error: unknown) {
-    console.error("Error in editItem execution:", error);
+    console.error('Error in editItem execution:', error);
 
     // Include more detailed error information
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     if (errorMessage.includes('syntax error')) {
-      console.error("This appears to be an AppleScript syntax error. Review the script generation logic.");
+      console.error(
+        'This appears to be an AppleScript syntax error. Review the script generation logic.'
+      );
     }
 
     return {
       success: false,
-      error: errorMessage || "Unknown error in editItem"
+      error: errorMessage || 'Unknown error in editItem'
     };
   } finally {
     // Clean up temp file

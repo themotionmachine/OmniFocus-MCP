@@ -1,14 +1,30 @@
-import { z } from 'zod';
-import { dumpDatabase } from '../dumpDatabase.js';
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
-import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
+import type { ServerNotification, ServerRequest } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
+import type {
+  OmnifocusDatabase,
+  OmnifocusFolder,
+  OmnifocusProject,
+  OmnifocusTag,
+  OmnifocusTask
+} from '../../types.js';
+import { dumpDatabase } from '../dumpDatabase.js';
 
 export const schema = z.object({
-  hideCompleted: z.boolean().optional().describe("Set to false to show completed and dropped tasks (default: true)"),
-  hideRecurringDuplicates: z.boolean().optional().describe("Set to true to hide duplicate instances of recurring tasks (default: true)")
+  hideCompleted: z
+    .boolean()
+    .optional()
+    .describe('Set to false to show completed and dropped tasks (default: true)'),
+  hideRecurringDuplicates: z
+    .boolean()
+    .optional()
+    .describe('Set to true to hide duplicate instances of recurring tasks (default: true)')
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
+export async function handler(
+  args: z.infer<typeof schema>,
+  _extra: RequestHandlerExtra<ServerRequest, ServerNotification>
+) {
   try {
     // Get raw database
     const database = await dumpDatabase();
@@ -20,17 +36,21 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
     });
 
     return {
-      content: [{
-        type: "text" as const,
-        text: formattedReport
-      }]
+      content: [
+        {
+          type: 'text' as const,
+          text: formattedReport
+        }
+      ]
     };
-  } catch (err: unknown) {
+  } catch (_err: unknown) {
     return {
-      content: [{
-        type: "text" as const,
-        text: `Error generating report. Please ensure OmniFocus is running and try again.`
-      }],
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error generating report. Please ensure OmniFocus is running and try again.`
+        }
+      ],
       isError: true
     };
   }
@@ -45,8 +65,12 @@ function formatCompactDate(isoDate: string | null): string {
 }
 
 // Function to format the database in the compact report format
-function formatCompactReport(database: any, options: { hideCompleted: boolean, hideRecurringDuplicates: boolean }): string {
-  const { hideCompleted, hideRecurringDuplicates } = options;
+function formatCompactReport(
+  database: OmnifocusDatabase,
+  options: { hideCompleted: boolean; hideRecurringDuplicates: boolean }
+): string {
+  const { hideCompleted } = options;
+  // Note: hideRecurringDuplicates is reserved for future use
 
   // Get current date for the header
   const today = new Date();
@@ -61,19 +85,19 @@ Dates: [M/D] | Duration: (30m) or (2h) | Tags: <tag1,tag2>
 Status: #next #avail #block #due #over #compl #drop\n\n`;
 
   // Map of folder IDs to folder objects for quick lookup
-  const folderMap = new Map();
-  Object.values(database.folders).forEach((folder: any) => {
+  const folderMap = new Map<string, OmnifocusFolder>();
+  Object.values(database.folders).forEach((folder: OmnifocusFolder) => {
     folderMap.set(folder.id, folder);
   });
 
   // Get all tag names to compute minimum unique prefixes
-  const allTagNames = Object.values(database.tags).map((tag: any) => tag.name);
+  const allTagNames = Object.values(database.tags).map((tag: OmnifocusTag) => tag.name);
   const tagPrefixMap = computeMinimumUniquePrefixes(allTagNames);
 
   // Function to get folder hierarchy path
-  function getFolderPath(folderId: string): string[] {
+  function _getFolderPath(folderId: string): string[] {
     const path = [];
-    let currentId = folderId;
+    let currentId: string | null = folderId;
 
     while (currentId) {
       const folder = folderMap.get(currentId);
@@ -87,10 +111,12 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
   }
 
   // Get root folders (no parent)
-  const rootFolders = Object.values(database.folders).filter((folder: any) => !folder.parentFolderID);
+  const rootFolders = Object.values(database.folders).filter(
+    (folder: OmnifocusFolder) => !folder.parentFolderID
+  );
 
   // Process folders recursively
-  function processFolder(folder: any, level: number): string {
+  function processFolder(folder: OmnifocusFolder, level: number): string {
     const indent = '   '.repeat(level);
     let folderOutput = `${indent}F: ${folder.name}\n`;
 
@@ -118,7 +144,7 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
   }
 
   // Process a project
-  function processProject(project: any, level: number): string {
+  function processProject(project: OmnifocusProject, level: number): string {
     const indent = '   '.repeat(level);
 
     // Skip if it's completed or dropped and we're hiding completed items
@@ -146,8 +172,8 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
     let projectOutput = `${indent}P: ${project.name}${flaggedSymbol}${statusInfo}\n`;
 
     // Process tasks in this project
-    const projectTasks = database.tasks.filter((task: any) =>
-      task.projectId === project.id && !task.parentId
+    const projectTasks = database.tasks.filter(
+      (task: OmnifocusTask) => task.projectId === project.id && !task.parentId
     );
 
     if (projectTasks.length > 0) {
@@ -160,11 +186,14 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
   }
 
   // Process a task
-  function processTask(task: any, level: number): string {
+  function processTask(task: OmnifocusTask, level: number): string {
     const indent = '   '.repeat(level);
 
     // Skip if it's completed or dropped and we're hiding completed items
-    if (hideCompleted && (task.completed || task.taskStatus === 'Completed' || task.taskStatus === 'Dropped')) {
+    if (
+      hideCompleted &&
+      (task.completed || task.taskStatus === 'Completed' || task.taskStatus === 'Dropped')
+    ) {
       return '';
     }
 
@@ -235,7 +264,7 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
 
     // Process subtasks
     if (task.childIds && task.childIds.length > 0) {
-      const childTasks = database.tasks.filter((t: any) => task.childIds.includes(t.id));
+      const childTasks = database.tasks.filter((t: OmnifocusTask) => task.childIds.includes(t.id));
 
       for (const childTask of childTasks) {
         taskOutput += processTask(childTask, level + 1);
@@ -251,16 +280,16 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
   }
 
   // Process projects not in any folder (if any)
-  const rootProjects = Object.values(database.projects).filter((project: any) => !project.folderID);
+  const rootProjects = Object.values(database.projects).filter(
+    (project: OmnifocusProject) => !project.folderID
+  );
 
   for (const project of rootProjects) {
     output += processProject(project, 0);
   }
 
   // Process tasks in the Inbox (not in any project)
-  const inboxTasks = database.tasks.filter(function (task: any) {
-    return !task.projectId;
-  });
+  const inboxTasks = database.tasks.filter((task: OmnifocusTask) => !task.projectId);
 
   if (inboxTasks.length > 0) {
     output += `\nP: Inbox\n`;
@@ -287,7 +316,7 @@ function computeMinimumUniquePrefixes(tagNames: string[]): Map<string, string> {
       const prefix = tagName.substring(0, prefixLength);
 
       // Check if this prefix uniquely identifies the tag
-      isUnique = tagNames.every(otherTag => {
+      isUnique = tagNames.every((otherTag) => {
         // If it's the same tag, skip comparison
         if (otherTag === tagName) return true;
 

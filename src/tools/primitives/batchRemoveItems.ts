@@ -1,4 +1,4 @@
-import { removeItem, RemoveItemParams } from './removeItem.js';
+import { type RemoveItemParams, removeItem } from './removeItem.js';
 
 // Define the parameters for the batch removal operation
 export type BatchRemoveItemsParams = RemoveItemParams;
@@ -6,9 +6,9 @@ export type BatchRemoveItemsParams = RemoveItemParams;
 // Define the result type for individual operations
 type ItemResult = {
   success: boolean;
-  id?: string;
-  name?: string;
-  error?: string;
+  id?: string | undefined;
+  name?: string | undefined;
+  error?: string | undefined;
 };
 
 // Define the result type for the batch operation
@@ -25,7 +25,7 @@ export async function batchRemoveItems(items: BatchRemoveItemsParams[]): Promise
   try {
     // Results array to track individual operation outcomes
     const results: ItemResult[] = [];
-    
+
     // Process each item in sequence
     for (const item of items) {
       try {
@@ -37,28 +37,28 @@ export async function batchRemoveItems(items: BatchRemoveItemsParams[]): Promise
           name: itemResult.name,
           error: itemResult.error
         });
-      } catch (itemError: any) {
+      } catch (itemError: unknown) {
         // Handle individual item errors
         results.push({
           success: false,
-          error: itemError.message || "Unknown error processing item"
+          error: itemError instanceof Error ? itemError.message : 'Unknown error processing item'
         });
       }
     }
-    
+
     // Determine overall success (true if at least one item was removed successfully)
-    const overallSuccess = results.some(result => result.success);
-    
+    const overallSuccess = results.some((result) => result.success);
+
     return {
       success: overallSuccess,
       results: results
     };
-  } catch (error: any) {
-    console.error("Error in batchRemoveItems:", error);
+  } catch (error: unknown) {
+    console.error('Error in batchRemoveItems:', error);
     return {
       success: false,
       results: [],
-      error: error.message || "Unknown error in batchRemoveItems"
+      error: error instanceof Error ? error.message : 'Unknown error in batchRemoveItems'
     };
   }
-} 
+}

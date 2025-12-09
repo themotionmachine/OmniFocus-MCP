@@ -445,3 +445,10 @@ The `cli.cjs` wrapper handles npm invocation and starts the built server.
 | Empty JXA results | JXA errors often produce empty output, not errors | Wrap everything in try-catch with JSON returns |
 | SDK type arguments | `RequestHandlerExtra` requires 2 type params in SDK 1.15.x+ | Use `RequestHandlerExtra<ServerRequest, ServerNotification>` in all handler signatures |
 | Module resolution | Legacy `"moduleResolution": "node"` causes infinite type recursion | Use `"moduleResolution": "NodeNext"` and `"module": "NodeNext"` in tsconfig.json |
+
+## Active Technologies
+- TypeScript 5.9+ targeting ES2024 + @modelcontextprotocol/sdk 1.24.3, Zod 4.1.x (001-tooling-modernization)
+- N/A (file-based JXA scripts only) (001-tooling-modernization)
+
+## Recent Changes
+- 001-tooling-modernization: Added TypeScript 5.9+ targeting ES2024 + @modelcontextprotocol/sdk 1.24.3, Zod 4.1.x

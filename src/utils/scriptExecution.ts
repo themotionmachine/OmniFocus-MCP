@@ -1,10 +1,8 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { existsSync } from 'fs';
+import { execFile } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { writeSecureTempFile } from './secureTempFile.js';
 
 const execFileAsync = promisify(execFile);
@@ -15,10 +13,14 @@ export async function executeJXA(script: string): Promise<unknown[]> {
 
   try {
     // Execute the script using osascript (execFile prevents command injection)
-    const { stdout, stderr } = await execFileAsync('osascript', ['-l', 'JavaScript', tempFile.path]);
+    const { stdout, stderr } = await execFileAsync('osascript', [
+      '-l',
+      'JavaScript',
+      tempFile.path
+    ]);
 
     if (stderr) {
-      console.error("Script stderr output:", stderr);
+      console.error('Script stderr output:', stderr);
     }
 
     // Parse the output as JSON
@@ -26,17 +28,17 @@ export async function executeJXA(script: string): Promise<unknown[]> {
       const result = JSON.parse(stdout);
       return result;
     } catch (e) {
-      console.error("Failed to parse script output as JSON:", e);
+      console.error('Failed to parse script output as JSON:', e);
 
       // If this contains a "Found X tasks" message, treat it as a successful non-JSON response
-      if (stdout.includes("Found") && stdout.includes("tasks")) {
+      if (stdout.includes('Found') && stdout.includes('tasks')) {
         return [];
       }
 
       return [];
     }
   } catch (error) {
-    console.error("Failed to execute JXA script:", error);
+    console.error('Failed to execute JXA script:', error);
     throw error;
   } finally {
     // Clean up the temporary file
@@ -45,12 +47,15 @@ export async function executeJXA(script: string): Promise<unknown[]> {
 }
 
 // Function to execute scripts in OmniFocus using the URL scheme
-export async function executeOmniFocusScript(scriptPath: string, args?: unknown): Promise<unknown> {
+export async function executeOmniFocusScript(
+  scriptPath: string,
+  _args?: unknown
+): Promise<unknown> {
   let tempFile: { path: string; cleanup: () => void } | null = null;
 
   try {
     // Get the actual script path (existing code remains the same)
-    let actualPath;
+    let actualPath: string;
     if (scriptPath.startsWith('@')) {
       const scriptName = scriptPath.substring(1);
       const __filename = fileURLToPath(import.meta.url);
@@ -74,7 +79,10 @@ export async function executeOmniFocusScript(scriptPath: string, args?: unknown)
     const scriptContent = readFileSync(actualPath, 'utf8');
 
     // Escape the script content properly for use in JXA
-    const escapedScript = scriptContent.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+    const escapedScript = scriptContent
+      .replace(/\\/g, '\\\\')
+      .replace(/`/g, '\\`')
+      .replace(/\$/g, '\\$');
 
     // Create a JXA script that will execute our OmniJS script in OmniFocus
     const jxaScript = `
@@ -98,21 +106,25 @@ export async function executeOmniFocusScript(scriptPath: string, args?: unknown)
     tempFile = writeSecureTempFile(jxaScript, 'jxa_wrapper', '.js');
 
     // Execute the JXA script using osascript (execFile prevents command injection)
-    const { stdout, stderr } = await execFileAsync('osascript', ['-l', 'JavaScript', tempFile.path]);
+    const { stdout, stderr } = await execFileAsync('osascript', [
+      '-l',
+      'JavaScript',
+      tempFile.path
+    ]);
 
     if (stderr) {
-      console.error("Script stderr output:", stderr);
+      console.error('Script stderr output:', stderr);
     }
 
     // Parse the output as JSON
     try {
       return JSON.parse(stdout);
     } catch (parseError) {
-      console.error("Error parsing script output:", parseError);
+      console.error('Error parsing script output:', parseError);
       return stdout;
     }
   } catch (error) {
-    console.error("Failed to execute OmniFocus script:", error);
+    console.error('Failed to execute OmniFocus script:', error);
     throw error;
   } finally {
     // Clean up the temporary file

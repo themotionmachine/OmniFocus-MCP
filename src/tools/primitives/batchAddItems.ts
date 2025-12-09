@@ -1,5 +1,5 @@
-import { addOmniFocusTask, AddOmniFocusTaskParams } from './addOmniFocusTask.js';
-import { addProject, AddProjectParams } from './addProject.js';
+import { type AddOmniFocusTaskParams, addOmniFocusTask } from './addOmniFocusTask.js';
+import { type AddProjectParams, addProject } from './addProject.js';
 
 // Define the parameters for the batch operation
 export type BatchAddItemsParams = {
@@ -25,8 +25,8 @@ export type BatchAddItemsParams = {
 // Define the result type for individual operations
 type ItemResult = {
   success: boolean;
-  id?: string;
-  error?: string;
+  id?: string | undefined;
+  error?: string | undefined;
 };
 
 // Define the result type for the batch operation
@@ -47,7 +47,9 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
 
     // Pre-validate cycles in tempId -> parentTempId references
     const tempIndex = new Map<string, number>();
-    items.forEach((it, idx) => { if (it.tempId) tempIndex.set(it.tempId, idx); });
+    items.forEach((it, idx) => {
+      if (it.tempId) tempIndex.set(it.tempId, idx);
+    });
 
     // Detect cycles using DFS and capture cycle paths
     const visiting = new Set<string>();
@@ -61,16 +63,21 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
       if (visiting.has(tempId)) return; // already on stack, handled by caller
       visiting.add(tempId);
       stack.push(tempId);
-      const idx = tempIndex.get(tempId)!;
-      const parentTemp = items[idx].parentTempId;
+      const idx = tempIndex.get(tempId);
+      if (idx === undefined) return;
+      const item = items[idx];
+      if (!item) return;
+      const parentTemp = item.parentTempId;
       if (parentTemp && tempIndex.has(parentTemp)) {
         if (visiting.has(parentTemp)) {
           // Found a cycle; construct path
           const startIdx = stack.indexOf(parentTemp);
           const cycleIds = stack.slice(startIdx).concat(parentTemp);
-          const cycleNames = cycleIds.map(tid => {
-            const i = tempIndex.get(tid)!;
-            return items[i].name || tid;
+          const cycleNames = cycleIds.map((tid) => {
+            const i = tempIndex.get(tid);
+            if (i === undefined) return tid;
+            const cycleItem = items[i];
+            return cycleItem?.name ?? tid;
           });
           const pathText = `${cycleNames.join(' -> ')}`;
           for (const tid of cycleIds) {
@@ -90,7 +97,8 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
 
     // Mark items that participate in cycles as failed early
     for (const tid of inCycle) {
-      const idx = tempIndex.get(tid)!;
+      const idx = tempIndex.get(tid);
+      if (idx === undefined) continue;
       const msg = cycleMessageByTempId.get(tid) || `Cycle detected involving tempId: ${tid}`;
       results[idx] = { success: false, error: msg };
       processed[idx] = true;
@@ -107,10 +115,12 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
 
     // Stable order: sort by hierarchyLevel (undefined -> 0), then original index
     const indexed = items.map((it, idx) => ({ ...it, __index: idx }));
-    indexed.sort((a, b) => (a.hierarchyLevel ?? 0) - (b.hierarchyLevel ?? 0) || a.__index - b.__index);
+    indexed.sort(
+      (a, b) => (a.hierarchyLevel ?? 0) - (b.hierarchyLevel ?? 0) || a.__index - b.__index
+    );
 
     let madeProgress = true;
-    while (processed.some(p => !p) && madeProgress) {
+    while (processed.some((p) => !p) && madeProgress) {
       madeProgress = false;
       for (const item of indexed) {
         const i = item.__index;
@@ -175,10 +185,10 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
           }
           processed[i] = true;
           madeProgress = true;
-        } catch (itemError: any) {
+        } catch (itemError: unknown) {
           results[i] = {
             success: false,
-            error: itemError?.message || 'Unknown error processing item'
+            error: itemError instanceof Error ? itemError.message : 'Unknown error processing item'
           };
           processed[i] = true; // avoid infinite loop on thrown errors
           madeProgress = true;
@@ -190,18 +200,23 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
     for (const item of indexed) {
       const i = item.__index;
       if (!processed[i]) {
-        const reason = item.parentTempId && !tempToRealId.has(item.parentTempId)
-          ? `Unresolved parentTempId: ${item.parentTempId}`
-          : 'Unresolved dependency or cycle';
+        const reason =
+          item.parentTempId && !tempToRealId.has(item.parentTempId)
+            ? `Unresolved parentTempId: ${item.parentTempId}`
+            : 'Unresolved dependency or cycle';
         results[i] = { success: false, error: reason };
         processed[i] = true;
       }
     }
 
-    const overallSuccess = results.some(r => r?.success);
+    const overallSuccess = results.some((r) => r?.success);
     return { success: overallSuccess, results };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in batchAddItems:', error);
-    return { success: false, results: [], error: error?.message || 'Unknown error in batchAddItems' };
+    return {
+      success: false,
+      results: [],
+      error: error instanceof Error ? error.message : 'Unknown error in batchAddItems'
+    };
   }
 }

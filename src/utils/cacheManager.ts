@@ -1,16 +1,16 @@
-import { OmnifocusDatabase } from '../types.js';
+import type { OmnifocusDatabase } from '../types.js';
 import { executeOmniFocusScript } from './scriptExecution.js';
 import { writeSecureTempFile } from './secureTempFile.js';
 
 interface CacheEntry {
   data: OmnifocusDatabase;
   timestamp: Date;
-  checksum?: string;
+  checksum?: string | undefined;
 }
 
 interface CacheOptions {
-  ttlSeconds?: number;  // Time to live in seconds
-  maxSize?: number;     // Maximum cache size in MB
+  ttlSeconds?: number; // Time to live in seconds
+  maxSize?: number; // Maximum cache size in MB
   useChecksum?: boolean; // Whether to use checksum for validation
 }
 
@@ -105,7 +105,7 @@ class OmniFocusCacheManager {
   } {
     let oldestEntry: Date | null = null;
 
-    this.cache.forEach(entry => {
+    this.cache.forEach((entry) => {
       if (!oldestEntry || entry.timestamp < oldestEntry) {
         oldestEntry = entry.timestamp;
       }
@@ -160,7 +160,7 @@ class OmniFocusCacheManager {
       const tempFile = writeSecureTempFile(script, 'omnifocus_checksum', '.js');
 
       try {
-        const result = await executeOmniFocusScript(tempFile.path) as { checksum?: string };
+        const result = (await executeOmniFocusScript(tempFile.path)) as { checksum?: string };
         return result.checksum || `fallback-${Date.now()}`;
       } finally {
         tempFile.cleanup();

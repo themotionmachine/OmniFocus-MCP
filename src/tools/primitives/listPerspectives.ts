@@ -1,5 +1,5 @@
+import type { OmnifocusPerspective } from '../../types.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
-import { OmnifocusPerspective } from '../../types.js';
 
 export interface ListPerspectivesParams {
   includeBuiltIn?: boolean;
@@ -12,15 +12,17 @@ interface ListPerspectivesResult {
   error?: string;
 }
 
-export async function listPerspectives(params: ListPerspectivesParams = {}): Promise<ListPerspectivesResult> {
+export async function listPerspectives(
+  params: ListPerspectivesParams = {}
+): Promise<ListPerspectivesResult> {
   const { includeBuiltIn = true, includeCustom = true } = params;
-  
+
   try {
     // Execute the OmniJS script to list perspectives
     // This uses the built-in OmniFocus JavaScript API
-    const result = await executeOmniFocusScript('@listPerspectives.js') as {
+    const result = (await executeOmniFocusScript('@listPerspectives.js')) as {
       error?: string;
-      perspectives?: any[];
+      perspectives?: OmnifocusPerspective[];
     };
 
     if (result.error) {
@@ -32,20 +34,19 @@ export async function listPerspectives(params: ListPerspectivesParams = {}): Pro
 
     // Filter perspectives based on parameters
     let perspectives = result.perspectives || [];
-    
+
     if (!includeBuiltIn) {
-      perspectives = perspectives.filter((p: any) => p.type !== 'builtin');
+      perspectives = perspectives.filter((p) => p.type !== 'builtin');
     }
-    
+
     if (!includeCustom) {
-      perspectives = perspectives.filter((p: any) => p.type !== 'custom');
+      perspectives = perspectives.filter((p) => p.type !== 'custom');
     }
-    
+
     return {
       success: true,
       perspectives: perspectives
     };
-    
   } catch (error) {
     console.error('Error listing perspectives:', error);
     return {

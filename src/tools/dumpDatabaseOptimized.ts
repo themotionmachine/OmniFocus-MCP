@@ -1,8 +1,8 @@
-import { OmnifocusDatabase } from '../types.js';
-import { executeOmniFocusScript } from '../utils/scriptExecution.js';
+import type { OmnifocusDatabase } from '../types.js';
 import { getCacheManager } from '../utils/cacheManager.js';
-import { dumpDatabase as originalDumpDatabase } from './dumpDatabase.js';
+import { executeOmniFocusScript } from '../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../utils/secureTempFile.js';
+import { dumpDatabase as originalDumpDatabase } from './dumpDatabase.js';
 
 /**
  * Optimized version of dumpDatabase that uses caching
@@ -120,7 +120,7 @@ export async function getDatabaseStats(): Promise<{
   const tempFile = writeSecureTempFile(script, 'omnifocus_stats', '.js');
 
   try {
-    const result = await executeOmniFocusScript(tempFile.path) as {
+    const result = (await executeOmniFocusScript(tempFile.path)) as {
       error?: string;
       taskCount: number;
       activeTaskCount: number;
@@ -234,7 +234,7 @@ export async function getChangesSince(since: Date): Promise<{
   const tempFile = writeSecureTempFile(script, 'omnifocus_changes', '.js');
 
   try {
-    const result = await executeOmniFocusScript(tempFile.path) as {
+    const result = (await executeOmniFocusScript(tempFile.path)) as {
       error?: string;
       newTasks: unknown[];
       updatedTasks: unknown[];
