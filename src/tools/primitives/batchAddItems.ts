@@ -40,6 +40,23 @@ type BatchResult = {
  * Add multiple items (tasks or projects) to OmniFocus
  */
 export async function batchAddItems(items: BatchAddItemsParams[]): Promise<BatchResult> {
+  // Validate input
+  if (!Array.isArray(items)) {
+    return {
+      success: false,
+      results: [],
+      error: 'Items parameter must be an array'
+    };
+  }
+
+  if (items.length === 0) {
+    return {
+      success: false,
+      results: [],
+      error: 'Items array cannot be empty'
+    };
+  }
+
   try {
     const results: ItemResult[] = new Array(items.length);
     const processed: boolean[] = new Array(items.length).fill(false);

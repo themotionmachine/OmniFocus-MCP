@@ -134,6 +134,14 @@ function generateAppleScript(params: AddProjectParams): string {
 export async function addProject(
   params: AddProjectParams
 ): Promise<{ success: boolean; projectId?: string; error?: string }> {
+  // Validate required parameters
+  if (!params || typeof params.name !== 'string' || params.name.trim().length === 0) {
+    return {
+      success: false,
+      error: 'Project name is required and must be a non-empty string'
+    };
+  }
+
   // Generate AppleScript
   const script = generateAppleScript(params);
 

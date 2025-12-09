@@ -101,8 +101,21 @@ const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error('MCP Server connected and ready to accept commands from Claude');
   } catch (err) {
-    console.error(`Failed to start MCP server: ${err}`);
+    const error = err instanceof Error ? err : new Error(String(err));
+    console.error(`Failed to start MCP server: ${error.message}`);
+    console.error('Stack trace:', error.stack);
+    // Exit with error code to signal failure
+    process.exit(1);
   }
 })();
 
 // For a cleaner shutdown if the process is terminated
+process.on('SIGINT', () => {
+  console.error('Received SIGINT, shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.error('Received SIGTERM, shutting down gracefully...');
+  process.exit(0);
+});

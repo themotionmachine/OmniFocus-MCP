@@ -33,6 +33,17 @@ export function writeSecureTempFile(
   prefix: string = 'temp',
   extension: string = '.tmp'
 ): SecureTempFile {
+  // Validate inputs
+  if (typeof content !== 'string') {
+    throw new Error('Content parameter must be a string');
+  }
+  if (typeof prefix !== 'string' || prefix.trim().length === 0) {
+    throw new Error('Prefix parameter must be a non-empty string');
+  }
+  if (typeof extension !== 'string' || !extension.startsWith('.')) {
+    throw new Error('Extension parameter must be a string starting with "."');
+  }
+
   const file = tmp.fileSync({
     prefix: `${prefix}_`,
     postfix: extension,

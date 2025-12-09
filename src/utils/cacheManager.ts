@@ -46,8 +46,15 @@ class OmniFocusCacheManager {
 
     // If using checksums, validate the cache is still current
     if (this.options.useChecksum && entry.checksum) {
-      const currentChecksum = await this.getDatabaseChecksum();
-      if (currentChecksum !== entry.checksum) {
+      try {
+        const currentChecksum = await this.getDatabaseChecksum();
+        if (currentChecksum !== entry.checksum) {
+          this.cache.delete(key);
+          return null;
+        }
+      } catch (error) {
+        // If checksum validation fails, invalidate cache to be safe
+        console.error('Error validating cache checksum:', error);
         this.cache.delete(key);
         return null;
       }
@@ -68,7 +75,16 @@ class OmniFocusCacheManager {
       this.evictOldest();
     }
 
-    const checksum = this.options.useChecksum ? await this.getDatabaseChecksum() : undefined;
+    let checksum: string | undefined;
+    if (this.options.useChecksum) {
+      try {
+        checksum = await this.getDatabaseChecksum();
+      } catch (error) {
+        console.error('Error getting checksum for cache:', error);
+        // Continue without checksum rather than failing the cache operation
+        checksum = undefined;
+      }
+    }
 
     this.cache.set(key, {
       data,
@@ -123,51 +139,55 @@ class OmniFocusCacheManager {
    * Get a lightweight checksum of the database state
    */
   private async getDatabaseChecksum(): Promise<string> {
+    const script = `
+      (() => {
+        try {
+          // Get counts and latest modification times as a simple checksum
+          const taskCount = flattenedTasks.length;
+          const projectCount = flattenedProjects.length;
+
+          // Get the most recent modification time
+          let latestMod = new Date(0);
+
+          flattenedTasks.forEach(task => {
+            if (task.modificationDate && task.modificationDate > latestMod) {
+              latestMod = task.modificationDate;
+            }
+          });
+
+          flattenedProjects.forEach(project => {
+            if (project.modificationDate && project.modificationDate > latestMod) {
+              latestMod = project.modificationDate;
+            }
+          });
+
+          // Create a simple checksum string
+          const checksum = taskCount + "-" + projectCount + "-" + latestMod.getTime();
+
+          return JSON.stringify({ checksum });
+        } catch (error) {
+          return JSON.stringify({ checksum: "error-" + Date.now() });
+        }
+      })();
+    `;
+
+    // Write to secure temp file and execute
+    const tempFile = writeSecureTempFile(script, 'omnifocus_checksum', '.js');
+
     try {
-      const script = `
-        (() => {
-          try {
-            // Get counts and latest modification times as a simple checksum
-            const taskCount = flattenedTasks.length;
-            const projectCount = flattenedProjects.length;
-
-            // Get the most recent modification time
-            let latestMod = new Date(0);
-
-            flattenedTasks.forEach(task => {
-              if (task.modificationDate && task.modificationDate > latestMod) {
-                latestMod = task.modificationDate;
-              }
-            });
-
-            flattenedProjects.forEach(project => {
-              if (project.modificationDate && project.modificationDate > latestMod) {
-                latestMod = project.modificationDate;
-              }
-            });
-
-            // Create a simple checksum string
-            const checksum = taskCount + "-" + projectCount + "-" + latestMod.getTime();
-
-            return JSON.stringify({ checksum });
-          } catch (error) {
-            return JSON.stringify({ checksum: "error-" + Date.now() });
-          }
-        })();
-      `;
-
-      // Write to secure temp file and execute
-      const tempFile = writeSecureTempFile(script, 'omnifocus_checksum', '.js');
-
-      try {
-        const result = (await executeOmniFocusScript(tempFile.path)) as { checksum?: string };
-        return result.checksum || `fallback-${Date.now()}`;
-      } finally {
-        tempFile.cleanup();
+      const result = (await executeOmniFocusScript(tempFile.path)) as { checksum?: string };
+      if (!result || !result.checksum) {
+        throw new Error('Invalid checksum result from script');
       }
+      return result.checksum;
     } catch (error) {
       console.error('Error getting database checksum:', error);
-      return `error-${Date.now()}`;
+      // Re-throw with context instead of returning fallback
+      throw new Error(
+        `Failed to get database checksum: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      tempFile.cleanup();
     }
   }
 

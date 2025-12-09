@@ -439,6 +439,28 @@ export async function editItem(params: EditItemParams): Promise<{
   changedProperties?: string;
   error?: string;
 }> {
+  // Validate required parameters
+  if (!params) {
+    return {
+      success: false,
+      error: 'Parameters object is required'
+    };
+  }
+
+  if (!params.id && !params.name) {
+    return {
+      success: false,
+      error: 'Either id or name must be provided'
+    };
+  }
+
+  if (!params.itemType || !['task', 'project'].includes(params.itemType)) {
+    return {
+      success: false,
+      error: 'itemType must be either "task" or "project"'
+    };
+  }
+
   // Generate AppleScript
   const script = generateAppleScript(params);
 

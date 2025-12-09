@@ -30,6 +30,21 @@ interface QueryResult {
 }
 
 export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<QueryResult> {
+  // Validate required parameters
+  if (!params || !params.entity) {
+    return {
+      success: false,
+      error: 'Entity parameter is required'
+    };
+  }
+
+  if (!['tasks', 'projects', 'folders'].includes(params.entity)) {
+    return {
+      success: false,
+      error: `Invalid entity type: ${params.entity}. Must be 'tasks', 'projects', or 'folders'`
+    };
+  }
+
   const jxaScript = generateQueryScript(params);
   const tempFile = writeSecureTempFile(jxaScript, 'omnifocus_query', '.js');
 

@@ -9,6 +9,11 @@ const execFileAsync = promisify(execFile);
 
 // Helper function to execute OmniFocus scripts
 export async function executeJXA(script: string): Promise<unknown[]> {
+  // Validate input
+  if (typeof script !== 'string' || script.trim().length === 0) {
+    throw new Error('Script parameter must be a non-empty string');
+  }
+
   const tempFile = writeSecureTempFile(script, 'jxa_script', '.js');
 
   try {
@@ -28,18 +33,25 @@ export async function executeJXA(script: string): Promise<unknown[]> {
       const result = JSON.parse(stdout);
       return result;
     } catch (e) {
-      console.error('Failed to parse script output as JSON:', e);
+      const parseError = e instanceof Error ? e : new Error(String(e));
+      console.error('Failed to parse script output as JSON:', parseError.message);
+      console.error('Script output was:', stdout);
 
       // If this contains a "Found X tasks" message, treat it as a successful non-JSON response
       if (stdout.includes('Found') && stdout.includes('tasks')) {
         return [];
       }
 
+      // Return empty array for backwards compatibility, but log the issue
+      console.error('Returning empty array due to parse failure');
       return [];
     }
   } catch (error) {
-    console.error('Failed to execute JXA script:', error);
-    throw error;
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error('Failed to execute JXA script:', err.message);
+    console.error('Script content (first 200 chars):', script.substring(0, 200));
+    // Re-throw with enhanced error message
+    throw new Error(`JXA execution failed: ${err.message}`);
   } finally {
     // Clean up the temporary file
     tempFile.cleanup();
@@ -47,10 +59,12 @@ export async function executeJXA(script: string): Promise<unknown[]> {
 }
 
 // Function to execute scripts in OmniFocus using the URL scheme
-export async function executeOmniFocusScript(
-  scriptPath: string,
-  _args?: unknown
-): Promise<unknown> {
+export async function executeOmniFocusScript(scriptPath: string): Promise<unknown> {
+  // Validate input
+  if (typeof scriptPath !== 'string' || scriptPath.trim().length === 0) {
+    throw new Error('Script path must be a non-empty string');
+  }
+
   let tempFile: { path: string; cleanup: () => void } | null = null;
 
   try {
@@ -120,12 +134,18 @@ export async function executeOmniFocusScript(
     try {
       return JSON.parse(stdout);
     } catch (parseError) {
-      console.error('Error parsing script output:', parseError);
+      const err = parseError instanceof Error ? parseError : new Error(String(parseError));
+      console.error('Error parsing script output:', err.message);
+      console.error('Script output was:', stdout);
+      // Return stdout as fallback but log the parsing failure
       return stdout;
     }
   } catch (error) {
-    console.error('Failed to execute OmniFocus script:', error);
-    throw error;
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error('Failed to execute OmniFocus script:', err.message);
+    console.error('Script path:', scriptPath);
+    // Re-throw with enhanced context
+    throw new Error(`OmniFocus script execution failed: ${err.message}`);
   } finally {
     // Clean up the temporary file
     if (tempFile) {

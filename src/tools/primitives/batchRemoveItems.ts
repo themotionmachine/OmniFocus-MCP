@@ -22,6 +22,23 @@ type BatchResult = {
  * Remove multiple items (tasks or projects) from OmniFocus
  */
 export async function batchRemoveItems(items: BatchRemoveItemsParams[]): Promise<BatchResult> {
+  // Validate input
+  if (!Array.isArray(items)) {
+    return {
+      success: false,
+      results: [],
+      error: 'Items parameter must be an array'
+    };
+  }
+
+  if (items.length === 0) {
+    return {
+      success: false,
+      results: [],
+      error: 'Items array cannot be empty'
+    };
+  }
+
   try {
     // Results array to track individual operation outcomes
     const results: ItemResult[] = [];

@@ -223,6 +223,14 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
   error?: string;
   placement?: 'parent' | 'project' | 'inbox';
 }> {
+  // Validate required parameters
+  if (!params || typeof params.name !== 'string' || params.name.trim().length === 0) {
+    return {
+      success: false,
+      error: 'Task name is required and must be a non-empty string'
+    };
+  }
+
   // Generate AppleScript
   const script = generateAppleScript(params);
   console.error('Executing AppleScript via temp file...');

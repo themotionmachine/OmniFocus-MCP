@@ -32,6 +32,18 @@ interface PerspectiveViewResult {
 export async function getPerspectiveView(
   params: GetPerspectiveViewParams
 ): Promise<PerspectiveViewResult> {
+  // Validate required parameters
+  if (
+    !params ||
+    typeof params.perspectiveName !== 'string' ||
+    params.perspectiveName.trim().length === 0
+  ) {
+    return {
+      success: false,
+      error: 'Perspective name is required and must be a non-empty string'
+    };
+  }
+
   const { perspectiveName, limit = 100, fields } = params;
   // Note: includeMetadata is reserved for future use
 
