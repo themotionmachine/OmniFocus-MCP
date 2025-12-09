@@ -94,22 +94,6 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
   const allTagNames = Object.values(database.tags).map((tag: OmnifocusTag) => tag.name);
   const tagPrefixMap = computeMinimumUniquePrefixes(allTagNames);
 
-  // Function to get folder hierarchy path
-  function _getFolderPath(folderId: string): string[] {
-    const path = [];
-    let currentId: string | null = folderId;
-
-    while (currentId) {
-      const folder = folderMap.get(currentId);
-      if (!folder) break;
-
-      path.unshift(folder.name);
-      currentId = folder.parentFolderID;
-    }
-
-    return path;
-  }
-
   // Get root folders (no parent)
   const rootFolders = Object.values(database.folders).filter(
     (folder: OmnifocusFolder) => !folder.parentFolderID
