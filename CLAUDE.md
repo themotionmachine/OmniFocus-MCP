@@ -73,7 +73,7 @@ interactions. Approach it with caution:
 
 ### ALWAYS
 
-- Run `npm run build` after any source changes
+- Run `pnpm build` after any source changes
 - Verify JXA scripts are copied to `dist/utils/omnifocusScripts/`
 - Use Zod schemas for all tool input validation
 - Return structured JSON from JXA scripts (never raw strings)
@@ -88,15 +88,15 @@ interactions. Approach it with caution:
 
 ### Tooling Discipline
 
-- Use the project's existing build system (`npm run build`)
-- Use the project's existing linter settings (ESLint, TypeScript strict mode)
+- Use the project's existing build system (`pnpm build` via tsup)
+- Use the project's existing linter/formatter (Biome, TypeScript strict mode)
 - Don't introduce new dependencies without strong justification
 - If a utility exists in the codebase, use it; don't create a new one
 
 ### Code Style
 
 - Follow existing conventions in the project
-- Refer to `.eslintrc`, `tsconfig.json`, and `.editorconfig` if present
+- Refer to `biome.json` and `tsconfig.json` for style rules
 - Text files should always end with an empty line
 - Use consistent naming: camelCase for functions, PascalCase for types
 
@@ -233,21 +233,39 @@ Automation) via AppleScript to interact with OmniFocus on macOS.
 ## Build and Development Commands
 
 ```bash
+# Install dependencies (pnpm recommended)
+pnpm install
+
 # Build the project (compiles TypeScript and copies JXA scripts)
-npm run build
+pnpm build
 
 # Start the server (must be built first)
-npm run start
+pnpm start
 
 # Watch mode for development (auto-recompile on changes)
-npm run dev
+pnpm dev
+
+# Run tests
+pnpm test              # Run once
+pnpm test:watch        # Watch mode
+pnpm test:coverage     # With V8 coverage
+
+# Linting and formatting (via Biome)
+pnpm lint              # Check code
+pnpm lint:fix          # Fix issues
+pnpm format            # Format code
+
+# Type checking
+pnpm typecheck         # TypeScript checking without emit
 ```
 
-The build process:
+The build process (via tsup):
 
-1. Compiles TypeScript from `src/` to `dist/`
-2. Copies JXA scripts from `src/utils/omnifocusScripts/*.js` to `dist/utils/omnifocusScripts/`
-3. Makes `dist/server.js` executable
+1. Compiles TypeScript from `src/` to `dist/` (ESM + CJS dual output)
+2. Generates type declarations (`.d.ts` files)
+3. Creates sourcemaps for debugging
+4. Copies JXA scripts from `src/utils/omnifocusScripts/*.js` to `dist/utils/omnifocusScripts/`
+5. Makes `dist/server.js` executable
 
 ## Architecture Overview
 
@@ -409,12 +427,14 @@ When creating nested tasks:
 
 ## Testing Approach
 
-Currently no automated tests. When adding tests:
+Tests run via Vitest (`pnpm test`). When adding tests:
 
 - Mock `executeJXA()` to avoid requiring OmniFocus installation
 - Test JXA string generation separately from execution
 - Validate cycle detection in batch operations
 - Test date parsing and formatting edge cases
+- Place test files in `tests/` or colocate as `*.test.ts` in `src/`
+- Use `pnpm test:coverage` to check coverage via V8
 
 ## Claude Desktop Integration
 
@@ -437,7 +457,7 @@ The `cli.cjs` wrapper handles npm invocation and starts the built server.
 
 | Gotcha | Why It Happens | How to Avoid |
 |--------|----------------|--------------|
-| Build before test | Server runs from `dist/`, not `src/` | Use `npm run dev` for watch mode |
+| Build before test | Server runs from `dist/`, not `src/` | Use `pnpm dev` for watch mode |
 | JXA syntax errors | Missing quotes or escaping causes silent failures | Test in Script Editor first |
 | Date timezones | OmniFocus interprets local time | Always use explicit ISO 8601 format |
 | Perspective state | OmniJS can't switch perspectives programmatically | Document limitation in tool description |
@@ -447,8 +467,24 @@ The `cli.cjs` wrapper handles npm invocation and starts the built server.
 | Module resolution | Legacy `"moduleResolution": "node"` causes infinite type recursion | Use `"moduleResolution": "NodeNext"` and `"module": "NodeNext"` in tsconfig.json |
 
 ## Active Technologies
-- TypeScript 5.9+ targeting ES2024 + @modelcontextprotocol/sdk 1.24.3, Zod 4.1.x (001-tooling-modernization)
-- N/A (file-based JXA scripts only) (001-tooling-modernization)
+
+| Category | Technology | Version |
+|----------|------------|---------|
+| Runtime | Node.js | 24+ |
+| Language | TypeScript | 5.9+ |
+| Build | tsup | 8.5+ |
+| Test | Vitest | 4.0+ |
+| Lint/Format | Biome | 2.3+ |
+| MCP SDK | @modelcontextprotocol/sdk | 1.24.3 |
+| Validation | Zod | 4.1.x |
+| Dev Watch | tsx | 4.21+ |
+| Git Hooks | Husky + lint-staged | Latest |
 
 ## Recent Changes
-- 001-tooling-modernization: Added TypeScript 5.9+ targeting ES2024 + @modelcontextprotocol/sdk 1.24.3, Zod 4.1.x
+
+- **001-tooling-modernization**: Complete tooling overhaul
+  - Migrated build from tsc to tsup (ESM + CJS dual output)
+  - Added Vitest for testing with V8 coverage
+  - Replaced ESLint + Prettier with Biome
+  - Upgraded to Node.js 24+, TypeScript 5.9+, MCP SDK 1.24.3, Zod 4.1.x
+  - Added Husky + lint-staged for pre-commit hooks

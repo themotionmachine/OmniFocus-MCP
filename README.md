@@ -26,7 +26,7 @@ implementation phases.
 
 | Phase | Category                                  | Tools | Status   |
 | ----- | ----------------------------------------- | ----- | -------- |
-| 0     | Tooling Setup (pnpm, tsup, Vitest, Biome) | -     | Pending  |
+| 0     | Tooling Setup (pnpm, tsup, Vitest, Biome) | -     | Complete |
 | 0.5   | MCP SDK Upgrade to 1.24.x                 | -     | Complete |
 | 1     | Folders                                   | 5     | Pending  |
 | 2     | Tags                                      | 6     | Pending  |
@@ -347,7 +347,80 @@ Due to OmniJS limitations, it cannot programmatically switch perspectives.
 
 ## Development
 
-Documentation to follow.
+### Prerequisites
+
+- **Node.js 24+** required
+- **pnpm** recommended (npm/yarn also work)
+- macOS with OmniFocus installed (for integration testing)
+
+### Quick Setup
+
+```bash
+# Install dependencies
+pnpm install
+
+# Build the project
+pnpm build
+
+# Start the server
+pnpm start
+```
+
+### Development Commands
+
+| Command              | Description                                      |
+| -------------------- | ------------------------------------------------ |
+| `pnpm build`         | Build with tsup (ESM + CJS, sourcemaps, types)   |
+| `pnpm dev`           | Watch mode with tsx (auto-rebuild on changes)    |
+| `pnpm start`         | Run the built server                             |
+| `pnpm test`          | Run tests with Vitest                            |
+| `pnpm test:watch`    | Run tests in watch mode                          |
+| `pnpm test:coverage` | Run tests with V8 coverage report                |
+| `pnpm lint`          | Check code with Biome                            |
+| `pnpm lint:fix`      | Fix lint issues automatically                    |
+| `pnpm format`        | Format code with Biome                           |
+| `pnpm typecheck`     | TypeScript type checking without emit            |
+
+### Tooling Stack
+
+- **[tsup](https://tsup.egoist.dev/)** - Fast TypeScript bundler powered by
+  esbuild. Generates ESM, CJS, and type definitions
+- **[Vitest](https://vitest.dev/)** - Vite-native test framework with V8
+  coverage
+- **[Biome](https://biomejs.dev/)** - Fast linter and formatter (replaces
+  ESLint + Prettier)
+- **[tsx](https://tsx.is/)** - TypeScript execution for development watch mode
+- **[Husky](https://typicode.github.io/husky/)** - Git hooks for pre-commit
+  linting
+
+### Project Structure
+
+```text
+src/
+├── server.ts              # Entry point, MCP server setup
+├── tools/
+│   ├── definitions/       # Tool schemas and MCP handlers
+│   └── primitives/        # Core business logic
+├── utils/
+│   ├── omnifocusScripts/  # JXA scripts (copied to dist on build)
+│   └── scriptExecution.ts # JXA execution utilities
+└── omnifocustypes.ts      # TypeScript types for OmniFocus
+
+tests/                     # Test files
+dist/                      # Build output (gitignored)
+```
+
+### Testing JXA Scripts
+
+JXA (JavaScript for Automation) scripts cannot be tested in CI as they require
+macOS with OmniFocus. Test JXA changes manually:
+
+1. Open Script Editor.app on macOS
+2. Set language to JavaScript (View → Show Log, then choose JavaScript)
+3. Copy your JXA code and run it
+4. Verify output before integrating
+
+See `CLAUDE.md` for detailed JXA development guidelines.
 
 ## How It Works
 
