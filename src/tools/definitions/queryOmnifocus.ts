@@ -180,8 +180,15 @@ function formatTasks(tasks: any[]): string {
     if (task.completionDate) {
       parts.push(`[completed: ${formatDate(task.completionDate)}]`);
     }
-    
-    return parts.join(' ');
+
+    let result = parts.join(' ');
+
+    // Add note on a new line if present
+    if (task.note) {
+      result += `\n  Note: ${task.note}`;
+    }
+
+    return result;
   }).join('\n');
 }
 
@@ -192,8 +199,15 @@ function formatProjects(projects: any[]): string {
     const taskCount = project.taskCount !== undefined && project.taskCount !== null ? ` (${project.taskCount} tasks)` : '';
     const flagged = project.flagged ? '🚩 ' : '';
     const due = project.dueDate ? ` [due: ${formatDate(project.dueDate)}]` : '';
-    
-    return `P: ${flagged}${project.name}${status}${due}${folder}${taskCount}`;
+
+    let result = `P: ${flagged}${project.name}${status}${due}${folder}${taskCount}`;
+
+    // Add note on a new line if present
+    if (project.note) {
+      result += `\n  Note: ${project.note}`;
+    }
+
+    return result;
   }).join('\n');
 }
 

@@ -99,7 +99,7 @@ The server currently provides these tools:
 Efficiently query your OmniFocus database with powerful filters. Get specific tasks, projects, or folders without loading the entire database.
 
 Key Features:
-- **Filter by multiple criteria**: project, tags, status, due dates, flags, and more
+- **Filter by multiple criteria**: project, tags, status, due dates, flags, notes, and more
 - **Request specific fields**: Reduce response size by only getting the data you need
 - **Sort and limit results**: Control the output format
 - **Much faster than dump_database** for targeted queries
@@ -115,7 +115,7 @@ Common Uses:
 Parameters:
 - `entity`: Type to query ('tasks', 'projects', or 'folders')
 - `filters`: (Optional) Narrow results by project, tags, status, dates, etc.
-- `fields`: (Optional) Specific fields to return (id, name, dueDate, etc.)
+- `fields`: (Optional) Specific fields to return (id, name, note, dueDate, etc.)
 - `limit`: (Optional) Maximum items to return
 - `sortBy`: (Optional) Field to sort by
 - `includeCompleted`: (Optional) Include completed items (default: false)
