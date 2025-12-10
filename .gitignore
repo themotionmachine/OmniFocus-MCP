@@ -16,7 +16,8 @@ build/
 
 # IDE and editor files
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
 *.swp
 *.swo
 .DS_Store
