@@ -673,7 +673,7 @@ documentation in the `/specs/` directory:
 - `research.md` - API research and technical decisions
 - `quickstart.md` - Developer implementation guide
 
-See `/specs/001-tooling-modernization/` and `/specs/002-folder-tools/` for
+See `/specs/000-tooling-setup/` and `/specs/001-folders/` for
 examples.
 
 ## How It Works

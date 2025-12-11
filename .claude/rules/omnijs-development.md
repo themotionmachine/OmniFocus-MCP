@@ -96,7 +96,7 @@ deleteObject(item)             // Delete task, project, or folder
 
 ## Migration from AppleScript to OmniJS
 
-As of 002-folder-tools, ALL primitives use Omni Automation JavaScript
+As of Phase 1 (001-folders), ALL primitives use Omni Automation JavaScript
 executed via `executeOmniFocusScript()`.
 
 Previous patterns (now obsolete):
@@ -111,4 +111,4 @@ When refactoring old code:
 3. Wrap in IIFE with try-catch returning JSON
 4. Update tests to mock OmniJS output format
 
-See `specs/002-folder-tools/research.md` for OmniJS API reference.
+See `specs/001-folders/research.md` for OmniJS API reference.
