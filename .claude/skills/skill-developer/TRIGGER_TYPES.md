@@ -14,15 +14,15 @@ Complete reference for configuring skill triggers in Claude Code's skill auto-ac
 
 ## Keyword Triggers (Explicit)
 
-### How It Works
+### Keywords - How It Works
 
 Case-insensitive substring matching in user's prompt.
 
-### Use For
+### Keywords - Use For
 
 Topic-based activation where user explicitly mentions the subject.
 
-### Configuration
+### Keywords - Configuration
 
 ```json
 "promptTriggers": {
@@ -30,13 +30,13 @@ Topic-based activation where user explicitly mentions the subject.
 }
 ```
 
-### Example
+### Keywords - Example
 
 - User prompt: "how does the **layout** system work?"
 - Matches: "layout" keyword
 - Activates: `project-catalog-developer`
 
-### Best Practices
+### Keywords - Best Practices
 
 - Use specific, unambiguous terms
 - Include common variations ("layout", "layout system", "grid layout")
@@ -47,15 +47,15 @@ Topic-based activation where user explicitly mentions the subject.
 
 ## Intent Pattern Triggers (Implicit)
 
-### How It Works
+### Intent - How It Works
 
 Regex pattern matching to detect user's intent even when they don't mention the topic explicitly.
 
-### Use For
+### Intent - Use For
 
 Action-based activation where user describes what they want to do rather than the specific topic.
 
-### Configuration
+### Intent - Configuration
 
 ```json
 "promptTriggers": {
@@ -66,7 +66,7 @@ Action-based activation where user describes what they want to do rather than th
 }
 ```
 
-### Examples
+### Intent - Examples
 
 **Database Work:**
 
@@ -80,7 +80,7 @@ Action-based activation where user describes what they want to do rather than th
 - Matches: `(create).*?(component)` (if component in pattern)
 - Activates: `frontend-dev-guidelines`
 
-### Best Practices
+### Intent - Best Practices
 
 - Capture common action verbs: `(create|add|modify|build|implement)`
 - Include domain-specific nouns: `(feature|endpoint|component|workflow)`
@@ -112,15 +112,15 @@ Action-based activation where user describes what they want to do rather than th
 
 ## File Path Triggers
 
-### How It Works
+### Path - How It Works
 
 Glob pattern matching against the file path being edited.
 
-### Use For
+### Path - Use For
 
 Domain/area-specific activation based on file location in the project.
 
-### Configuration
+### Path - Configuration
 
 ```json
 "fileTriggers": {
@@ -144,13 +144,13 @@ Domain/area-specific activation based on file location in the project.
   - `**/schema.prisma` = schema.prisma anywhere in project
   - `form/src/**/*.ts` = All .ts files in form/src subdirs
 
-### Example
+### Path - Example
 
 - File being edited: `frontend/src/components/Dashboard.tsx`
 - Matches: `frontend/src/**/*.tsx`
 - Activates: `frontend-dev-guidelines`
 
-### Best Practices
+### Path - Best Practices
 
 - Be specific to avoid false positives
 - Use exclusions for test files: `**/*.test.ts`
@@ -190,15 +190,15 @@ form/src/workflow-definitions/**/*.json # Workflow definitions
 
 ## Content Pattern Triggers
 
-### How It Works
+### Content - How It Works
 
 Regex pattern matching against the file's actual content (what's inside the file).
 
-### Use For
+### Content - Use For
 
 Technology-specific activation based on what the code imports or uses (Prisma, controllers, specific libraries).
 
-### Configuration
+### Content - Configuration
 
 ```json
 "fileTriggers": {
@@ -211,7 +211,7 @@ Technology-specific activation based on what the code imports or uses (Prisma, c
 }
 ```
 
-### Examples
+### Content - Examples
 
 **Prisma Detection:**
 
@@ -225,7 +225,7 @@ Technology-specific activation based on what the code imports or uses (Prisma, c
 - Matches: `export class.*Controller`
 - Activates: `error-tracking`
 
-### Best Practices
+### Content - Best Practices
 
 - Match imports: `import.*[Pp]risma` (case-insensitive with [Pp])
 - Escape special regex chars: `\\.findMany\\(` not `.findMany(`

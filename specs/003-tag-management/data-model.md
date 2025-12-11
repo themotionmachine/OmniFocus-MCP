@@ -79,13 +79,12 @@ export const TagPositionSchema = z.object({
 export type TagPosition = z.infer<typeof TagPositionSchema>;
 ```
 
-**Position Error Messages**:
+**Position Error Messages** (aligned with spec.md Error Message Standards):
 
 | Scenario | Error Message |
 |----------|---------------|
-| Invalid parentId | `"Invalid parentId '{id}': tag not found"` |
-| Invalid relativeTo (before/after) | `"Invalid relativeTo '{id}': tag not found"` |
-| Invalid relativeTo (beginning/ending) | `"Invalid relativeTo '{id}': tag not found"` |
+| Invalid parentId | `"Parent tag '{id}' not found"` |
+| Invalid relativeTo | `"Reference tag '{id}' not found for position placement"` |
 | Missing relativeTo | `"relativeTo is required for 'before' and 'after' placements"` |
 
 ### Disambiguation Error Schema
@@ -273,16 +272,14 @@ export const AssignTagsInputSchema = z.object({
 **Success Response**:
 
 ```typescript
-export const AssignTagsResultSchema = z.object({
-  taskId: z.string(),
-  taskName: z.string(),
-  success: z.boolean(),
-  error: z.string().optional()
-});
+import { BatchItemResultSchema } from './shared/batch-result.js';
 
+// Per-item results include disambiguation support (code, matchingIds)
+// See "Batch Operation Semantics" section for full BatchItemResultSchema definition
 export const AssignTagsSuccessSchema = z.object({
   success: z.literal(true),
-  results: z.array(AssignTagsResultSchema)
+  results: z.array(BatchItemResultSchema)
+    .describe('Per-task results in same order as input taskIds')
 });
 ```
 
@@ -292,7 +289,8 @@ export const AssignTagsSuccessSchema = z.object({
 
 **Purpose**: Remove specific tags from tasks, or clear all tags (FR-032 to FR-037).
 Supports two modes: selective removal via `tagIds`, or clearing all tags via `clearAll: true`.
-When `clearAll: true`, the `tagIds` parameter is ignored if provided.
+These modes are mutually exclusive: specifying both `clearAll: true` AND `tagIds` results in
+a validation error per spec.md edge case "clearAll with tagIds conflict".
 
 **Input Schema**:
 
@@ -316,16 +314,14 @@ export const RemoveTagsInputSchema = z.object({
 **Success Response**:
 
 ```typescript
-export const RemoveTagsResultSchema = z.object({
-  taskId: z.string(),
-  taskName: z.string(),
-  success: z.boolean(),
-  error: z.string().optional()
-});
+import { BatchItemResultSchema } from './shared/batch-result.js';
 
+// Per-item results include disambiguation support (code, matchingIds)
+// See "Batch Operation Semantics" section for full BatchItemResultSchema definition
 export const RemoveTagsSuccessSchema = z.object({
   success: z.literal(true),
-  results: z.array(RemoveTagsResultSchema)
+  results: z.array(BatchItemResultSchema)
+    .describe('Per-task results in same order as input taskIds')
 });
 ```
 

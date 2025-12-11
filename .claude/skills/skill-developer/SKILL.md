@@ -37,7 +37,7 @@ Automatically activates when you mention:
 
 **Example - Research skill best practices:**
 
-```
+```javascript
 mcp__tavily-mcp__tavily-search({
   query: "Claude Code skills best practices YAML frontmatter",
   include_domains: ["anthropic.com", "docs.anthropic.com"]

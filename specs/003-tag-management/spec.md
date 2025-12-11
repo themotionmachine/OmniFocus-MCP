@@ -441,6 +441,7 @@ Error messages follow these patterns (per Constitution Principle V):
 | Missing relativeTo | "relativeTo is required for 'before' and 'after' placements" | (static message) |
 | No updates | "At least one update field (newName, status, allowsNextAction) must be provided" | (static message) |
 | clearAll conflict | "Cannot specify both clearAll and tagIds. Use clearAll=true alone to remove all tags, or provide tagIds to remove specific tags" | (static message) |
+| Root-level restriction | "Cannot delete or modify the root Tags container" | (static message) |
 
 ### Key Entities
 
@@ -477,7 +478,8 @@ Error messages follow these patterns (per Constitution Principle V):
   success rate of 99% for valid requests
 - **SC-004**: All tag operations provide descriptive error messages when
   operations fail due to validation or constraints
-- **SC-005**: Tag operations complete within 3 seconds under normal conditions
+- **SC-005**: Tag operations complete within 3 seconds (measured with ≤500 tags
+  and ≤50 tasks per batch operation)
 - **SC-006**: The six tag tools collectively enable complete tag management
   without requiring manual OmniFocus interaction
 - **SC-007**: Tag hierarchy changes and task assignments made through the tools

@@ -154,6 +154,59 @@
         ]
       }
     },
+    "implementation-orchestrator": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "critical",
+      "description": "MUST BE USED PROACTIVELY when executing tasks from tasks.md. Orchestrates parallel execution by spawning omnifocus-developer subagents for tasks marked [P]. Ensures TDD compliance and efficient parallel implementation.",
+      "promptTriggers": {
+        "keywords": [
+          "speckit.implement",
+          "execute tasks",
+          "implement tasks",
+          "tasks.md",
+          "parallel tasks",
+          "[P]",
+          "spawn agents",
+          "spawn subagents",
+          "parallel execution",
+          "TDD cycle",
+          "red-green-refactor",
+          "implementation phase",
+          "execute implementation",
+          "run implementation",
+          "start implementing",
+          "begin implementation",
+          "implement the plan",
+          "execute the plan",
+          "process tasks",
+          "task execution"
+        ],
+        "intentPatterns": [
+          "(execute|implement|run|process).*?(tasks|tasks\\.md|implementation)",
+          "(spawn|launch|start).*?(agents|subagents|parallel)",
+          "(parallel|concurrent).*?(execution|tasks|implementation)",
+          "speckit.*?implement",
+          "(TDD|test.driven|red.green).*?(cycle|development)",
+          "(begin|start|execute).*?(implementation|plan|tasks)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "specs/**/tasks.md",
+          "src/tools/definitions/**/*",
+          "src/tools/primitives/**/*",
+          "src/contracts/**/*",
+          "tests/**/*"
+        ],
+        "contentPatterns": [
+          "\\[P\\]",
+          "Phase \\d+",
+          "\\[US\\d+\\]",
+          "T\\d{3}.*?\\[P\\]"
+        ]
+      }
+    },
     "mcp-builder": {
       "type": "domain",
       "enforcement": "suggest",

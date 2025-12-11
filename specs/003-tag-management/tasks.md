@@ -277,6 +277,7 @@ This is a single project with TypeScript MCP server:
 - [ ] T110 Integration test: Test all 6 tools via Claude Desktop in sequence
 - [ ] T111 Integration test: Verify error handling across all tools (not found, disambiguation, invalid inputs)
 - [ ] T112 Integration test: Verify TDD compliance (all tests still GREEN after final changes)
+- [ ] T113 [P] Edge case test: Verify root-level Tags container cannot be deleted or modified (returns "Cannot delete or modify the root Tags container" error)
 
 ---
 
@@ -418,13 +419,13 @@ With 6 developers available:
    - Developer F: User Story 6 - remove_tags (T081-T095)
 3. Stories complete independently and integrate via server.ts registration
 4. All tests GREEN before merge
-5. Team reconvenes for Polish phase (T096-T112)
+5. Team reconvenes for Polish phase (T096-T113)
 
 ---
 
 ## Task Summary
 
-### Total Tasks: 112
+### Total Tasks: 113
 
 ### Tasks by Phase:
 - **Phase 1 (Setup)**: 4 tasks (T001-T004)
@@ -435,7 +436,7 @@ With 6 developers available:
 - **Phase 6 (US4 - delete_tag)**: 13 tasks (T054-T066)
 - **Phase 7 (US5 - assign_tags)**: 14 tasks (T067-T080)
 - **Phase 8 (US6 - remove_tags)**: 15 tasks (T081-T095)
-- **Phase 9 (Polish)**: 17 tasks (T096-T112)
+- **Phase 9 (Polish)**: 18 tasks (T096-T113)
 
 ### Parallel Opportunities:
 - Setup: 4 parallel tasks
@@ -443,7 +444,7 @@ With 6 developers available:
 - User Stories: 6 stories can run in parallel after Foundational complete
 - Within each story: 5-8 RED phase tests can run in parallel
 - Within each story: 1-2 GREEN phase tasks can run in parallel
-- Polish: Up to 10 tasks can run in parallel
+- Polish: Up to 11 tasks can run in parallel
 
 ### MVP Scope:
 **User Story 1 only (list_tags)** - 26 tasks total (T001-T013 foundational + T014-T026 US1)
