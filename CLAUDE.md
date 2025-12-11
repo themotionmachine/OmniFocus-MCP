@@ -239,6 +239,12 @@ stdout as JSON-RPC, while diagnostic logs stay on stderr.
 
 **Never use `console.error` directly** - always use the logger utility.
 
+### Future: Protocol-Native Logging (Phase 20)
+
+Phase 20 will migrate to `server.sendLoggingMessage()` for client-visible logs.
+This requires refactoring from `McpServer` to the low-level `Server` class.
+See [MCP logging spec](https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/logging).
+
 ## Active Technologies
 
 - TypeScript 5.9+ with strict mode enabled

@@ -669,6 +669,18 @@ This logging approach is fully compatible with OmniJS scripts. OmniJS output
 flows through the JXA wrapper as JSON-RPC responses on stdout, while diagnostic
 logs remain separate on stderr.
 
+### Future: Protocol-Native Logging (Phase 20)
+
+Phase 20 will migrate to MCP's protocol-native logging using
+`server.sendLoggingMessage()`. This provides:
+
+- Client-visible logs in MCP Inspector and other debugging tools
+- Structured log levels (debug/info/warning/error/critical)
+- `logging: {}` capability declaration for client negotiation
+
+This requires refactoring from `McpServer` to the low-level `Server` class.
+See [MCP logging utilities spec](https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/logging).
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
