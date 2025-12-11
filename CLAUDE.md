@@ -193,11 +193,15 @@ Domain-specific rules in `.claude/rules/` load automatically:
 
 ## Recent Changes
 
+- **Phase 2 Tags**: Completed tag management tools (2025-12-11)
+  - `list_tags`, `create_tag`, `edit_tag`, `delete_tag`, `assign_tags`, `remove_tags`
+  - Full hierarchy support with parent/child relationships
+- **Phase 1 Folders**: Completed folder management tools (2025-12-10)
+  - `list_folders`, `add_folder`, `edit_folder`, `remove_folder`, `move_folder`
+  - All primitives use pure Omni Automation JavaScript (OmniJS)
 - **Constitution v2.0.0**: Migrated to pure OmniJS execution model
   - Removed AppleScript tier (Tier 1) - all write operations now use OmniJS
   - Removed direct JXA tier (Tier 3) - unused execution path eliminated
   - All operations (read AND write) now use consistent OmniJS execution
-- **002-folder-tools**: Adding folder management tools (in progress)
-  - All primitives use pure Omni Automation JavaScript (OmniJS)
-  - Consistent execution model across all tools
-- **001-tooling-modernization**: Migrated to tsup, Vitest, Biome, Node 24+
+- **Phase 0.5 SDK Upgrade**: Upgraded to MCP SDK 1.24.3 and Zod 4.x
+- **Phase 0 Tooling**: Migrated to tsup, Vitest, Biome, Node 24+

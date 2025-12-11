@@ -8,7 +8,7 @@
 > roadmap below for current progress.
 
 A professional-grade Model Context Protocol (MCP) server that provides
-comprehensive OmniFocus integration with 62 automation tools. Built for
+comprehensive OmniFocus integration with 86 automation tools. Built for
 power users who need advanced features like Perspectives management,
 Review system, TaskPaper import/export, Forecast, Window/UI control,
 and bulk operations.
@@ -19,38 +19,42 @@ and bulk operations.
 
 ## Development Roadmap
 
-This project is being expanded from 22 to 62 tools across 19
+This project is being expanded from 22 to 86 tools across 20
 implementation phases.
 
 ### Current Progress
 
-| Phase | Category                                  | Tools | Status   |
-| ----- | ----------------------------------------- | ----- | -------- |
-| 0     | Tooling Setup (pnpm, tsup, Vitest, Biome) | -     | Complete |
-| 0.5   | MCP SDK Upgrade to 1.24.x                 | -     | Complete |
-| 1     | Folders                                   | 5     | Complete |
-| 2     | Tags                                      | 6     | Pending  |
-| 3     | **Review System**                         | 3     | Pending  |
-| 4     | Notifications                             | 5     | Pending  |
-| 5     | Repetition                                | 4     | Pending  |
-| 6     | **Perspectives**                          | 4     | Pending  |
-| 7     | **Search & Database**                     | 9     | Pending  |
-| 8     | **Bulk Operations**                       | 5     | Pending  |
-| 9     | Attachments & Linked Files                | 4     | Pending  |
-| 10    | **TaskPaper Import/Export**               | 3     | Pending  |
-| 11    | **Task Status & Project Types**           | 6     | Pending  |
-| 12    | **Window & UI Control** (OF4)             | 6     | Pending  |
-| 13    | **Forecast**                              | 2     | Pending  |
-| 14    | **Settings**                              | 2     | Pending  |
-| 15    | MCP Resources & Prompts                   | -     | Pending  |
-| 16    | Planned Date Support (OF 4.7)             | 1     | Pending  |
-| 17    | **Hybrid Script Execution**               | 1     | Pending  |
-| 18    | **GTD + OmniFocus Claude Skill**          | -     | Pending  |
+| Phase | Category                       | Tools | Status   |
+| ----- | ------------------------------ | ----- | -------- |
+| 0     | Tooling Setup                  | -     | Complete |
+| 0.5   | MCP SDK Upgrade to 1.24.x      | -     | Complete |
+| 1     | Folders                        | 5     | Complete |
+| 2     | Tags                           | 6     | Complete |
+| 3     | **Tasks (Enhanced)**           | 4     | Pending  |
+| 4     | **Projects**                   | 6     | Pending  |
+| 5     | **Review System**              | 3     | Pending  |
+| 6     | Notifications                  | 5     | Pending  |
+| 7     | Repetition                     | 5     | Pending  |
+| 8     | **Perspectives**               | 5     | Pending  |
+| 9     | **Search & Database**          | 10    | Pending  |
+| 10    | **Bulk Operations**            | 6     | Pending  |
+| 11    | Attachments & Linked Files     | 5     | Pending  |
+| 12    | **TaskPaper Import/Export**    | 3     | Pending  |
+| 13    | **Task Status & Completion**   | 6     | Pending  |
+| 14    | **Window & UI Control** (OF4)  | 8     | Pending  |
+| 15    | **Forecast**                   | 3     | Pending  |
+| 16    | **Settings**                   | 2     | Pending  |
+| 17    | **Deep Links & URLs** (OF4.5)  | 3     | Pending  |
+| 18    | **Pasteboard & Clipboard**     | 3     | Pending  |
+| 19    | **Document & Sync**            | 4     | Pending  |
+| 20    | **MCP Optimization**           | 8     | Pending  |
 
 ### Key New Features
 
 Bold items in the table above represent new capabilities:
 
+- **Tasks (Enhanced)** - Dedicated task tools with planned date support
+- **Projects** - Full project lifecycle management
 - **Review System** - Get projects for review, mark reviewed, set intervals
 - **Perspectives** - List, get details, switch perspectives, export configs
 - **Search & Database** - Smart search across all item types, DB utilities
@@ -58,9 +62,10 @@ Bold items in the table above represent new capabilities:
 - **TaskPaper** - Import/export TaskPaper format for interoperability
 - **Window & UI Control** - Reveal, expand, collapse, focus items (OF4+)
 - **Forecast** - Get forecast data and navigate to specific days
-- **Hybrid Script Execution** - Execute OmniAutomation scripts for complex
-  operations
-- **GTD + OmniFocus Claude Skill** - Intelligent workflow automation
+- **Deep Links & URLs** - OmniFocus URL scheme support (OF4.5+)
+- **Pasteboard & Clipboard** - Copy/paste tasks between apps
+- **Document & Sync** - Database sync and window management
+- **MCP Optimization** - Dynamic toolsets, token-efficient responses
 
 ---
 
@@ -314,6 +319,75 @@ Parameters:
   - `id`: (Optional) The ID of the item to remove
   - `name`: (Optional) The name of the item to remove
   - `itemType`: The type of item ('task' or 'project')
+
+### `list_tags`
+
+List tags from the OmniFocus database with optional filtering.
+
+Parameters:
+
+- `status`: (Optional) Filter by tag status ('active' or 'dropped')
+- `parentId`: (Optional) Filter to children of a specific tag ID
+- `includeChildren`: (Optional) Include all nested descendants (default: false)
+
+Returns:
+
+- Array of tags with id, name, status, parentId, allowsNextAction, and taskCount
+
+### `create_tag`
+
+Create a new tag in OmniFocus.
+
+Parameters:
+
+- `name`: The name of the new tag (required)
+- `parentId`: (Optional) Parent tag ID for nested tags
+- `parentName`: (Optional) Parent tag name (used if parentId not provided)
+- `allowsNextAction`: (Optional) Whether tasks with this tag can be next actions (default: true)
+
+### `edit_tag`
+
+Edit tag properties in OmniFocus.
+
+Parameters:
+
+- `id`: (Optional) The tag's unique identifier
+- `name`: (Optional) The tag's name (used if id not provided)
+- `updates`: Object containing properties to change:
+  - `name`: (Optional) New name for the tag
+  - `allowsNextAction`: (Optional) Whether tasks can be next actions
+  - `status`: (Optional) New status ('active' or 'dropped')
+
+### `delete_tag`
+
+Remove a tag from OmniFocus.
+
+Parameters:
+
+- `id`: (Optional) The tag's unique identifier
+- `name`: (Optional) The tag's name (used if id not provided)
+
+### `assign_tags`
+
+Assign tags to one or more tasks.
+
+Parameters:
+
+- `taskIds`: Array of task IDs to assign tags to
+- `tagIds`: (Optional) Array of tag IDs to assign
+- `tagNames`: (Optional) Array of tag names to assign
+- `mode`: (Optional) 'add' to append tags, 'replace' to clear existing first (default: 'add')
+
+### `remove_tags`
+
+Remove tags from one or more tasks.
+
+Parameters:
+
+- `taskIds`: Array of task IDs to remove tags from
+- `tagIds`: (Optional) Array of specific tag IDs to remove
+- `tagNames`: (Optional) Array of specific tag names to remove
+- `removeAll`: (Optional) If true, removes all tags from the tasks
 
 ### `list_perspectives` ⭐ NEW
 
