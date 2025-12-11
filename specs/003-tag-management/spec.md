@@ -301,6 +301,10 @@ organizational maintenance.
   encounter an ambiguous name (tag or task), the per-item result includes the full
   disambiguation error structure in the `error` field as a JSON-encoded string:
   `"Ambiguous tag name 'X'. Found N matches: id1, id2. Please specify by ID."`
+- **Per-item result taskName on failure**: When a batch operation fails to resolve a
+  task identifier (not found or disambiguation required), the per-item result's
+  `taskName` field is set to an empty string `""` since the task could not be
+  resolved. The `taskId` field retains the original input identifier for correlation.
 
 ## Requirements *(mandatory)*
 

@@ -106,6 +106,8 @@ This is a single project with TypeScript MCP server:
 - [ ] T030 [P] [US2] Write unit test for createTag with position placement in `tests/unit/tag-tools/createTag.test.ts` → verify FAILS
 - [ ] T031 [P] [US2] Write unit test for createTag with parentId in `tests/unit/tag-tools/createTag.test.ts` → verify FAILS
 - [ ] T032 [P] [US2] Write unit test for createTag error handling (invalid parentId) in `tests/unit/tag-tools/createTag.test.ts` → verify FAILS
+- [ ] T032b [P] [US2] Write unit test for createTag error handling (invalid relativeTo) in `tests/unit/tag-tools/createTag.test.ts` → verify FAILS
+- [ ] T032c [P] [US2] Write unit test for createTag with parentId AND position combination in `tests/unit/tag-tools/createTag.test.ts` → verify FAILS
 
 ### 🟢 GREEN Phase - Implementation
 
@@ -425,13 +427,13 @@ With 6 developers available:
 
 ## Task Summary
 
-### Total Tasks: 113
+### Total Tasks: 115
 
 ### Tasks by Phase:
 - **Phase 1 (Setup)**: 4 tasks (T001-T004)
 - **Phase 2 (Foundational)**: 9 tasks (T005-T013)
 - **Phase 3 (US1 - list_tags)**: 13 tasks (T014-T026)
-- **Phase 4 (US2 - create_tag)**: 13 tasks (T027-T039)
+- **Phase 4 (US2 - create_tag)**: 15 tasks (T027-T039, T032b, T032c)
 - **Phase 5 (US3 - edit_tag)**: 14 tasks (T040-T053)
 - **Phase 6 (US4 - delete_tag)**: 13 tasks (T054-T066)
 - **Phase 7 (US5 - assign_tags)**: 14 tasks (T067-T080)
