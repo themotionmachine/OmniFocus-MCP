@@ -19,38 +19,42 @@ and bulk operations.
 
 ## Development Roadmap
 
-This project is being expanded from 22 to 62 tools across 19
+This project is being expanded from 22 to 86 tools across 20
 implementation phases.
 
 ### Current Progress
 
-| Phase | Category                                  | Tools | Status   |
-| ----- | ----------------------------------------- | ----- | -------- |
-| 0     | Tooling Setup (pnpm, tsup, Vitest, Biome) | -     | Complete |
-| 0.5   | MCP SDK Upgrade to 1.24.x                 | -     | Complete |
-| 1     | Folders                                   | 5     | Complete |
-| 2     | Tags                                      | 6     | Complete |
-| 3     | **Review System**                         | 3     | Pending  |
-| 4     | Notifications                             | 5     | Pending  |
-| 5     | Repetition                                | 4     | Pending  |
-| 6     | **Perspectives**                          | 4     | Pending  |
-| 7     | **Search & Database**                     | 9     | Pending  |
-| 8     | **Bulk Operations**                       | 5     | Pending  |
-| 9     | Attachments & Linked Files                | 4     | Pending  |
-| 10    | **TaskPaper Import/Export**               | 3     | Pending  |
-| 11    | **Task Status & Project Types**           | 6     | Pending  |
-| 12    | **Window & UI Control** (OF4)             | 6     | Pending  |
-| 13    | **Forecast**                              | 2     | Pending  |
-| 14    | **Settings**                              | 2     | Pending  |
-| 15    | MCP Resources & Prompts                   | -     | Pending  |
-| 16    | Planned Date Support (OF 4.7)             | 1     | Pending  |
-| 17    | **Hybrid Script Execution**               | 1     | Pending  |
-| 18    | **GTD + OmniFocus Claude Skill**          | -     | Pending  |
+| Phase | Category                       | Tools | Status   |
+| ----- | ------------------------------ | ----- | -------- |
+| 0     | Tooling Setup                  | -     | Complete |
+| 0.5   | MCP SDK Upgrade to 1.24.x      | -     | Complete |
+| 1     | Folders                        | 5     | Complete |
+| 2     | Tags                           | 6     | Complete |
+| 3     | **Tasks (Enhanced)**           | 4     | Pending  |
+| 4     | **Projects**                   | 6     | Pending  |
+| 5     | **Review System**              | 3     | Pending  |
+| 6     | Notifications                  | 5     | Pending  |
+| 7     | Repetition                     | 5     | Pending  |
+| 8     | **Perspectives**               | 5     | Pending  |
+| 9     | **Search & Database**          | 10    | Pending  |
+| 10    | **Bulk Operations**            | 6     | Pending  |
+| 11    | Attachments & Linked Files     | 5     | Pending  |
+| 12    | **TaskPaper Import/Export**    | 3     | Pending  |
+| 13    | **Task Status & Completion**   | 6     | Pending  |
+| 14    | **Window & UI Control** (OF4)  | 8     | Pending  |
+| 15    | **Forecast**                   | 3     | Pending  |
+| 16    | **Settings**                   | 2     | Pending  |
+| 17    | **Deep Links & URLs** (OF4.5)  | 3     | Pending  |
+| 18    | **Pasteboard & Clipboard**     | 3     | Pending  |
+| 19    | **Document & Sync**            | 4     | Pending  |
+| 20    | **MCP Optimization**           | 8     | Pending  |
 
 ### Key New Features
 
 Bold items in the table above represent new capabilities:
 
+- **Tasks (Enhanced)** - Dedicated list/get, planned date (v4.7+), append note
+- **Projects** - Full CRUD + move, parallel to Folders/Tags phases
 - **Review System** - Get projects for review, mark reviewed, set intervals
 - **Perspectives** - List, get details, switch perspectives, export configs
 - **Search & Database** - Smart search across all item types, DB utilities
@@ -58,9 +62,10 @@ Bold items in the table above represent new capabilities:
 - **TaskPaper** - Import/export TaskPaper format for interoperability
 - **Window & UI Control** - Reveal, expand, collapse, focus items (OF4+)
 - **Forecast** - Get forecast data and navigate to specific days
-- **Hybrid Script Execution** - Execute OmniAutomation scripts for complex
-  operations
-- **GTD + OmniFocus Claude Skill** - Intelligent workflow automation
+- **Deep Links & URLs** - Get/resolve OmniFocus URLs (OF4.5+)
+- **Pasteboard** - Copy/paste tasks between apps
+- **Document & Sync** - Trigger sync, create windows/tabs, export database
+- **MCP Optimization** - Dynamic toolsets, TOON format, lazy schemas (75-160x token reduction)
 
 ---
 
