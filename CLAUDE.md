@@ -46,6 +46,7 @@ reliability.
 - Handle partial failures in batch operations
 - Follow existing patterns - find a similar tool and mirror its structure
 - End all text files with a newline
+- Use the `logger` utility for all diagnostic output (never `console.error`)
 
 ## Build Commands
 
@@ -208,6 +209,35 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - **002-folder-tools**: Folder management tools (complete)
   - 5 tools: list_folders, add_folder, edit_folder, remove_folder, move_folder
   - Established OmniJS-first architecture pattern for future tools
+
+## Logging
+
+Use the MCP-compliant logger utility for all diagnostic output:
+
+```typescript
+import { logger } from './utils/logger.js';
+
+// Log levels: debug, info, warning, error
+logger.error('Operation failed', 'functionName', { taskId: 'abc123' });
+logger.warning('Unexpected state', 'functionName', { details });
+logger.info('Processing started', 'functionName');
+logger.debug('Verbose info', 'functionName', { data });
+```
+
+### Why stderr logging is MCP-compliant
+
+Per [MCP stdio transport spec](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports):
+
+> "Servers MAY send UTF-8 strings to their stderr stream. These are NOT
+> protocol messages and SHOULD NOT be parsed as JSON-RPC."
+
+- **stdout**: Reserved for JSON-RPC protocol messages only
+- **stderr**: Allowed for logging (captured by Claude Desktop)
+
+This is also compatible with OmniJS execution - script results flow through
+stdout as JSON-RPC, while diagnostic logs stay on stderr.
+
+**Never use `console.error` directly** - always use the logger utility.
 
 ## Active Technologies
 

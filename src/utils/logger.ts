@@ -1,15 +1,43 @@
 /**
  * MCP-compliant logger for stdio transport.
  *
+ * ## MCP Specification Compliance
+ *
  * Per MCP specification (https://modelcontextprotocol.io/specification/2025-06-18/basic/transports):
- * - stdout is RESERVED for JSON-RPC protocol messages
- * - stderr MAY be used for logging (captured by host applications)
  *
- * This logger writes structured JSON to stderr, which Claude Desktop captures to:
- * ~/Library/Logs/Claude/mcp-server-omnifocus-mcp.log
+ * > "Servers MAY send UTF-8 strings to their stderr stream. These are NOT
+ * > protocol messages and SHOULD NOT be parsed as JSON-RPC. Hosts SHOULD
+ * > capture stderr and expose it for diagnostics."
  *
- * Future Enhancement (Phase 20): Migrate to MCP protocol-native logging using
- * server.sendLoggingMessage() for client-visible structured logs.
+ * This means:
+ * - **stdout**: RESERVED exclusively for JSON-RPC protocol messages
+ * - **stderr**: MAY be used for logging (captured by host applications)
+ *
+ * ## Implementation
+ *
+ * This logger writes structured JSON to stderr, making logs:
+ * - Machine-parseable for log aggregation tools
+ * - Human-readable when inspected
+ * - MCP-compliant (does not interfere with JSON-RPC on stdout)
+ *
+ * Claude Desktop captures stderr logs to:
+ * `~/Library/Logs/Claude/mcp-server-omnifocus-mcp.log`
+ *
+ * ## Omni Automation Compatibility
+ *
+ * This logging approach is fully compatible with OmniJS scripts executed via
+ * `osascript`. OmniJS script output flows through the JXA wrapper and is
+ * returned as JSON-RPC responses on stdout. Logging to stderr keeps diagnostic
+ * output separate from script results.
+ *
+ * ## Future Enhancement (Phase 20)
+ *
+ * Migrate to MCP protocol-native logging using `server.sendLoggingMessage()`
+ * for client-visible structured logs. This requires refactoring from `McpServer`
+ * to the low-level `Server` class.
+ *
+ * @see https://modelcontextprotocol.io/specification/2025-06-18/basic/transports
+ * @see https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/logging
  */
 
 export type LogLevel = 'debug' | 'info' | 'warning' | 'error';

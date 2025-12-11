@@ -615,6 +615,60 @@ functionality. The server is built using the Model Context Protocol SDK,
 which provides a standardized way for AI models to interact with external
 tools and systems.
 
+## Logging
+
+This server uses MCP-compliant structured logging that writes to stderr.
+
+### MCP Specification Compliance
+
+Per the [MCP stdio transport specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports):
+
+> "Servers MAY send UTF-8 strings to their stderr stream. These are NOT
+> protocol messages and SHOULD NOT be parsed as JSON-RPC. Hosts SHOULD
+> capture stderr and expose it for diagnostics."
+
+This means:
+
+- **stdout**: Reserved exclusively for JSON-RPC protocol messages
+- **stderr**: May be used for logging (captured by host applications)
+
+### Log Format
+
+Logs are written as structured JSON for machine parseability:
+
+```json
+{
+  "timestamp": "2024-12-11T10:30:00.000Z",
+  "level": "error",
+  "context": "assignTags",
+  "message": "Failed to find task",
+  "data": { "taskId": "abc123" }
+}
+```
+
+### Log Levels
+
+| Level   | Usage                                    |
+| ------- | ---------------------------------------- |
+| debug   | Detailed diagnostic information          |
+| info    | General operational messages             |
+| warning | Potential issues or unexpected behavior  |
+| error   | Operation failures requiring attention   |
+
+### Viewing Logs
+
+Claude Desktop captures stderr logs to:
+
+```text
+~/Library/Logs/Claude/mcp-server-omnifocus-mcp.log
+```
+
+### Omni Automation Compatibility
+
+This logging approach is fully compatible with OmniJS scripts. OmniJS output
+flows through the JXA wrapper as JSON-RPC responses on stdout, while diagnostic
+logs remain separate on stderr.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
