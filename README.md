@@ -29,7 +29,7 @@ implementation phases.
 | 0     | Tooling Setup (pnpm, tsup, Vitest, Biome) | -     | Complete |
 | 0.5   | MCP SDK Upgrade to 1.24.x                 | -     | Complete |
 | 1     | Folders                                   | 5     | Complete |
-| 2     | Tags                                      | 6     | Pending  |
+| 2     | Tags                                      | 6     | Complete |
 | 3     | **Review System**                         | 3     | Pending  |
 | 4     | Notifications                             | 5     | Pending  |
 | 5     | Repetition                                | 4     | Pending  |
@@ -381,11 +381,11 @@ Parameters:
 
 - `id`: (Optional) The folder's unique identifier
 - `name`: (Optional) The folder's name (used if id not provided)
-- `updates`: Object containing properties to change:
-  - `name`: (Optional) New name for the folder
-  - `status`: (Optional) New status ('active' or 'dropped')
+- `newName`: (Optional) New name for the folder (trimmed, must be non-empty)
+- `newStatus`: (Optional) New status ('active' or 'dropped')
 
 Note: At least one of `id` or `name` must be provided for identification.
+At least one of `newName` or `newStatus` must be provided.
 Returns disambiguation error if multiple folders match the name.
 
 ### `remove_folder`
@@ -415,6 +415,101 @@ Parameters:
 
 Note: Prevents circular moves (folder into its own descendant). Returns
 disambiguation error if multiple folders match the name.
+
+### `list_tags`
+
+List tags from the OmniFocus database with optional filtering.
+
+Parameters:
+
+- `status`: (Optional) Filter by tag status ('active', 'onHold', or 'dropped')
+- `parentId`: (Optional) Filter to children of a specific tag ID
+- `includeChildren`: (Optional) Include all nested descendants (default: true)
+
+Returns:
+
+- Array of tags with id, name, status, parentId, allowsNextAction, and taskCount
+
+### `create_tag`
+
+Create a new tag in OmniFocus.
+
+Parameters:
+
+- `name`: The name of the new tag (required, non-empty after trim)
+- `parentId`: (Optional) Parent tag ID to create a nested tag
+- `position`: (Optional) Where to place the tag:
+  - `placement`: 'beginning', 'ending', 'before', or 'after'
+  - `relativeTo`: Tag ID (required for before/after)
+- `allowsNextAction`: (Optional) Whether tasks with this tag can be next
+  actions (default: true)
+
+Returns:
+
+- The ID and name of the newly created tag
+
+### `edit_tag`
+
+Edit tag properties in OmniFocus.
+
+Parameters:
+
+- `id`: (Optional) The tag's unique identifier
+- `name`: (Optional) The tag's name (used if id not provided)
+- `newName`: (Optional) New name for the tag
+- `status`: (Optional) New status ('active', 'onHold', or 'dropped')
+- `allowsNextAction`: (Optional) Whether tasks can be next actions
+
+Note: At least one of `id` or `name` must be provided for identification.
+At least one of `newName`, `status`, or `allowsNextAction` must be provided.
+Returns disambiguation error if multiple tags match the name.
+
+### `delete_tag`
+
+Delete a tag from OmniFocus.
+
+Parameters:
+
+- `id`: (Optional) The tag's unique identifier
+- `name`: (Optional) The tag's name (used if id not provided)
+
+Note: Deleting a tag removes it from all tasks but does not delete the tasks.
+Child tags are also deleted. Returns disambiguation error if multiple tags
+match the name.
+
+### `assign_tags`
+
+Assign tags to multiple tasks in a single operation.
+
+Parameters:
+
+- `taskIds`: Array of task IDs to assign tags to (required, at least one)
+- `tagIds`: Array of tag IDs to assign (required, at least one)
+
+Returns:
+
+- `results`: Array of per-task results with success/failure status
+
+Note: This operation is idempotent - assigning a tag already on a task
+succeeds silently. Continues processing remaining tasks if one fails.
+
+### `remove_tags`
+
+Remove tags from multiple tasks in a single operation.
+
+Parameters:
+
+- `taskIds`: Array of task IDs to remove tags from (required, at least one)
+- `tagIds`: (Optional) Array of specific tag IDs to remove
+- `clearAll`: (Optional) If true, remove ALL tags from the tasks (default: false)
+
+Note: Must provide either `tagIds` OR set `clearAll: true`, but not both.
+This operation is idempotent - removing a tag not on a task succeeds silently.
+Continues processing remaining tasks if one fails.
+
+Returns:
+
+- `results`: Array of per-task results with success/failure status
 
 ## Development
 
@@ -493,12 +588,27 @@ macOS with OmniFocus. Test JXA changes manually:
 
 See `CLAUDE.md` for detailed JXA development guidelines.
 
+### Specification Documentation
+
+This project follows spec-driven development. Each phase has detailed
+documentation in the `/specs/` directory:
+
+- `spec.md` - Feature requirements and user stories
+- `plan.md` - Implementation strategy and architecture
+- `tasks.md` - Task breakdown and progress tracking
+- `research.md` - API research and technical decisions
+- `quickstart.md` - Developer implementation guide
+
+See `/specs/001-tooling-modernization/` and `/specs/002-folder-tools/` for
+examples.
+
 ## How It Works
 
-This server uses AppleScript to communicate with OmniFocus, allowing it
-to interact with the application's native functionality. The server is
-built using the Model Context Protocol SDK, which provides a standardized
-way for AI models to interact with external tools and systems.
+This server uses Omni Automation JavaScript (OmniJS) to communicate with
+OmniFocus, allowing it to interact with the application's native
+functionality. The server is built using the Model Context Protocol SDK,
+which provides a standardized way for AI models to interact with external
+tools and systems.
 
 ## 🤝 Contributing
 

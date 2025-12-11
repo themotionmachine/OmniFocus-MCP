@@ -199,12 +199,7 @@
           "src/contracts/**/*",
           "tests/**/*"
         ],
-        "contentPatterns": [
-          "\\[P\\]",
-          "Phase \\d+",
-          "\\[US\\d+\\]",
-          "T\\d{3}.*?\\[P\\]"
-        ]
+        "contentPatterns": ["\\[P\\]", "Phase \\d+", "\\[US\\d+\\]", "T\\d{3}.*?\\[P\\]"]
       }
     },
     "mcp-builder": {

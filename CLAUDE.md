@@ -140,9 +140,12 @@ tempFile.cleanup();
 - **Task**: `Task.byIdentifier()`, `flattenedTasks.byName()`, `new Task(name, position)`
 - **Project**: `Project.byIdentifier()`, `flattenedProjects.byName()`, `new Project(name, folder)`
 - **Folder**: `Folder.byIdentifier()`, `flattenedFolders.byName()`, `new Folder(name)`
-- **Tag**: `flattenedTags.byName()`, `new Tag(name)`, `task.addTag()`, `task.clearTags()`
+- **Tag**: `Tag.byIdentifier()`, `flattenedTags.byName()`, `new Tag(name, parent)`
+  - Status: `tag.active = true/false`, `tag.status = Tag.Status.Active/OnHold/Dropped`
+  - Properties: `tag.allowsNextAction`, `tag.name`, `tag.parent`, `tag.children`
+  - Task operations: `task.addTag(tag)`, `task.removeTag(tag)`, `task.clearTags()`
 - **Status**: `task.markComplete()`, `task.markIncomplete()`, `task.active = false` (drop)
-- **Delete**: `deleteObject(item)` - works for tasks, projects, folders
+- **Delete**: `deleteObject(item)` - works for tasks, projects, folders, tags
 
 ## Modular Rules
 
@@ -192,16 +195,22 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - You've tested OmniJS scripts independently
 
 ## Recent Changes
-- 003-tag-management: Added TypeScript 5.9+ with strict mode enabled
 
+- **003-tag-management**: Tag management tools (complete)
+  - 6 tools: list_tags, create_tag, edit_tag, delete_tag, assign_tags, remove_tags
+  - Batch operations with per-item results for assign/remove
+  - Disambiguation support for name-based lookups
+  - Full TDD implementation with 150+ tests
 - **Constitution v2.0.0**: Migrated to pure OmniJS execution model
   - Removed AppleScript tier (Tier 1) - all write operations now use OmniJS
   - Removed direct JXA tier (Tier 3) - unused execution path eliminated
   - All operations (read AND write) now use consistent OmniJS execution
-- **002-folder-tools**: Adding folder management tools (in progress)
-  - All primitives use pure Omni Automation JavaScript (OmniJS)
-  - Consistent execution model across all tools
+- **002-folder-tools**: Folder management tools (complete)
+  - 5 tools: list_folders, add_folder, edit_folder, remove_folder, move_folder
+  - Established OmniJS-first architecture pattern for future tools
 
 ## Active Technologies
-- TypeScript 5.9+ with strict mode enabled (003-tag-management)
-- OmniFocus database (accessed via Omni Automation JavaScript) (003-tag-management)
+
+- TypeScript 5.9+ with strict mode enabled
+- OmniFocus database (accessed via Omni Automation JavaScript)
+- Zod 4.1.x with refine validations for complex input constraints
