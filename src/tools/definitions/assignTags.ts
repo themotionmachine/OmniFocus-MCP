@@ -2,6 +2,7 @@ import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/proto
 import type { ServerNotification, ServerRequest } from '@modelcontextprotocol/sdk/types.js';
 import type { z } from 'zod';
 import { AssignTagsInputSchema } from '../../contracts/tag-tools/assign-tags.js';
+import { logger } from '../../utils/logger.js';
 import { assignTags } from '../primitives/assignTags.js';
 
 export const schema = AssignTagsInputSchema;
@@ -47,7 +48,7 @@ export async function handler(
     }
 
     // Operation failed completely
-    console.error('[assign_tags] failure result:', JSON.stringify(result));
+    logger.error('Assign tags operation failed', 'assign_tags', result);
     return {
       content: [
         {
@@ -59,7 +60,7 @@ export async function handler(
     };
   } catch (err: unknown) {
     const error = err as Error;
-    console.error(`Tool execution error: ${error.message}`);
+    logger.error('Tool execution error', 'assign_tags', { message: error.message });
     return {
       content: [
         {

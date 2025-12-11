@@ -65,7 +65,7 @@ Bold items in the table above represent new capabilities:
 - **Deep Links & URLs** - Get/resolve OmniFocus URLs (OF4.5+)
 - **Pasteboard** - Copy/paste tasks between apps
 - **Document & Sync** - Trigger sync, create windows/tabs, export database
-- **MCP Optimization** - Dynamic toolsets, TOON format, lazy schemas (75-160x token reduction)
+- **MCP Optimization** - Dynamic toolsets, TOON format, lazy schemas, protocol-native logging (75-160x token reduction)
 
 ---
 
