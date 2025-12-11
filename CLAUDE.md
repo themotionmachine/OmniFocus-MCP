@@ -192,6 +192,7 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - You've tested OmniJS scripts independently
 
 ## Recent Changes
+- 003-tag-management: Added TypeScript 5.9+ with strict mode enabled
 
 - **Constitution v2.0.0**: Migrated to pure OmniJS execution model
   - Removed AppleScript tier (Tier 1) - all write operations now use OmniJS
@@ -200,4 +201,7 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - **002-folder-tools**: Adding folder management tools (in progress)
   - All primitives use pure Omni Automation JavaScript (OmniJS)
   - Consistent execution model across all tools
-- **001-tooling-modernization**: Migrated to tsup, Vitest, Biome, Node 24+
+
+## Active Technologies
+- TypeScript 5.9+ with strict mode enabled (003-tag-management)
+- OmniFocus database (accessed via Omni Automation JavaScript) (003-tag-management)

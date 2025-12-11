@@ -279,6 +279,28 @@ organizational maintenance.
   are also deleted recursively (matches OmniFocus native behavior)
 - **Orphaned tag references**: When a tag is deleted, tasks that had it
   assigned automatically lose that tag reference (handled by OmniFocus)
+- **Invalid parentId**: When `create_tag` specifies a `parentId` that doesn't
+  exist, the operation fails with error "Parent tag 'xyz' not found"
+- **Invalid relativeTo**: When `create_tag` specifies a `relativeTo` ID that
+  doesn't exist, the operation fails with error "Reference tag 'xyz' not found
+  for position placement"
+- **Invalid status enum**: When an invalid status value is provided (not one
+  of 'active', 'onHold', 'dropped'), the operation fails with error
+  "Invalid status 'xyz'. Expected 'active', 'onHold', or 'dropped'"
+  (status values are case-sensitive)
+- **clearAll with tagIds conflict**: When `remove_tags` is called with both
+  `clearAll: true` AND non-empty `tagIds`, the operation fails with error
+  "Cannot specify both clearAll and tagIds. Use clearAll=true alone to remove
+  all tags, or provide tagIds to remove specific tags"
+- **Batch operation tag not found**: When `assign_tags` references a non-existent
+  tag, the per-item result includes error "Tag 'xyz' not found". For `remove_tags`,
+  a non-existent tag reference is silently ignored (idempotent behavior) unless
+  the tag doesn't exist at all in OmniFocus, in which case error "Tag 'xyz' not
+  found" is returned
+- **Per-item disambiguation**: When batch operations (`assign_tags`, `remove_tags`)
+  encounter an ambiguous name (tag or task), the per-item result includes the full
+  disambiguation error structure in the `error` field as a JSON-encoded string:
+  `"Ambiguous tag name 'X'. Found N matches: id1, id2. Please specify by ID."`
 
 ## Requirements *(mandatory)*
 
@@ -386,6 +408,39 @@ organizational maintenance.
   code: "DISAMBIGUATION_REQUIRED", matchingIds: string[] }`
 - **FR-039**: System MUST return standard error responses for all other
   failures: `{ success: false, error: string }` with descriptive error messages
+- **FR-040**: Error messages MUST be **actionable**: they MUST (1) quote the
+  problematic input value, (2) explain WHY the operation failed, and (3)
+  suggest corrective action when applicable. Generic messages like "An error
+  occurred" are prohibited.
+- **FR-041**: For batch operations (`assign_tags`, `remove_tags`), the top-level
+  `success: true` indicates the operation completed execution (not that all
+  items succeeded). Consumers MUST check individual per-item results to
+  determine which items succeeded or failed.
+- **FR-042**: Batch operations MUST continue processing remaining items after
+  encountering a per-item failure. One failed item does NOT halt the entire
+  batch.
+- **FR-043**: Per-item results MUST be returned at the same array index as the
+  corresponding input, enabling correlation. Every input item produces exactly
+  one result entry.
+- **FR-044**: Per-item results use `success: boolean` to indicate individual
+  outcome. When `success: false`, the `error` field MUST be present with a
+  descriptive message. When `success: true`, the `error` field MUST be absent.
+
+### Error Message Standards
+
+Error messages follow these patterns (per Constitution Principle V):
+
+| Error Type | Message Format | Example |
+|------------|----------------|---------|
+| Not found | "{Type} '{id}' not found" | "Tag 'abc123' not found" |
+| Disambiguation | "Ambiguous {type} name '{name}'. Found N matches: {ids}. Please specify by ID." | "Ambiguous tag name 'Urgent'. Found 2 matches: id1, id2. Please specify by ID." |
+| Invalid parent | "Parent tag '{id}' not found" | "Parent tag 'xyz' not found" |
+| Invalid reference | "Reference tag '{id}' not found for position placement" | "Reference tag 'xyz' not found for position placement" |
+| Invalid status | "Invalid status '{value}'. Expected 'active', 'onHold', or 'dropped'" | "Invalid status 'Active'. Expected 'active', 'onHold', or 'dropped'" |
+| Empty name | "Tag name is required and must be a non-empty string" | (static message) |
+| Missing relativeTo | "relativeTo is required for 'before' and 'after' placements" | (static message) |
+| No updates | "At least one update field (newName, status, allowsNextAction) must be provided" | (static message) |
+| clearAll conflict | "Cannot specify both clearAll and tagIds. Use clearAll=true alone to remove all tags, or provide tagIds to remove specific tags" | (static message) |
 
 ### Key Entities
 
