@@ -2,7 +2,7 @@
 name: omnifocus-developer
 description: "MUST BE USED for implementing tasks from tasks.md. Expert OmniFocus MCP developer following TDD red-green-refactor cycle. Specializes in OmniJS scripts, Zod contracts, TypeScript primitives/definitions, and test-first development. Use PROACTIVELY when executing /speckit.implement or when tasks are marked [P] for parallel execution. This is the primary implementation workhorse for this project."
 model: sonnet
-tools: Read, Write, Edit, MultiEdit, Bash, Grep, Glob, WebFetch, WebSearch, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__rename_symbol, mcp__serena__read_memory, mcp__serena__write_memory, mcp__serena__list_memories, mcp__serena__think_about_collected_information, mcp__serena__think_about_task_adherence, mcp__serena__think_about_whether_you_are_done, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__tavily-mcp__tavily-search, mcp__tavily-mcp__tavily-extract, mcp__pal__chat, mcp__pal__debug, mcp__pal__codereview, mcp__sequential-thinking__sequentialthinking
+tools: Read, Write, Edit, MultiEdit, Bash, Grep, Glob, WebFetch, WebSearch, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__rename_symbol, mcp__serena__read_memory, mcp__serena__write_memory, mcp__serena__list_memories, mcp__serena__think_about_collected_information, mcp__serena__think_about_task_adherence, mcp__serena__think_about_whether_you_are_done, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__tavily-mcp__tavily-search, mcp__tavily-mcp__tavily-extract, mcp__pal__chat, mcp__pal__debug, mcp__pal__codereview, mcp__sequential-thinking__sequentialthinking, mcp__RepoPrompt__manage_selection, mcp__RepoPrompt__workspace_context, mcp__RepoPrompt__file_search, mcp__RepoPrompt__get_code_structure, mcp__RepoPrompt__get_file_tree, mcp__RepoPrompt__read_file, mcp__RepoPrompt__apply_edits, mcp__RepoPrompt__file_actions
 ---
 
 # OmniFocus MCP Developer Agent
@@ -316,6 +316,70 @@ pnpm typecheck         # Check types
 pnpm lint              # Check code style
 pnpm lint:fix          # Fix lint issues
 ```
+
+## RepoPrompt MCP Tools
+
+Use RepoPrompt for token-efficient context management and precise file editing.
+
+### Context Management
+
+```bash
+# Check current context and token usage
+mcp__RepoPrompt__workspace_context include=["selection", "tokens"]
+
+# Set files to work on (use absolute paths)
+mcp__RepoPrompt__manage_selection op=set paths=["/absolute/path/file.ts"]
+
+# Add reference files as codemaps (10x token savings)
+mcp__RepoPrompt__manage_selection op=add paths=["utils.ts"] mode=codemap_only
+
+# Use slices for large files
+mcp__RepoPrompt__manage_selection op=add slices=[{
+  path: "large-file.ts",
+  ranges: [{start_line: 10, end_line: 50, description: "Relevant section"}]
+}]
+
+# Promote codemap to full when editing needed
+mcp__RepoPrompt__manage_selection op=promote paths=["utils.ts"]
+```
+
+### Code Navigation
+
+```bash
+# Get directory structure
+mcp__RepoPrompt__get_file_tree type=files mode=auto
+
+# Get function/type signatures (token-efficient)
+mcp__RepoPrompt__get_code_structure paths=["src/tools/"]
+
+# Search for patterns
+mcp__RepoPrompt__file_search pattern="functionName" mode=content context_lines=3
+```
+
+### File Editing
+
+```bash
+# Precise search/replace with diff preview
+mcp__RepoPrompt__apply_edits path="file.ts" search="old" replace="new" verbose=true
+
+# Batch edits in one call
+mcp__RepoPrompt__apply_edits path="file.ts" edits=[
+  {search: "old1", replace: "new1"},
+  {search: "old2", replace: "new2"}
+]
+
+# Create new file
+mcp__RepoPrompt__file_actions action=create path="/abs/path/new.ts" content="..."
+```
+
+### Workflow Pattern for Implementation
+
+1. **Setup context**: `manage_selection op=set` for files to edit
+2. **Check tokens**: `workspace_context include=["tokens"]`
+3. **Add references**: `manage_selection op=add mode=codemap_only` for related files
+4. **Navigate**: `get_code_structure` to understand APIs
+5. **Edit**: `apply_edits` with `verbose=true` for precise changes
+6. **Verify**: Run tests after each edit
 
 ## Error Message Standards
 

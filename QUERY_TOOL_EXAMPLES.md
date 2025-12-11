@@ -5,6 +5,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ## Basic Usage
 
 ### Get all flagged tasks
+
 ```json
 {
   "entity": "tasks",
@@ -15,9 +16,10 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get tasks due in the next 7 days
+
 ```json
 {
-  "entity": "tasks", 
+  "entity": "tasks",
   "filters": {
     "dueWithin": 7
   }
@@ -25,6 +27,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get next actions only
+
 ```json
 {
   "entity": "tasks",
@@ -35,6 +38,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get inbox tasks
+
 ```json
 {
   "entity": "tasks",
@@ -47,6 +51,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ## Advanced Filtering
 
 ### Get flagged tasks due this week with specific tags
+
 ```json
 {
   "entity": "tasks",
@@ -61,6 +66,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get overdue and due soon tasks
+
 ```json
 {
   "entity": "tasks",
@@ -72,6 +78,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get tasks in a specific project
+
 ```json
 {
   "entity": "tasks",
@@ -82,6 +89,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get tasks that will become available in the next 3 days
+
 ```json
 {
   "entity": "tasks",
@@ -94,6 +102,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ## Performance Optimization
 
 ### Get only specific fields (reduces response size)
+
 ```json
 {
   "entity": "tasks",
@@ -106,6 +115,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get just a count of matching items
+
 ```json
 {
   "entity": "tasks",
@@ -117,6 +127,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Limit results for large queries
+
 ```json
 {
   "entity": "tasks",
@@ -132,6 +143,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ## Project Queries
 
 ### Get all active projects
+
 ```json
 {
   "entity": "projects",
@@ -142,6 +154,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get projects on hold
+
 ```json
 {
   "entity": "projects",
@@ -152,6 +165,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Include completed projects
+
 ```json
 {
   "entity": "projects",
@@ -162,6 +176,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ## Folder Queries
 
 ### Get all folders
+
 ```json
 {
   "entity": "folders"
@@ -169,6 +184,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get folder structure with project counts
+
 ```json
 {
   "entity": "folders",
@@ -179,6 +195,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ## Complex Queries
 
 ### Daily planning query - get today's agenda
+
 ```json
 {
   "entity": "tasks",
@@ -192,6 +209,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Weekly review - get stale tasks
+
 ```json
 {
   "entity": "tasks",
@@ -206,6 +224,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get high-priority items (flagged or due soon)
+
 ```json
 {
   "entity": "tasks",
@@ -215,7 +234,9 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
   "limit": 10
 }
 ```
+
 Then separately:
+
 ```json
 {
   "entity": "tasks",
@@ -246,7 +267,9 @@ Then separately:
 ## Common Use Cases
 
 ### Morning Planning
+
 Get your most important tasks for the day:
+
 ```json
 {
   "entity": "tasks",
@@ -260,7 +283,9 @@ Get your most important tasks for the day:
 ```
 
 ### Project Status Check
+
 Quick count of tasks in a project:
+
 ```json
 {
   "entity": "tasks",
@@ -272,7 +297,9 @@ Quick count of tasks in a project:
 ```
 
 ### Inbox Processing
+
 See what's in your inbox:
+
 ```json
 {
   "entity": "tasks",
@@ -284,7 +311,9 @@ See what's in your inbox:
 ```
 
 ### Context-Based Views
+
 Get all tasks for a specific context/tag:
+
 ```json
 {
   "entity": "tasks",

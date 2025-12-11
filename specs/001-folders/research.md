@@ -13,7 +13,9 @@ This research validates the Omni Automation JavaScript API for folder operations
 ### 1. Omni Automation vs AppleScript
 
 **Decision**: Use Omni Automation JavaScript (OmniJS)
+
 **Rationale**:
+
 - Officially recommended by Omni Group
 - Cross-platform (macOS, iOS, iPadOS) - future-proofing
 - Better documented with official API reference
@@ -21,6 +23,7 @@ This research validates the Omni Automation JavaScript API for folder operations
 - Faster execution performance
 
 **Alternatives Considered**:
+
 - **AppleScript**: Legacy approach, macOS-only, verbose syntax
 - **Pure JXA**: Limited OmniFocus API access compared to OmniJS
 
@@ -29,18 +32,22 @@ This research validates the Omni Automation JavaScript API for folder operations
 ### 2. Script Execution Bridge
 
 **Decision**: Use existing `executeOmniFocusScript` with dynamic OmniJS generation
+
 **Rationale**:
+
 - Bridge already implemented and tested in `scriptExecution.ts`
 - Uses `app.evaluateJavascript()` to run OmniJS inside OmniFocus
 - Pattern proven by `queryOmnifocus.ts` (dynamic) and `omnifocusDump.js` (pre-built)
 
 **Execution Flow**:
-```
+
+```text
 TypeScript Primitive → Generate OmniJS string → JXA wrapper →
 osascript -l JavaScript → OmniFocus evaluateJavascript → JSON result
 ```
 
 **Alternatives Considered**:
+
 - **Pre-built scripts in omnifocusScripts/**: More complex for parameterized operations
 - **New execution function**: Unnecessary - existing bridge works
 
@@ -81,7 +88,9 @@ osascript -l JavaScript → OmniFocus evaluateJavascript → JSON result
 ### 5. Folder Status Values
 
 **Decision**: Two statuses only - `active` and `dropped`
+
 **Evidence**: `Folder.Status` enumeration has only two values:
+
 - `Folder.Status.Active`
 - `Folder.Status.Dropped`
 
@@ -90,12 +99,16 @@ osascript -l JavaScript → OmniFocus evaluateJavascript → JSON result
 ### 6. Folder Identification
 
 **Decision**: Support both ID and name lookup with disambiguation
+
 **API Methods**:
+
 - `Folder.byIdentifier(id)` - Returns single folder or null
 - `flattenedFolders.byName(name)` - Returns first match only
 
 **Disambiguation Strategy**:
+
 Since `byName()` returns only the first match, we must manually search for all matches:
+
 ```javascript
 const matches = flattenedFolders.filter(f => f.name === targetName);
 if (matches.length > 1) {
@@ -106,7 +119,9 @@ if (matches.length > 1) {
 ### 7. Recursive Folder Operations
 
 **Decision**: Use `flattenedFolders` for recursive, `folders` for immediate
+
 **API Properties**:
+
 - `folder.folders` - Immediate child folders only
 - `folder.flattenedFolders` - All descendant folders recursively
 - `database.folders` - Top-level folders only
@@ -115,12 +130,15 @@ if (matches.length > 1) {
 ### 8. Error Response Format
 
 **Decision**: Standard error format + disambiguation code
+
 **Standard Error**:
+
 ```json
 { "success": false, "error": "Descriptive message" }
 ```
 
 **Disambiguation Error**:
+
 ```json
 {
   "success": false,
@@ -133,7 +151,9 @@ if (matches.length > 1) {
 ### 9. Circular Move Prevention
 
 **Decision**: Check ancestor chain before move
+
 **Implementation**:
+
 ```javascript
 function isDescendantOf(folder, potentialAncestor) {
   let current = folder.parent;
@@ -192,6 +212,7 @@ function isDescendantOf(folder, potentialAncestor) {
 ### Existing Patterns to Follow
 
 1. **OmniJS Script Pattern** (from `omnifocusDump.js`):
+
 ```javascript
 (() => {
   try {
@@ -203,12 +224,14 @@ function isDescendantOf(folder, potentialAncestor) {
 })()
 ```
 
-2. **Dynamic Script Generation** (from `queryOmnifocus.ts`):
-- Build OmniJS as template literal string
-- Escape user inputs properly
-- Execute via `executeOmniFocusScript`
+1. **Dynamic Script Generation** (from `queryOmnifocus.ts`):
 
-3. **Folder Status Map** (from `omnifocusDump.js`):
+   - Build OmniJS as template literal string
+   - Escape user inputs properly
+   - Execute via `executeOmniFocusScript`
+
+1. **Folder Status Map** (from `omnifocusDump.js`):
+
 ```javascript
 const folderStatusMap = {
   [Folder.Status.Active]: "Active",

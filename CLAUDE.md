@@ -70,7 +70,7 @@ reliability.
 | `src/tools/primitives/` | Core business logic |
 | `src/utils/omnifocusScripts/` | Pre-built OmniJS scripts |
 | `specs/` | Feature specifications |
-| `.claude/rules/` | Modular Claude rules |
+| `.claude/rules/` | Modular Claude rules (including RepoPrompt MCP guide) |
 
 ## Technology Stack
 
@@ -158,6 +158,7 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - `error-handling.md` - Error patterns, partial failures
 - `git-workflow.md` - Commit conventions, PR rules
 - `research-workflow.md` - Research patterns and tools
+- `repoprompt-mcp.md` - RepoPrompt MCP context management and editing
 
 **Path-scoped (load when working with matching files):**
 
@@ -178,6 +179,16 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - Use `write_memory` to preserve findings before context compaction
 - Prefer symbolic editing over file-based for precision
 
+## RepoPrompt MCP Usage Tips
+
+- Use `manage_selection` with absolute paths to curate context efficiently
+- Use `apply_edits` with `verbose=true` to see diffs before committing
+- Use `workspace_context` to check token counts before adding more files
+- Use `mode=codemap_only` for reference files you won't edit (saves tokens)
+- Use `slices` for large files - only include relevant line ranges
+- Use `chat_send` to delegate to specialized models (Planner, Engineer, etc.)
+- See `.claude/rules/repoprompt-mcp.md` for comprehensive patterns
+
 ## When to Ask vs. Proceed
 
 **Stop and ask:**
@@ -197,6 +208,17 @@ Domain-specific rules in `.claude/rules/` load automatically:
 
 ## Recent Changes
 
+- 003-tasks: Added TypeScript 5.9+ with strict mode (`ES2024` target)
+
+- **Phase 3 Tasks (Enhanced)**: Completed enhanced task management tools (2025-12-11)
+  - `list_tasks`: Comprehensive task filtering (project, folder, tags, status, dates)
+  - `get_task`: Full task details by ID or name with disambiguation
+  - `set_planned_date`: Set/clear planned dates (OmniFocus v4.7+ feature)
+  - `append_note`: Append text to task notes without overwriting
+  - Contracts in `src/contracts/task-tools/` with shared schemas
+  - Full TDD implementation with 325+ tests (contract + unit)
+  - Server-side OmniJS filtering for performance
+
 - **Phase 2 Tags**: Completed tag management tools (2025-12-11)
   - `list_tags`, `create_tag`, `edit_tag`, `delete_tag`, `assign_tags`, `remove_tags`
   - Full hierarchy support with parent/child relationships
@@ -207,12 +229,9 @@ Domain-specific rules in `.claude/rules/` load automatically:
   - `list_folders`, `add_folder`, `edit_folder`, `remove_folder`, `move_folder`
   - All primitives use pure Omni Automation JavaScript (OmniJS)
   - Established OmniJS-first architecture pattern for future tools
-- **Constitution v2.0.0**: Migrated to pure OmniJS execution model
   - Removed AppleScript tier (Tier 1) - all write operations now use OmniJS
   - Removed direct JXA tier (Tier 3) - unused execution path eliminated
   - All operations (read AND write) now use consistent OmniJS execution
-- **Phase 0.5 SDK Upgrade**: Upgraded to MCP SDK 1.24.3 and Zod 4.x
-- **Phase 0 Tooling**: Migrated to tsup, Vitest, Biome, Node 24+
 
 ## Logging
 
@@ -248,3 +267,8 @@ stdout as JSON-RPC, while diagnostic logs stay on stderr.
 Phase 20 will migrate to `server.sendLoggingMessage()` for client-visible logs.
 This requires refactoring from `McpServer` to the low-level `Server` class.
 See [MCP logging spec](https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/logging).
+
+## Active Technologies
+
+- TypeScript 5.9+ with strict mode (`ES2024` target) (003-tasks)
+- N/A (interfaces with OmniFocus via OmniJS execution) (003-tasks)

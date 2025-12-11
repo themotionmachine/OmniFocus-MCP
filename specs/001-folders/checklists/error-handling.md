@@ -6,6 +6,7 @@
 **Feature**: [spec.md](../spec.md) - FR-027, FR-028, Clarifications #1, #9, #11, #19, #28, #34, #36
 
 **Focus Areas**:
+
 - Error Response Structure consistency
 - Error Scenarios Coverage per tool
 - Error Message Quality standards

@@ -16,6 +16,7 @@
 ## Path Conventions
 
 This is a single project with TypeScript MCP server:
+
 - Source code: `src/` at repository root
 - Tests: `tests/` at repository root
 - Contracts: `src/contracts/tag-tools/`
@@ -98,7 +99,7 @@ This is a single project with TypeScript MCP server:
 
 **Independent Test**: Create a new tag and verify it appears in OmniFocus with correct settings
 
-### 🔴 RED Phase - Tests First (REQUIRED)
+### 🔴 RED Phase - Tests First (US2)
 
 - [X] T027 [P] [US2] Write contract test for create_tag input schema in `tests/contract/tag-tools/create-tag.test.ts` → verify FAILS
 - [X] T028 [P] [US2] Write contract test for create_tag response schema in `tests/contract/tag-tools/create-tag.test.ts` → verify FAILS
@@ -109,14 +110,14 @@ This is a single project with TypeScript MCP server:
 - [X] T032b [P] [US2] Write unit test for createTag error handling (invalid relativeTo) in `tests/unit/tag-tools/createTag.test.ts` → verify FAILS
 - [X] T032c [P] [US2] Write unit test for createTag with parentId AND position combination in `tests/unit/tag-tools/createTag.test.ts` → verify FAILS
 
-### 🟢 GREEN Phase - Implementation
+### 🟢 GREEN Phase - Implementation (US2)
 
 - [X] T033 [P] [US2] Create create_tag contract in `src/contracts/tag-tools/create-tag.ts` (CreateTagInputSchema with position, CreateTagResponseSchema) → contract tests GREEN
 - [X] T034 [US2] Implement createTag primitive in `src/tools/primitives/createTag.ts` (position resolution, OmniJS generation, new Tag() call) → unit tests GREEN
 - [X] T035 [US2] Implement createTag definition handler in `src/tools/definitions/createTag.ts` (Zod validation, call primitive)
 - [X] T036 [US2] Register create_tag tool in `src/server.ts`
 
-### 🔵 REFACTOR Phase - Polish
+### 🔵 REFACTOR Phase - Polish (US2)
 
 - [X] T037 [US2] Refactor createTag position resolution logic for clarity while keeping tests green
 - [ ] T038 [US2] Manual verification: Create tags at various positions in OmniFocus Script Editor
@@ -132,7 +133,7 @@ This is a single project with TypeScript MCP server:
 
 **Independent Test**: Modify a tag's name, status, or settings and verify the change persists
 
-### 🔴 RED Phase - Tests First (REQUIRED)
+### 🔴 RED Phase - Tests First (US3)
 
 - [X] T040 [P] [US3] Write contract test for edit_tag input schema with refine validations in `tests/contract/tag-tools/edit-tag.test.ts` → verify FAILS
 - [X] T041 [P] [US3] Write contract test for edit_tag response schema in `tests/contract/tag-tools/edit-tag.test.ts` → verify FAILS
@@ -142,14 +143,14 @@ This is a single project with TypeScript MCP server:
 - [X] T045 [P] [US3] Write unit test for editTag updating status in `tests/unit/tag-tools/editTag.test.ts` → verify FAILS
 - [X] T046 [P] [US3] Write unit test for editTag updating allowsNextAction in `tests/unit/tag-tools/editTag.test.ts` → verify FAILS
 
-### 🟢 GREEN Phase - Implementation
+### 🟢 GREEN Phase - Implementation (US3)
 
 - [X] T047 [P] [US3] Create edit_tag contract in `src/contracts/tag-tools/edit-tag.ts` (EditTagInputSchema with refine, EditTagResponseSchema with disambiguation) → contract tests GREEN
 - [X] T048 [US3] Implement editTag primitive in `src/tools/primitives/editTag.ts` (find by ID or name with disambiguation, partial updates, status mapping) → unit tests GREEN
 - [X] T049 [US3] Implement editTag definition handler in `src/tools/definitions/editTag.ts` (Zod validation, disambiguation error handling)
 - [X] T050 [US3] Register edit_tag tool in `src/server.ts`
 
-### 🔵 REFACTOR Phase - Polish
+### 🔵 REFACTOR Phase - Polish (US3)
 
 - [X] T051 [US3] Refactor editTag disambiguation logic while keeping tests green
 - [ ] T052 [US3] Manual verification: Edit tags by ID and by name in OmniFocus Script Editor
@@ -165,7 +166,7 @@ This is a single project with TypeScript MCP server:
 
 **Independent Test**: Delete a tag and verify it no longer exists
 
-### 🔴 RED Phase - Tests First (REQUIRED)
+### 🔴 RED Phase - Tests First (US4)
 
 - [X] T054 [P] [US4] Write contract test for delete_tag input schema in `tests/contract/tag-tools/delete-tag.test.ts` → verify FAILS
 - [X] T055 [P] [US4] Write contract test for delete_tag response schema in `tests/contract/tag-tools/delete-tag.test.ts` → verify FAILS
@@ -174,14 +175,14 @@ This is a single project with TypeScript MCP server:
 - [X] T058 [P] [US4] Write unit test for deleteTag with recursive child deletion in `tests/unit/tag-tools/deleteTag.test.ts` → verify FAILS
 - [X] T059 [P] [US4] Write unit test for deleteTag error handling (tag not found) in `tests/unit/tag-tools/deleteTag.test.ts` → verify FAILS
 
-### 🟢 GREEN Phase - Implementation
+### 🟢 GREEN Phase - Implementation (US4)
 
 - [X] T060 [P] [US4] Create delete_tag contract in `src/contracts/tag-tools/delete-tag.ts` (DeleteTagInputSchema, DeleteTagResponseSchema with disambiguation) → contract tests GREEN
 - [X] T061 [US4] Implement deleteTag primitive in `src/tools/primitives/deleteTag.ts` (find tag with disambiguation, capture ID/name before deletion, deleteObject() call) → unit tests GREEN
 - [X] T062 [US4] Implement deleteTag definition handler in `src/tools/definitions/deleteTag.ts` (Zod validation, disambiguation error handling)
 - [X] T063 [US4] Register delete_tag tool in `src/server.ts`
 
-### 🔵 REFACTOR Phase - Polish
+### 🔵 REFACTOR Phase - Polish (US4)
 
 - [X] T064 [US4] Refactor deleteTag to ensure ID/name captured before deletion while keeping tests green
 - [ ] T065 [US4] Manual verification: Delete tags with and without children in OmniFocus Script Editor
@@ -197,7 +198,7 @@ This is a single project with TypeScript MCP server:
 
 **Independent Test**: Assign tags to tasks and verify the tags appear on those tasks
 
-### 🔴 RED Phase - Tests First (REQUIRED)
+### 🔴 RED Phase - Tests First (US5)
 
 - [X] T067 [P] [US5] Write contract test for assign_tags input schema in `tests/contract/tag-tools/assign-tags.test.ts` → verify FAILS
 - [X] T068 [P] [US5] Write contract test for assign_tags response schema with batch results in `tests/contract/tag-tools/assign-tags.test.ts` → verify FAILS
@@ -207,14 +208,14 @@ This is a single project with TypeScript MCP server:
 - [X] T072 [P] [US5] Write unit test for assignTags with disambiguation errors in `tests/unit/tag-tools/assignTags.test.ts` → verify FAILS
 - [X] T073 [P] [US5] Write unit test for assignTags idempotency (tag already assigned) in `tests/unit/tag-tools/assignTags.test.ts` → verify FAILS
 
-### 🟢 GREEN Phase - Implementation
+### 🟢 GREEN Phase - Implementation (US5)
 
 - [X] T074 [P] [US5] Create assign_tags contract in `src/contracts/tag-tools/assign-tags.ts` (AssignTagsInputSchema, AssignTagsResponseSchema with batch results) → contract tests GREEN
 - [X] T075 [US5] Implement assignTags primitive in `src/tools/primitives/assignTags.ts` (resolve tags first, iterate tasks, task.addTag(), continue on error) → unit tests GREEN
 - [X] T076 [US5] Implement assignTags definition handler in `src/tools/definitions/assignTags.ts` (Zod validation, batch error handling)
 - [X] T077 [US5] Register assign_tags tool in `src/server.ts`
 
-### 🔵 REFACTOR Phase - Polish
+### 🔵 REFACTOR Phase - Polish (US5)
 
 - [X] T078 [US5] Refactor assignTags batch processing logic for clarity while keeping tests green
 - [ ] T079 [US5] Manual verification: Assign tags to tasks in OmniFocus Script Editor with mixed success/failure scenarios
@@ -230,7 +231,7 @@ This is a single project with TypeScript MCP server:
 
 **Independent Test**: Remove tags from tasks and verify the tags no longer appear on those tasks
 
-### 🔴 RED Phase - Tests First (REQUIRED)
+### 🔴 RED Phase - Tests First (US6)
 
 - [X] T081 [P] [US6] Write contract test for remove_tags input schema with refine validations in `tests/contract/tag-tools/remove-tags.test.ts` → verify FAILS
 - [X] T082 [P] [US6] Write contract test for remove_tags response schema with batch results in `tests/contract/tag-tools/remove-tags.test.ts` → verify FAILS
@@ -241,14 +242,14 @@ This is a single project with TypeScript MCP server:
 - [X] T087 [P] [US6] Write unit test for removeTags idempotency (tag not assigned) in `tests/unit/tag-tools/removeTags.test.ts` → verify FAILS
 - [X] T088 [P] [US6] Write unit test for removeTags error (clearAll + tagIds conflict) in `tests/unit/tag-tools/removeTags.test.ts` → verify FAILS
 
-### 🟢 GREEN Phase - Implementation
+### 🟢 GREEN Phase - Implementation (US6)
 
 - [X] T089 [P] [US6] Create remove_tags contract in `src/contracts/tag-tools/remove-tags.ts` (RemoveTagsInputSchema with clearAll refine, RemoveTagsResponseSchema) → contract tests GREEN
 - [X] T090 [US6] Implement removeTags primitive in `src/tools/primitives/removeTags.ts` (resolve tags or use clearAll, task.removeTag() or task.clearTags(), continue on error) → unit tests GREEN
 - [X] T091 [US6] Implement removeTags definition handler in `src/tools/definitions/removeTags.ts` (Zod validation, batch error handling)
 - [X] T092 [US6] Register remove_tags tool in `src/server.ts`
 
-### 🔵 REFACTOR Phase - Polish
+### 🔵 REFACTOR Phase - Polish (US6)
 
 - [X] T093 [US6] Refactor removeTags clearAll logic while keeping tests green
 - [X] T094 [US6] Manual verification: Remove tags from tasks in OmniFocus Script Editor with clearAll and specific tags
@@ -326,14 +327,18 @@ This is a single project with TypeScript MCP server:
 ### Parallel Opportunities
 
 #### Phase 1 (Setup)
+
 - All 4 tasks (T001-T004) can run in parallel - different directories
 
 #### Phase 2 (Foundational)
+
 - Schema creation tasks (T005-T009) can run in parallel - different files
 - Contract test tasks (T010-T013) can run in parallel after schemas exist - different test files
 
 #### Phase 3-8 (User Stories)
+
 Once Foundational phase completes, all user stories can start in parallel if team capacity allows:
+
 - Developer A: US1 (list_tags) - TDD cycle
 - Developer B: US2 (create_tag) - TDD cycle
 - Developer C: US3 (edit_tag) - TDD cycle
@@ -342,10 +347,12 @@ Once Foundational phase completes, all user stories can start in parallel if tea
 - Developer F: US6 (remove_tags) - TDD cycle
 
 Within each user story:
+
 - All RED phase tests marked [P] can run in parallel (different test files or test suites)
 - All GREEN phase tasks marked [P] can run in parallel (different implementation files)
 
 #### Phase 9 (Polish)
+
 - Documentation tasks (T096-T098) can run in parallel
 - Cleanup tasks (T099-T100) can run in parallel
 - Performance checks (T101-T102) can run in parallel
@@ -429,7 +436,8 @@ With 6 developers available:
 
 ### Total Tasks: 115
 
-### Tasks by Phase:
+### Tasks by Phase
+
 - **Phase 1 (Setup)**: 4 tasks (T001-T004)
 - **Phase 2 (Foundational)**: 9 tasks (T005-T013)
 - **Phase 3 (US1 - list_tags)**: 13 tasks (T014-T026)
@@ -440,7 +448,8 @@ With 6 developers available:
 - **Phase 8 (US6 - remove_tags)**: 15 tasks (T081-T095)
 - **Phase 9 (Polish)**: 18 tasks (T096-T113)
 
-### Parallel Opportunities:
+### Summary: Parallel Opportunities
+
 - Setup: 4 parallel tasks
 - Foundational: 9 parallel tasks (4 schema creation + 4 contract tests, plus 1 index)
 - User Stories: 6 stories can run in parallel after Foundational complete
@@ -448,7 +457,8 @@ With 6 developers available:
 - Within each story: 1-2 GREEN phase tasks can run in parallel
 - Polish: Up to 11 tasks can run in parallel
 
-### MVP Scope:
+### MVP Scope
+
 **User Story 1 only (list_tags)** - 26 tasks total (T001-T013 foundational + T014-T026 US1)
 
 This provides immediate value by enabling AI assistants to view and understand the user's tag taxonomy.

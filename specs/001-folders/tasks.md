@@ -49,6 +49,7 @@
 - [x] T005 [US0] Document current patterns in each file (AppleScript vs Omni Automation). Output: Table in PR description with columns: File | Current Approach | Migration Needed (Y/N)
 
 **Audit Results (T004-T005):**
+
 | File | Current Approach | Migration Needed |
 |------|------------------|------------------|
 | addProject.ts | AppleScript (`tell application "OmniFocus"`) | Yes |
@@ -126,13 +127,13 @@
 
 **Independent Test**: Call `add_folder` with name and position to create folder, verify it appears in OmniFocus at correct location
 
-### 🔴 RED Phase - Tests First (REQUIRED)
+### 🔴 RED Phase - Tests First (US2)
 
 - [x] T025 [P] [US2] Write contract test tests/contract/addFolder.test.ts for AddFolderInputSchema → verify FAILS ✓
 - [x] T026 [P] [US2] Write unit test tests/unit/addFolder.test.ts for addFolder primitive with position scenarios → verify FAILS ✓
 - [x] T026a [P] [US2] Write unit test for special characters in folder names (edge case: quotes, slashes, Unicode, emoji) → verify FAILS ✓
 
-### 🟢 GREEN Phase - Implementation
+### 🟢 GREEN Phase - Implementation (US2)
 
 - [x] T027 [P] [US2] Create primitive src/tools/primitives/addFolder.ts with OmniJS script generation → tests GREEN ✓
 - [x] T028 [P] [US2] Create definition src/tools/definitions/addFolder.ts with Zod schema and handler ✓
@@ -142,7 +143,7 @@
 - [x] T032 [US2] Implement default position handling (library.ending when position omitted) ✓
 - [x] T033 [US2] Implement name trimming and validation (non-empty after trim) ✓
 
-### 🔵 REFACTOR Phase - Polish
+### 🔵 REFACTOR Phase - Polish (US2)
 
 - [x] T034 [US2] Refactor if needed while keeping tests green ✓
 - [x] T035 [US2] Verify add_folder in OmniFocus Script Editor (manual test) ✓
@@ -157,12 +158,12 @@
 
 **Independent Test**: Call `edit_folder` to rename a folder, verify name change persists in OmniFocus
 
-### 🔴 RED Phase - Tests First (REQUIRED)
+### 🔴 RED Phase - Tests First (US3)
 
 - [x] T036 [P] [US3] Write contract test tests/contract/editFolder.test.ts for EditFolderInputSchema → verify FAILS ✓
 - [x] T037 [P] [US3] Write unit test tests/unit/editFolder.test.ts with disambiguation scenarios → verify FAILS ✓
 
-### 🟢 GREEN Phase - Implementation
+### 🟢 GREEN Phase - Implementation (US3)
 
 - [x] T038 [P] [US3] Create primitive src/tools/primitives/editFolder.ts with OmniJS script generation → tests GREEN ✓
 - [x] T039 [P] [US3] Create definition src/tools/definitions/editFolder.ts with Zod schema and handler ✓
@@ -174,7 +175,7 @@
 - [x] T045 [US3] Implement partial update for newStatus (folder.status assignment) ✓
 - [x] T046 [US3] Implement validation requiring at least one of newName or newStatus ✓
 
-### 🔵 REFACTOR Phase - Polish
+### 🔵 REFACTOR Phase - Polish (US3)
 
 - [x] T047 [US3] Refactor if needed while keeping tests green ✓
 - [x] T048 [US3] Verify edit_folder in OmniFocus Script Editor (manual test) ✓
@@ -189,13 +190,13 @@
 
 **Independent Test**: Call `remove_folder` to delete a folder, verify it and all contents are removed from OmniFocus
 
-### 🔴 RED Phase - Tests First (REQUIRED)
+### 🔴 RED Phase - Tests First (US4)
 
 - [x] T049 [P] [US4] Write contract test tests/contract/removeFolder.test.ts for RemoveFolderInputSchema → verify FAILS ✓
 - [x] T050 [P] [US4] Write unit test tests/unit/removeFolder.test.ts → verify FAILS ✓
 - [x] T050a [P] [US4] Write unit test for library deletion rejection (edge case: "Cannot delete/move library: not a valid folder target") → verify FAILS ✓
 
-### 🟢 GREEN Phase - Implementation
+### 🟢 GREEN Phase - Implementation (US4)
 
 - [x] T051 [P] [US4] Create primitive src/tools/primitives/removeFolder.ts with OmniJS script generation → tests GREEN ✓
 - [x] T052 [P] [US4] Create definition src/tools/definitions/removeFolder.ts with Zod schema and handler ✓
@@ -205,7 +206,7 @@
 - [x] T056 [US4] Implement deleteObject(folder) call in OmniJS ✓
 - [x] T057 [US4] Capture folder ID and name before deletion for response ✓
 
-### 🔵 REFACTOR Phase - Polish
+### 🔵 REFACTOR Phase - Polish (US4)
 
 - [x] T058 [US4] Refactor if needed while keeping tests green ✓
 - [x] T059 [US4] Verify remove_folder in OmniFocus Script Editor (manual test) ✓
@@ -220,13 +221,13 @@
 
 **Independent Test**: Call `move_folder` to move a folder to a different parent, verify hierarchy change in OmniFocus
 
-### 🔴 RED Phase - Tests First (REQUIRED)
+### 🔴 RED Phase - Tests First (US5)
 
 - [x] T060 [P] [US5] Write contract test tests/contract/moveFolder.test.ts for MoveFolderInputSchema → verify FAILS ✓
 - [x] T061 [P] [US5] Write unit test tests/unit/moveFolder.test.ts with circular detection scenarios → verify FAILS ✓
 - [x] T061a [P] [US5] Write unit test for library move rejection (edge case: "Cannot delete/move library: not a valid folder target") → verify FAILS ✓
 
-### 🟢 GREEN Phase - Implementation
+### 🟢 GREEN Phase - Implementation (US5)
 
 - [x] T062 [P] [US5] Create primitive src/tools/primitives/moveFolder.ts with OmniJS script generation → tests GREEN ✓
 - [x] T063 [P] [US5] Create definition src/tools/definitions/moveFolder.ts with Zod schema and handler ✓
@@ -237,7 +238,7 @@
 - [x] T068 [US5] Implement circular move detection (cannot move folder into its own descendant) ✓
 - [x] T069 [US5] Implement moveSections([folder], position) call in OmniJS ✓
 
-### 🔵 REFACTOR Phase - Polish
+### 🔵 REFACTOR Phase - Polish (US5)
 
 - [x] T070 [US5] Refactor if needed while keeping tests green ✓
 - [x] T071 [US5] Verify move_folder in OmniFocus Script Editor (manual test) ✓

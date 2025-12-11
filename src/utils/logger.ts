@@ -64,7 +64,7 @@ function writeLog(level: LogLevel, message: string, context?: string, data?: unk
     ...(data !== undefined && { data })
   };
 
-  process.stderr.write(JSON.stringify(entry) + '\n');
+  process.stderr.write(`${JSON.stringify(entry)}\n`);
 }
 
 /**

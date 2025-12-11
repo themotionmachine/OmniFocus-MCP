@@ -3,6 +3,7 @@
 ## Complete Field Reference
 
 ### Task Fields
+
 All available fields you can request for tasks:
 
 | Field | Type | Description | Example Value |
@@ -30,6 +31,7 @@ All available fields you can request for tasks:
 | `creationDate` | string | When task was created | "2024-12-01T09:00:00Z" |
 
 ### Project Fields
+
 All available fields you can request for projects:
 
 | Field | Type | Description | Example Value |
@@ -40,7 +42,7 @@ All available fields you can request for projects:
 | `note` | string | Project notes | "Phase 1 focus on UX" |
 | `folderName` | string | Containing folder name | "Work" |
 | `folderID` | string | Containing folder ID | "fold456" |
-|enser | boolean | Tasks must be done in order | true |
+| `sequential` | boolean | Tasks must be done in order | true |
 | `dueDate` | string | Project due date | "2024-12-31T00:00:00Z" |
 | `deferDate` | string | Project defer date | "2024-12-01T00:00:00Z" |
 | `effectiveDueDate` | string | Inherited or set due date | "2024-12-31T00:00:00Z" |
@@ -53,6 +55,7 @@ All available fields you can request for projects:
 | `creationDate` | string | When project was created | "2024-11-01T09:00:00Z" |
 
 ### Folder Fields
+
 All available fields you can request for folders:
 
 | Field | Type | Description | Example Value |
@@ -69,8 +72,10 @@ All available fields you can request for folders:
 ## Filter Behavior Details
 
 ### `projectName` Filter
+
 - **Behavior**: Case-insensitive partial/substring matching
 - **Special value**: Use `"inbox"` to get inbox tasks
+
 ```json
 {
   "projectName": "review"  // Matches "Weekly Review", "Review Documents", etc.
@@ -78,8 +83,10 @@ All available fields you can request for folders:
 ```
 
 ### `deferredUntil` Filter
+
 - **Behavior**: Returns tasks that are currently deferred but will become available within N days
 - **Example**: `"deferredUntil": 7` returns tasks deferred now but available within the next 7 days
+
 ```json
 {
   "deferredUntil": 3  // Tasks becoming available in next 3 days
@@ -87,8 +94,10 @@ All available fields you can request for folders:
 ```
 
 ### `dueWithin` Filter
+
 - **Behavior**: Returns tasks due from now until N days in the future (inclusive)
 - **Example**: `"dueWithin": 7` returns tasks due today through 7 days from now
+
 ```json
 {
   "dueWithin": 1  // Tasks due today or tomorrow
@@ -96,8 +105,10 @@ All available fields you can request for folders:
 ```
 
 ### `tags` Filter
+
 - **Behavior**: Exact match, case-sensitive
 - **Logic**: OR - task must have at least ONE of the specified tags
+
 ```json
 {
   "tags": ["Work", "work"]  // Different - case matters!
@@ -105,8 +116,10 @@ All available fields you can request for folders:
 ```
 
 ### `status` Filter
+
 - **Behavior**: Exact match against OmniFocus status values
 - **Logic**: OR - item must have ONE of the specified statuses
+
 ```json
 {
   "status": ["Next", "Available"]  // Tasks that are either next or available
@@ -114,7 +127,9 @@ All available fields you can request for folders:
 ```
 
 ### `hasNote` Filter
+
 - **Behavior**: Checks if note field exists and is non-empty (after trimming whitespace)
+
 ```json
 {
   "hasNote": true   // Tasks with non-empty notes
@@ -125,6 +140,7 @@ All available fields you can request for folders:
 ## Complete Status Values
 
 ### Task Status Values
+
 | Status | Description | When it appears |
 |--------|-------------|-----------------|
 | `Next` | Next action in sequential list | First available task in sequential project/group |
@@ -136,6 +152,7 @@ All available fields you can request for folders:
 | `Dropped` | Cancelled/dropped | Task that was dropped (not completed) |
 
 ### Project Status Values
+
 | Status | Description |
 |--------|-------------|
 | `Active` | Normal active project |
@@ -144,6 +161,7 @@ All available fields you can request for folders:
 | `Dropped` | Cancelled/dropped project |
 
 ### Folder Status Values
+
 | Status | Description |
 |--------|-------------|
 | `Active` | Normal active folder |
@@ -166,6 +184,7 @@ All filters use **AND** logic - an item must match ALL specified filters:
 ```
 
 Within array filters (`status`, `tags`), **OR** logic applies:
+
 ```json
 {
   "status": ["Next", "Available"],  // Next OR Available
@@ -176,9 +195,10 @@ Within array filters (`status`, `tags`), **OR** logic applies:
 ## Sort Fields
 
 Common fields you can sort by:
+
 - `name` - Alphabetical by item name
 - `dueDate` - By due date (null dates sort last)
-- `deferDate` - By defer date (null dates sort last)  
+- `deferDate` - By defer date (null dates sort last)
 - `modificationDate` - By last modified time
 - `creationDate` - By creation time
 - `estimatedMinutes` - By time estimate (shortest first with 'asc')
@@ -187,6 +207,7 @@ Common fields you can sort by:
 ## Performance Tips
 
 ### Request only needed fields
+
 ```json
 {
   "entity": "tasks",
@@ -196,6 +217,7 @@ Common fields you can sort by:
 ```
 
 ### Use summary for counts
+
 ```json
 {
   "entity": "tasks",
@@ -205,7 +227,9 @@ Common fields you can sort by:
 ```
 
 ### Combine related queries
+
 Instead of multiple queries, get everything at once:
+
 ```json
 {
   "entity": "tasks",
@@ -220,7 +244,7 @@ Instead of multiple queries, get everything at once:
 
 ## Common Gotchas
 
-1. **Tag names must be exact** - "Work" ≠ "work" 
+1. **Tag names must be exact** - "Work" ≠ "work"
 2. **Project names are partial matches** - "Review" matches "Weekly Review"
 3. **Null dates sort last** - Tasks without due dates appear at the end when sorting by dueDate
 4. **Inbox is a special project name** - Use `"projectName": "inbox"` for inbox tasks

@@ -5,6 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import * as addFolderTool from './tools/definitions/addFolder.js';
 import * as addOmniFocusTaskTool from './tools/definitions/addOmniFocusTask.js';
 import * as addProjectTool from './tools/definitions/addProject.js';
+import * as appendNoteTool from './tools/definitions/appendNote.js';
 import * as assignTagsTool from './tools/definitions/assignTags.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
@@ -16,14 +17,17 @@ import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as editTagTool from './tools/definitions/editTag.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
+import * as getTaskTool from './tools/definitions/getTask.js';
 import * as listFoldersTool from './tools/definitions/listFolders.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
 import * as listTagsTool from './tools/definitions/listTags.js';
+import * as listTasksTool from './tools/definitions/listTasks.js';
 import * as moveFolderTool from './tools/definitions/moveFolder.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as removeTagsTool from './tools/definitions/removeTags.js';
+import * as setPlannedDateTool from './tools/definitions/setPlannedDate.js';
 import { logger } from './utils/logger.js';
 
 // Create an MCP server
@@ -177,6 +181,35 @@ server.tool(
   'Remove tags from tasks in OmniFocus. Can remove specific tags or clear all tags from specified tasks. Supports batch operations with per-task success/failure reporting. Idempotent (removing an unassigned tag is safe).',
   removeTagsTool.schema.shape,
   removeTagsTool.handler
+);
+
+// Phase 3 Enhanced Task Management Tools
+server.tool(
+  'list_tasks',
+  'List tasks from OmniFocus with comprehensive filtering. Supports filtering by project/folder, tags (AND/OR logic), status, flagged state, and date ranges (due, defer, planned, completed). Returns TaskSummary objects with essential task metadata.',
+  listTasksTool.schema.shape,
+  listTasksTool.handler
+);
+
+server.tool(
+  'get_task',
+  'Get detailed information about a single task by ID or name. Returns complete TaskFull object with all properties including notes, dates, flags, hierarchy info, and relationships.',
+  getTaskTool.schema.shape,
+  getTaskTool.handler
+);
+
+server.tool(
+  'set_planned_date',
+  'Set or clear the planned date for a task (OmniFocus v4.7+ feature). Pass an ISO 8601 date string to set, or null to clear. Supports lookup by ID or name.',
+  setPlannedDateTool.schema.shape,
+  setPlannedDateTool.handler
+);
+
+server.tool(
+  'append_note',
+  "Append text to a task's existing note. Preserves existing note content and adds new text with proper line separation. Supports lookup by ID or name.",
+  appendNoteTool.schema.shape,
+  appendNoteTool.handler
 );
 
 // Start the MCP server
