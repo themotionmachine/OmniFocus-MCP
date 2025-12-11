@@ -44,6 +44,17 @@ vi.mock('node:fs', async (importOriginal) => {
   };
 });
 
+// Mock the logger
+vi.mock('../../src/utils/logger.js', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn()
+  }
+}));
+
+import { logger } from '../../src/utils/logger.js';
 // Import after mocking
 import { executeJXA, executeOmniFocusScript } from '../../src/utils/scriptExecution.js';
 
@@ -70,7 +81,6 @@ describe('scriptExecution', () => {
     });
 
     it('should handle stderr output gracefully', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const mockResult = { success: true };
 
       mockExecFileAsync.mockResolvedValue({
@@ -81,14 +91,12 @@ describe('scriptExecution', () => {
       const result = await executeJXA('script');
 
       expect(result).toEqual(mockResult);
-      expect(consoleSpy).toHaveBeenCalledWith('Script stderr output:', 'Warning message');
-
-      consoleSpy.mockRestore();
+      expect(logger.warning).toHaveBeenCalledWith('Script stderr output', 'executeJXA', {
+        stderr: 'Warning message'
+      });
     });
 
     it('should return empty array for non-JSON output', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
       mockExecFileAsync.mockResolvedValue({
         stdout: 'Not valid JSON',
         stderr: ''
@@ -97,13 +105,9 @@ describe('scriptExecution', () => {
       const result = await executeJXA('script');
 
       expect(result).toEqual([]);
-
-      consoleSpy.mockRestore();
     });
 
     it('should return empty array for "Found X tasks" output', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
       mockExecFileAsync.mockResolvedValue({
         stdout: 'Found 10 tasks in the database',
         stderr: ''
@@ -112,19 +116,14 @@ describe('scriptExecution', () => {
       const result = await executeJXA('script');
 
       expect(result).toEqual([]);
-
-      consoleSpy.mockRestore();
     });
 
     it('should throw error when script execution fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const error = new Error('Execution failed');
 
       mockExecFileAsync.mockRejectedValue(error);
 
       await expect(executeJXA('script')).rejects.toThrow('Execution failed');
-
-      consoleSpy.mockRestore();
     });
 
     it('should clean up temp file after successful execution', async () => {
@@ -139,14 +138,11 @@ describe('scriptExecution', () => {
     });
 
     it('should clean up temp file after failed execution', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const error = new Error('Execution failed');
 
       mockExecFileAsync.mockRejectedValue(error);
 
       await expect(executeJXA('script')).rejects.toThrow();
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -178,7 +174,6 @@ describe('scriptExecution', () => {
     });
 
     it('should handle stderr output', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const mockResult = { success: true };
 
       mockExecFileAsync.mockResolvedValue({
@@ -188,14 +183,14 @@ describe('scriptExecution', () => {
 
       await executeOmniFocusScript('@testScript.js');
 
-      expect(consoleSpy).toHaveBeenCalledWith('Script stderr output:', 'Some stderr');
-
-      consoleSpy.mockRestore();
+      expect(logger.warning).toHaveBeenCalledWith(
+        'Script stderr output',
+        'executeOmniFocusScript',
+        { stderr: 'Some stderr' }
+      );
     });
 
     it('should return raw output when JSON parsing fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
       mockExecFileAsync.mockResolvedValue({
         stdout: 'Not valid JSON output',
         stderr: ''
@@ -204,19 +199,14 @@ describe('scriptExecution', () => {
       const result = await executeOmniFocusScript('@testScript.js');
 
       expect(result).toBe('Not valid JSON output');
-
-      consoleSpy.mockRestore();
     });
 
     it('should throw error when execution fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const error = new Error('Script failed');
 
       mockExecFileAsync.mockRejectedValue(error);
 
       await expect(executeOmniFocusScript('@testScript.js')).rejects.toThrow('Script failed');
-
-      consoleSpy.mockRestore();
     });
 
     it('should properly escape script content', async () => {
