@@ -5,6 +5,9 @@
     }
   ],
   "settings": {
-    "git.enableCommitSigning": true
+    "git.enableCommitSigning": true,
+    "yaml.schemas": {
+      "https://www.artillery.io/schema.json": []
+    }
   }
 }

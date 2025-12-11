@@ -6,7 +6,7 @@
 
 ## Content Quality
 
-- [x] Core requirements are technology-agnostic (implementation details in Clarifications section)
+- [x] Core requirements are technology-agnostic (details in Clarifications)
 - [x] Focused on user value and business needs
 - [x] Written for non-technical stakeholders
 - [x] All mandatory sections completed
@@ -49,7 +49,7 @@ All checklist items have been verified:
    - 8 edge cases documented
 
 3. **Feature Readiness**:
-   - 6 prioritized user stories with acceptance scenarios (P0 refactor + P1-P5 folder tools)
+   - 6 prioritized user stories with acceptance scenarios (P0-P5)
    - Clear scope boundaries in "Out of Scope" section
    - Assumptions documented
    - Technology approach aligned with Omni Group's recommended automation method

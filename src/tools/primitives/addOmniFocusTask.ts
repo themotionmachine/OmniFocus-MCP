@@ -1,9 +1,5 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
+import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
-
-const execFileAsync = promisify(execFile);
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -22,200 +18,141 @@ export interface AddOmniFocusTaskParams {
 }
 
 /**
- * Generate pure AppleScript for task creation
+ * Generate Omni Automation JavaScript for task creation
  */
-function generateAppleScript(params: AddOmniFocusTaskParams): string {
-  // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+function generateOmniScript(params: AddOmniFocusTaskParams): string {
+  // Escape strings for JavaScript
+  const escapeForJS = (str: string): string =>
+    str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+
+  const name = escapeForJS(params.name);
+  const note = params.note ? escapeForJS(params.note) : '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
-  const estimatedMinutes = params.estimatedMinutes?.toString() || '';
+  const estimatedMinutes = params.estimatedMinutes || 0;
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  const projectName = params.projectName ? escapeForJS(params.projectName) : '';
+  const parentTaskId = params.parentTaskId ? escapeForJS(params.parentTaskId) : '';
+  const parentTaskName = params.parentTaskName ? escapeForJS(params.parentTaskName) : '';
 
-  // Generate date constructions outside tell blocks
-  let datePreScript = '';
-  let dueDateVar = '';
-  let deferDateVar = '';
+  // Generate tags array for OmniJS
+  const tagsArrayStr = JSON.stringify(tags);
 
-  if (dueDate) {
-    dueDateVar = `dueDate${Math.random().toString(36).substr(2, 9)}`;
-    datePreScript += `${createDateOutsideTellBlock(dueDate, dueDateVar)}\n\n`;
+  return `(function() {
+  try {
+    var name = "${name}";
+    var note = "${note}";
+    var dueDate = ${dueDate ? `"${dueDate}"` : 'null'};
+    var deferDate = ${deferDate ? `"${deferDate}"` : 'null'};
+    var flagged = ${flagged};
+    var estimatedMinutes = ${estimatedMinutes};
+    var tags = ${tagsArrayStr};
+    var projectName = "${projectName}";
+    var parentTaskId = "${parentTaskId}";
+    var parentTaskName = "${parentTaskName}";
+
+    var parentTask = null;
+    var targetProject = null;
+    var placement = "inbox";
+    var position = null;
+
+    // Find parent task by ID if provided
+    if (parentTaskId && parentTaskId.length > 0) {
+      // Try to find task by ID
+      parentTask = Task.byIdentifier(parentTaskId);
+
+      // If projectName provided, verify parent is in that project
+      if (parentTask && projectName && projectName.length > 0) {
+        var containingProj = parentTask.containingProject;
+        if (!containingProj || containingProj.name !== projectName) {
+          parentTask = null;
+        }
+      }
+    }
+
+    // Find parent task by name if not found by ID
+    if (!parentTask && parentTaskName && parentTaskName.length > 0) {
+      if (projectName && projectName.length > 0) {
+        // Find within specific project
+        var proj = flattenedProjects.byName(projectName);
+        if (proj) {
+          parentTask = proj.flattenedTasks.byName(parentTaskName);
+        }
+      } else {
+        // Search globally
+        parentTask = flattenedTasks.byName(parentTaskName);
+      }
+    }
+
+    // Determine where to create the task
+    var newTask = null;
+
+    if (parentTask) {
+      // Create under parent task
+      newTask = new Task(name, parentTask.ending);
+      placement = "parent";
+    } else if (projectName && projectName.length > 0) {
+      // Create in project
+      targetProject = flattenedProjects.byName(projectName);
+      if (!targetProject) {
+        return JSON.stringify({ success: false, error: "Project not found: " + projectName });
+      }
+      newTask = new Task(name, targetProject.ending);
+      placement = "project";
+    } else {
+      // Create in inbox
+      newTask = new Task(name, inbox.ending);
+      placement = "inbox";
+    }
+
+    // Set task properties
+    if (note && note.length > 0) {
+      newTask.note = note;
+    }
+
+    if (dueDate) {
+      newTask.dueDate = new Date(dueDate);
+    }
+
+    if (deferDate) {
+      newTask.deferDate = new Date(deferDate);
+    }
+
+    if (flagged) {
+      newTask.flagged = true;
+    }
+
+    if (estimatedMinutes > 0) {
+      newTask.estimatedMinutes = estimatedMinutes;
+    }
+
+    // Add tags
+    if (tags && tags.length > 0) {
+      tags.forEach(function(tagName) {
+        var tag = flattenedTags.byName(tagName);
+        if (!tag) {
+          tag = new Tag(tagName);
+        }
+        newTask.addTag(tag);
+      });
+    }
+
+    // Return success with task ID and placement
+    return JSON.stringify({
+      success: true,
+      taskId: newTask.id.primaryKey,
+      name: newTask.name,
+      placement: placement
+    });
+  } catch (e) {
+    return JSON.stringify({ success: false, error: e.message || String(e) });
   }
-
-  if (deferDate) {
-    deferDateVar = `deferDate${Math.random().toString(36).substr(2, 9)}`;
-    datePreScript += `${createDateOutsideTellBlock(deferDate, deferDateVar)}\n\n`;
-  }
-
-  // Construct AppleScript with error handling
-  const script =
-    datePreScript +
-    `
-  try
-    tell application "OmniFocus"
-      tell front document
-        -- Resolve parent task if provided
-        set newTask to missing value
-        set parentTask to missing value
-        set placement to ""
-
-        if "${parentTaskId}" is not "" then
-          try
-            set parentTask to first flattened task where id = "${parentTaskId}"
-          end try
-          if parentTask is missing value then
-            try
-              set parentTask to first inbox task where id = "${parentTaskId}"
-            end try
-          end if
-          -- If projectName provided, ensure parent is within that project
-          if parentTask is not missing value and "${projectName}" is not "" then
-            try
-              set pproj to containing project of parentTask
-              if pproj is missing value or name of pproj is not "${projectName}" then set parentTask to missing value
-            end try
-          end if
-        end if
-
-        if parentTask is missing value and "${parentTaskName}" is not "" then
-          if "${projectName}" is not "" then
-            -- Find by name but constrain to the specified project
-            try
-              set parentTask to first flattened task where name = "${parentTaskName}"
-            end try
-            if parentTask is not missing value then
-              try
-                set pproj to containing project of parentTask
-                if pproj is missing value or name of pproj is not "${projectName}" then set parentTask to missing value
-              end try
-            end if
-          else
-            -- No project specified; allow global or inbox match by name
-            try
-              set parentTask to first flattened task where name = "${parentTaskName}"
-            end try
-            if parentTask is missing value then
-              try
-                set parentTask to first inbox task where name = "${parentTaskName}"
-              end try
-            end if
-          end if
-        end if
-
-        if parentTask is not missing value then
-          -- Create task under parent task
-          set newTask to make new task with properties {name:"${name}"} at end of tasks of parentTask
-        else if "${projectName}" is not "" then
-          -- Create under specified project
-          try
-            set theProject to first flattened project where name = "${projectName}"
-            set newTask to make new task with properties {name:"${name}"} at end of tasks of theProject
-          on error
-            return "{\\"success\\":false,\\"error\\":\\"Project not found: ${projectName}\\"}"
-          end try
-        else
-          -- Fallback to inbox
-          set newTask to make new inbox task with properties {name:"${name}"}
-        end if
-
-        -- Set task properties
-        ${note ? `set note of newTask to "${note}"` : ''}
-        ${
-          dueDate
-            ? `
-          -- Set due date
-          set due date of newTask to ${dueDateVar}`
-            : ''
-        }
-        ${
-          deferDate
-            ? `
-          -- Set defer date
-          set defer date of newTask to ${deferDateVar}`
-            : ''
-        }
-        ${flagged ? `set flagged of newTask to true` : ''}
-        ${estimatedMinutes ? `set estimated minutes of newTask to ${estimatedMinutes}` : ''}
-
-        -- Derive placement from container; distinguish real parent vs project root task
-        try
-          set placement to "inbox"
-          set ctr to container of newTask
-          set cclass to class of ctr as string
-          set ctrId to id of ctr as string
-          if cclass is "project" then
-            set placement to "project"
-          else if cclass is "task" then
-            if parentTask is not missing value then
-              set parentId to id of parentTask as string
-              if ctrId is equal to parentId then
-                set placement to "parent"
-              else
-                -- Likely the project's root task; treat as project
-                set placement to "project"
-              end if
-            else
-              -- No explicit parent requested; container is root task -> treat as project
-              set placement to "project"
-            end if
-          else
-            set placement to "inbox"
-          end if
-        on error
-          -- If container access fails (e.g., inbox), default based on projectName
-          if "${projectName}" is not "" then
-            set placement to "project"
-          else
-            set placement to "inbox"
-          end if
-        end try
-
-        -- Get the task ID
-        set taskId to id of newTask as string
-
-        -- Add tags if provided
-        ${
-          tags.length > 0
-            ? tags
-                .map((tag) => {
-                  const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
-                  return `
-          try
-            set theTag to first flattened tag where name = "${sanitizedTag}"
-            add theTag to tags of newTask
-          on error
-            -- Tag might not exist, try to create it
-            try
-              set theTag to make new tag with properties {name:"${sanitizedTag}"}
-              add theTag to tags of newTask
-            on error
-              -- Could not create or add tag
-            end try
-          end try`;
-                })
-                .join('\n')
-            : ''
-        }
-
-        -- Return success with task ID and placement
-        return "{\\"success\\":true,\\"taskId\\":\\"" & taskId & "\\",\\"name\\":\\"${name}\\",\\"placement\\":\\"" & placement & "\\"}"
-      end tell
-    end tell
-  on error errorMessage
-    return "{\\"success\\":false,\\"error\\":\\"" & errorMessage & "\\"}"
-  end try
-  `;
-
-  return script;
+})();`;
 }
 
 /**
- * Add a task to OmniFocus
+ * Add a new task to OmniFocus using Omni Automation JavaScript
  */
 export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{
   success: boolean;
@@ -231,41 +168,45 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     };
   }
 
-  // Generate AppleScript
-  const script = generateAppleScript(params);
-  console.error('Executing AppleScript via temp file...');
+  // Generate Omni Automation script
+  const script = generateOmniScript(params);
 
-  // Write to a secure temporary file
-  const tempFile = writeSecureTempFile(script, 'omnifocus_add', '.applescript');
+  // Write script to secure temporary file
+  const tempFile = writeSecureTempFile(script, 'omnifocus_add', '.js');
 
   try {
-    // Execute AppleScript from file (execFile prevents command injection)
-    const { stdout, stderr } = await execFileAsync('osascript', [tempFile.path]);
+    // Execute via Omni Automation
+    const result = (await executeOmniFocusScript(tempFile.path)) as {
+      success: boolean;
+      taskId?: string;
+      name?: string;
+      error?: string;
+      placement?: 'parent' | 'project' | 'inbox';
+    };
 
-    if (stderr) {
-      console.error('AppleScript stderr:', stderr);
-    }
-
-    console.error('AppleScript stdout:', stdout);
-
-    // Parse the result
-    try {
-      const result = JSON.parse(stdout);
-
-      // Return the result
-      return {
-        success: result.success,
-        taskId: result.taskId,
-        error: result.error,
-        placement: result.placement
-      };
-    } catch (parseError) {
-      console.error('Error parsing AppleScript result:', parseError);
+    if (result.error) {
       return {
         success: false,
-        error: `Failed to parse result: ${stdout}`
+        error: result.error
       };
     }
+
+    // Build success response, only including defined properties
+    const response: {
+      success: boolean;
+      taskId?: string;
+      error?: string;
+      placement?: 'parent' | 'project' | 'inbox';
+    } = {
+      success: result.success
+    };
+    if (result.taskId !== undefined) {
+      response.taskId = result.taskId;
+    }
+    if (result.placement !== undefined) {
+      response.placement = result.placement;
+    }
+    return response;
   } catch (error: unknown) {
     console.error('Error in addOmniFocusTask:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -1,10 +1,10 @@
 # Code Style and Conventions
 
 ## TypeScript Configuration
-- ES module syntax (`"type": "module"` in package.json)
-- Target: ES2020+ (from tsconfig.json)
-- Strict type checking enabled
-- File extensions: `.ts` for TypeScript, `.js` for JXA scripts
+
+See `.claude/rules/typescript-standards.md` for detailed conventions.
+
+Key points: ES modules, strict mode, `.js` extensions in imports.
 
 ## Naming Conventions
 

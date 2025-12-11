@@ -1,19 +1,10 @@
 # Key Implementation Details
 
-## JXA Script Execution Pattern
+## JXA Script Execution
 
-All OmniFocus interactions use JXA (JavaScript for Automation) executed via AppleScript:
+See `.claude/rules/jxa-development.md` for detailed JXA patterns.
 
-```typescript
-// In src/utils/scriptExecution.ts
-executeJXA(script: string) -> Promise<any[]>
-```
-
-1. Writes JXA script to temp file in system temp directory
-2. Executes via `osascript -l JavaScript <tempfile>`
-3. Parses JSON output from stdout
-4. Cleans up temp file
-5. Returns parsed result
+Key flow: `executeJXA()` writes script to temp file → executes via osascript → parses JSON → cleans up.
 
 ## Two Query Strategies
 

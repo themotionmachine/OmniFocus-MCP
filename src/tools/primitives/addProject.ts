@@ -1,9 +1,5 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
+import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
-
-const execFileAsync = promisify(execFile);
 
 // Interface for project creation parameters
 export interface AddProjectParams {
@@ -19,117 +15,100 @@ export interface AddProjectParams {
 }
 
 /**
- * Generate pure AppleScript for project creation
+ * Generate Omni Automation JavaScript for project creation
  */
-function generateAppleScript(params: AddProjectParams): string {
-  // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+function generateOmniScript(params: AddProjectParams): string {
+  // Escape strings for JavaScript - escape backslashes first, then quotes
+  const escapeForJS = (str: string): string =>
+    str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+
+  const name = escapeForJS(params.name);
+  const note = params.note ? escapeForJS(params.note) : '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
-  const estimatedMinutes = params.estimatedMinutes?.toString() || '';
+  const estimatedMinutes = params.estimatedMinutes || 0;
   const tags = params.tags || [];
-  const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
+  const folderName = params.folderName ? escapeForJS(params.folderName) : '';
   const sequential = params.sequential === true;
 
-  // Generate date constructions outside tell blocks
-  let datePreScript = '';
-  let dueDateVar = '';
-  let deferDateVar = '';
+  // Generate tags array for OmniJS
+  const tagsArrayStr = JSON.stringify(tags);
 
-  if (dueDate) {
-    dueDateVar = `dueDate${Math.random().toString(36).substr(2, 9)}`;
-    datePreScript += `${createDateOutsideTellBlock(dueDate, dueDateVar)}\n\n`;
+  return `(function() {
+  try {
+    var name = "${name}";
+    var note = "${note}";
+    var dueDate = ${dueDate ? `"${dueDate}"` : 'null'};
+    var deferDate = ${deferDate ? `"${deferDate}"` : 'null'};
+    var flagged = ${flagged};
+    var estimatedMinutes = ${estimatedMinutes};
+    var tags = ${tagsArrayStr};
+    var folderName = "${folderName}";
+    var sequential = ${sequential};
+
+    // Determine position (folder or root)
+    var position = null;
+    if (folderName && folderName.length > 0) {
+      var folder = flattenedFolders.byName(folderName);
+      if (!folder) {
+        return JSON.stringify({ success: false, error: "Folder not found: " + folderName });
+      }
+      position = folder;
+    }
+
+    // Create project
+    var project = new Project(name, position);
+
+    // Set properties on project's root task
+    if (note && note.length > 0) {
+      project.task.note = note;
+    }
+
+    if (dueDate) {
+      project.task.dueDate = new Date(dueDate);
+    }
+
+    if (deferDate) {
+      project.task.deferDate = new Date(deferDate);
+    }
+
+    if (flagged) {
+      project.flagged = true;
+    }
+
+    if (estimatedMinutes > 0) {
+      project.task.estimatedMinutes = estimatedMinutes;
+    }
+
+    // Set sequential/parallel mode
+    project.sequential = sequential;
+
+    // Add tags
+    if (tags && tags.length > 0) {
+      tags.forEach(function(tagName) {
+        var tag = flattenedTags.byName(tagName);
+        if (!tag) {
+          tag = new Tag(tagName);
+        }
+        project.addTag(tag);
+      });
+    }
+
+    // Return success with project ID
+    return JSON.stringify({
+      success: true,
+      projectId: project.id.primaryKey,
+      name: project.name
+    });
+  } catch (e) {
+    return JSON.stringify({ success: false, error: e.message || String(e) });
   }
-
-  if (deferDate) {
-    deferDateVar = `deferDate${Math.random().toString(36).substr(2, 9)}`;
-    datePreScript += `${createDateOutsideTellBlock(deferDate, deferDateVar)}\n\n`;
-  }
-
-  // Construct AppleScript with error handling
-  const script =
-    datePreScript +
-    `
-  try
-    tell application "OmniFocus"
-      tell front document
-        -- Determine the container (root or folder)
-        if "${folderName}" is "" then
-          -- Create project at the root level
-          set newProject to make new project with properties {name:"${name}"}
-        else
-          -- Use specified folder
-          try
-            set theFolder to first flattened folder where name = "${folderName}"
-            set newProject to make new project with properties {name:"${name}"} at end of projects of theFolder
-          on error
-            return "{\\"success\\":false,\\"error\\":\\"Folder not found: ${folderName}\\"}"
-          end try
-        end if
-        
-        -- Set project properties
-        ${note ? `set note of newProject to "${note}"` : ''}
-        ${
-          dueDate
-            ? `
-          -- Set due date
-          set due date of newProject to ${dueDateVar}`
-            : ''
-        }
-        ${
-          deferDate
-            ? `
-          -- Set defer date
-          set defer date of newProject to ${deferDateVar}`
-            : ''
-        }
-        ${flagged ? `set flagged of newProject to true` : ''}
-        ${estimatedMinutes ? `set estimated minutes of newProject to ${estimatedMinutes}` : ''}
-        ${`set sequential of newProject to ${sequential}`}
-        
-        -- Get the project ID
-        set projectId to id of newProject as string
-        
-        -- Add tags if provided
-        ${
-          tags.length > 0
-            ? tags
-                .map((tag) => {
-                  const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
-                  return `
-          try
-            set theTag to first flattened tag where name = "${sanitizedTag}"
-            add theTag to tags of newProject
-          on error
-            -- Tag might not exist, try to create it
-            try
-              set theTag to make new tag with properties {name:"${sanitizedTag}"}
-              add theTag to tags of newProject
-            on error
-              -- Could not create or add tag
-            end try
-          end try`;
-                })
-                .join('\n')
-            : ''
-        }
-        
-        -- Return success with project ID
-        return "{\\"success\\":true,\\"projectId\\":\\"" & projectId & "\\",\\"name\\":\\"${name}\\"}"
-      end tell
-    end tell
-  on error errorMessage
-    return "{\\"success\\":false,\\"error\\":\\"" & errorMessage & "\\"}"
-  end try
-  `;
-
-  return script;
+})();`;
 }
 
 /**
- * Add a project to OmniFocus
+ * Add a new project to OmniFocus using Omni Automation JavaScript
  */
 export async function addProject(
   params: AddProjectParams
@@ -142,41 +121,36 @@ export async function addProject(
     };
   }
 
-  // Generate AppleScript
-  const script = generateAppleScript(params);
-
-  console.error('Executing AppleScript via temp file...');
+  // Generate Omni Automation script
+  const script = generateOmniScript(params);
 
   // Write script to secure temporary file
-  const tempFile = writeSecureTempFile(script, 'add_project', '.applescript');
+  const tempFile = writeSecureTempFile(script, 'add_project', '.js');
 
   try {
-    // Execute AppleScript from file (execFile prevents command injection)
-    const { stdout, stderr } = await execFileAsync('osascript', [tempFile.path]);
+    // Execute via Omni Automation
+    const result = (await executeOmniFocusScript(tempFile.path)) as {
+      success: boolean;
+      projectId?: string;
+      name?: string;
+      error?: string;
+    };
 
-    if (stderr) {
-      console.error('AppleScript stderr:', stderr);
-    }
-
-    console.error('AppleScript stdout:', stdout);
-
-    // Parse the result
-    try {
-      const result = JSON.parse(stdout);
-
-      // Return the result
-      return {
-        success: result.success,
-        projectId: result.projectId,
-        error: result.error
-      };
-    } catch (parseError) {
-      console.error('Error parsing AppleScript result:', parseError);
+    if (result.error) {
       return {
         success: false,
-        error: `Failed to parse result: ${stdout}`
+        error: result.error
       };
     }
+
+    // Build success response, only including defined properties
+    const response: { success: boolean; projectId?: string; error?: string } = {
+      success: result.success
+    };
+    if (result.projectId !== undefined) {
+      response.projectId = result.projectId;
+    }
+    return response;
   } catch (error: unknown) {
     console.error('Error in addProject:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

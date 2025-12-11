@@ -28,7 +28,7 @@ implementation phases.
 | ----- | ----------------------------------------- | ----- | -------- |
 | 0     | Tooling Setup (pnpm, tsup, Vitest, Biome) | -     | Complete |
 | 0.5   | MCP SDK Upgrade to 1.24.x                 | -     | Complete |
-| 1     | Folders                                   | 5     | Pending  |
+| 1     | Folders                                   | 5     | Complete |
 | 2     | Tags                                      | 6     | Pending  |
 | 3     | **Review System**                         | 3     | Pending  |
 | 4     | Notifications                             | 5     | Pending  |
@@ -344,6 +344,77 @@ Parameters:
 
 Note: This tool returns the content of the current perspective window.
 Due to OmniJS limitations, it cannot programmatically switch perspectives.
+
+### `list_folders`
+
+List folders from the OmniFocus database with optional filtering.
+
+Parameters:
+
+- `status`: (Optional) Filter by folder status ('active' or 'dropped')
+- `parentId`: (Optional) Filter to children of a specific folder ID
+- `includeChildren`: (Optional) Include all nested descendants (default: false)
+
+Returns:
+
+- Array of folders with id, name, status, and parentId
+
+### `add_folder`
+
+Create a new folder in the OmniFocus hierarchy.
+
+Parameters:
+
+- `name`: The name of the new folder (required, non-empty after trim)
+- `position`: (Optional) Where to place the folder:
+  - `placement`: 'beginning', 'ending', 'before', or 'after'
+  - `relativeTo`: Folder ID (required for before/after, optional for
+    beginning/ending to specify parent)
+
+Defaults to library ending if position is omitted.
+
+### `edit_folder`
+
+Edit folder properties (name and/or status) in OmniFocus.
+
+Parameters:
+
+- `id`: (Optional) The folder's unique identifier
+- `name`: (Optional) The folder's name (used if id not provided)
+- `updates`: Object containing properties to change:
+  - `name`: (Optional) New name for the folder
+  - `status`: (Optional) New status ('active' or 'dropped')
+
+Note: At least one of `id` or `name` must be provided for identification.
+Returns disambiguation error if multiple folders match the name.
+
+### `remove_folder`
+
+Remove a folder and all its contents from OmniFocus.
+
+Parameters:
+
+- `id`: (Optional) The folder's unique identifier
+- `name`: (Optional) The folder's name (used if id not provided)
+
+Note: This permanently deletes the folder and ALL nested folders, projects,
+and tasks. Returns disambiguation error if multiple folders match the name.
+
+### `move_folder`
+
+Move a folder to a new location in the OmniFocus hierarchy.
+
+Parameters:
+
+- `id`: (Optional) The folder's unique identifier
+- `name`: (Optional) The folder's name (used if id not provided)
+- `position`: Where to move the folder (required):
+  - `placement`: 'beginning', 'ending', 'before', or 'after'
+  - `relativeTo`: Folder ID (required for before/after, optional for
+    beginning/ending)
+
+Note: Prevents circular moves (folder into its own descendant). Returns
+disambiguation error if multiple folders match the name.
 
 ## Development
 

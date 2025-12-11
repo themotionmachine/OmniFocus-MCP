@@ -388,7 +388,8 @@ This approach:
 - **Use as reference**: `src/utils/omnifocusScripts/*.js` pre-built scripts -
   `omnifocusDump.js`, `listPerspectives.js`, and `getPerspectiveView.js`
   already use Omni Automation JavaScript and serve as target patterns
-- Update `src/utils/scriptExecution.ts` to support `evaluate javascript` pattern
+- **Verify** `src/utils/scriptExecution.ts` already supports `evaluate javascript`
+  pattern via `app.evaluateJavascript()` (line 109) - no changes needed
 - Update tests to validate Omni Automation JavaScript output
 - Update CLAUDE.md to document the Omni Automation JavaScript approach
 
@@ -560,7 +561,9 @@ restructuring.
   returns error "Cannot delete/move library: not a valid folder target" (the
   `Library` is a container class, not a `DatabaseObject`)
 - **Concurrent modifications**: Operations reflect the current state of
-  OmniFocus at execution time
+  OmniFocus at execution time. No locking or conflict resolution is needed
+  since OmniFocus is a single-user application; if the database changes
+  between request and execution, the operation uses the current state
 - **Special characters in names**: Folder names with special characters
   (quotes, slashes, etc.) are properly escaped and preserved
 - **Invalid relativeTo in position**: When `relativeTo` references a non-existent

@@ -1,28 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Use vi.hoisted() so the mock is available during vi.mock() hoisting
-const { mockExecFileAsync } = vi.hoisted(() => ({
-  mockExecFileAsync: vi.fn()
+// Mock dependencies for Omni Automation approach
+vi.mock('../../../src/utils/scriptExecution.js', () => ({
+  executeOmniFocusScript: vi.fn()
 }));
 
-vi.mock('node:util', async (importOriginal) => {
-  const original = await importOriginal<typeof import('node:util')>();
-  return {
-    ...original,
-    promisify: vi.fn(() => mockExecFileAsync)
-  };
-});
-
-// Mock secureTempFile
 vi.mock('../../../src/utils/secureTempFile.js', () => ({
   writeSecureTempFile: vi.fn(() => ({
-    path: '/tmp/mock_script.applescript',
+    path: '/tmp/mock_script.js',
     cleanup: vi.fn()
   }))
 }));
 
-// Import after mocking
 import { editItem } from '../../../src/tools/primitives/editItem.js';
+import { executeOmniFocusScript } from '../../../src/utils/scriptExecution.js';
+
+const mockExecuteOmniFocusScript = vi.mocked(executeOmniFocusScript);
 
 describe('editItem', () => {
   beforeEach(() => {
@@ -36,14 +29,11 @@ describe('editItem', () => {
 
   describe('successful edits', () => {
     it('should edit a task by ID', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Updated Task',
-          changedProperties: 'name'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Updated Task',
+        changedProperties: 'name'
       });
 
       const result = await editItem({
@@ -55,17 +45,15 @@ describe('editItem', () => {
       expect(result.success).toBe(true);
       expect(result.id).toBe('task-123');
       expect(result.changedProperties).toBe('name');
+      expect(mockExecuteOmniFocusScript).toHaveBeenCalledTimes(1);
     });
 
     it('should edit a task by name', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-456',
-          name: 'My Task',
-          changedProperties: 'note'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-456',
+        name: 'My Task',
+        changedProperties: 'note'
       });
 
       const result = await editItem({
@@ -78,14 +66,11 @@ describe('editItem', () => {
     });
 
     it('should edit a project by ID', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'project-123',
-          name: 'My Project',
-          changedProperties: 'name'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'project-123',
+        name: 'My Project',
+        changedProperties: 'name'
       });
 
       const result = await editItem({
@@ -98,14 +83,11 @@ describe('editItem', () => {
     });
 
     it('should edit multiple properties at once', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Task',
-          changedProperties: 'name, note, flagged'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Task',
+        changedProperties: 'name, note, flagged'
       });
 
       const result = await editItem({
@@ -125,14 +107,11 @@ describe('editItem', () => {
 
   describe('task status changes', () => {
     it('should mark task as completed', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Task',
-          changedProperties: 'status (completed)'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Task',
+        changedProperties: 'status (completed)'
       });
 
       const result = await editItem({
@@ -146,14 +125,11 @@ describe('editItem', () => {
     });
 
     it('should mark task as dropped', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Task',
-          changedProperties: 'status (dropped)'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Task',
+        changedProperties: 'status (dropped)'
       });
 
       const result = await editItem({
@@ -166,14 +142,11 @@ describe('editItem', () => {
     });
 
     it('should mark task as incomplete', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Task',
-          changedProperties: 'status (incomplete)'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Task',
+        changedProperties: 'status (incomplete)'
       });
 
       const result = await editItem({
@@ -188,14 +161,11 @@ describe('editItem', () => {
 
   describe('project status changes', () => {
     it('should set project status to active', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'project-123',
-          name: 'Project',
-          changedProperties: 'status'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'project-123',
+        name: 'Project',
+        changedProperties: 'status'
       });
 
       const result = await editItem({
@@ -208,14 +178,11 @@ describe('editItem', () => {
     });
 
     it('should set project status to onHold', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'project-123',
-          name: 'Project',
-          changedProperties: 'status'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'project-123',
+        name: 'Project',
+        changedProperties: 'status'
       });
 
       const result = await editItem({
@@ -230,14 +197,11 @@ describe('editItem', () => {
 
   describe('date handling', () => {
     it('should update due date', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Task',
-          changedProperties: 'due date'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Task',
+        changedProperties: 'due date'
       });
 
       const result = await editItem({
@@ -250,14 +214,11 @@ describe('editItem', () => {
     });
 
     it('should clear due date with empty string', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Task',
-          changedProperties: 'due date'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Task',
+        changedProperties: 'due date'
       });
 
       const result = await editItem({
@@ -270,14 +231,11 @@ describe('editItem', () => {
     });
 
     it('should update defer date', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Task',
-          changedProperties: 'defer date'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Task',
+        changedProperties: 'defer date'
       });
 
       const result = await editItem({
@@ -292,14 +250,11 @@ describe('editItem', () => {
 
   describe('tag operations', () => {
     it('should add tags to task', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Task',
-          changedProperties: 'tags (added)'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Task',
+        changedProperties: 'tags (added)'
       });
 
       const result = await editItem({
@@ -312,14 +267,11 @@ describe('editItem', () => {
     });
 
     it('should remove tags from task', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Task',
-          changedProperties: 'tags (removed)'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Task',
+        changedProperties: 'tags (removed)'
       });
 
       const result = await editItem({
@@ -332,14 +284,11 @@ describe('editItem', () => {
     });
 
     it('should replace all tags', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'task-123',
-          name: 'Task',
-          changedProperties: 'tags (replaced)'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'task-123',
+        name: 'Task',
+        changedProperties: 'tags (replaced)'
       });
 
       const result = await editItem({
@@ -354,14 +303,11 @@ describe('editItem', () => {
 
   describe('project-specific options', () => {
     it('should update sequential setting', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'project-123',
-          name: 'Project',
-          changedProperties: 'sequential'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'project-123',
+        name: 'Project',
+        changedProperties: 'sequential'
       });
 
       const result = await editItem({
@@ -374,14 +320,11 @@ describe('editItem', () => {
     });
 
     it('should move project to new folder', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: true,
-          id: 'project-123',
-          name: 'Project',
-          changedProperties: 'folder'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: true,
+        id: 'project-123',
+        name: 'Project',
+        changedProperties: 'folder'
       });
 
       const result = await editItem({
@@ -396,12 +339,9 @@ describe('editItem', () => {
 
   describe('error handling', () => {
     it('should handle item not found', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: false,
-          error: 'Item not found'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: false,
+        error: 'Item not found'
       });
 
       const result = await editItem({
@@ -413,8 +353,8 @@ describe('editItem', () => {
       expect(result.error).toBe('Item not found');
     });
 
-    it('should handle AppleScript execution error', async () => {
-      mockExecFileAsync.mockRejectedValue(new Error('osascript failed'));
+    it('should handle Omni Automation execution error', async () => {
+      mockExecuteOmniFocusScript.mockRejectedValue(new Error('OmniFocus script execution failed'));
 
       const result = await editItem({
         itemType: 'task',
@@ -422,13 +362,13 @@ describe('editItem', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('osascript failed');
+      expect(result.error).toContain('OmniFocus script execution failed');
     });
 
-    it('should handle invalid JSON response', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: 'Not valid JSON',
-        stderr: ''
+    it('should handle script error response', async () => {
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: false,
+        error: 'Script error occurred'
       });
 
       const result = await editItem({
@@ -437,11 +377,11 @@ describe('editItem', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Failed to parse result');
+      expect(result.error).toBe('Script error occurred');
     });
 
     it('should handle non-Error exceptions', async () => {
-      mockExecFileAsync.mockRejectedValue('String error');
+      mockExecuteOmniFocusScript.mockRejectedValue('String error');
 
       const result = await editItem({
         itemType: 'task',
@@ -454,12 +394,9 @@ describe('editItem', () => {
 
   describe('input validation', () => {
     it('should return error when neither id nor name provided', async () => {
-      mockExecFileAsync.mockResolvedValue({
-        stdout: JSON.stringify({
-          success: false,
-          error: 'Either id or name must be provided'
-        }),
-        stderr: ''
+      mockExecuteOmniFocusScript.mockResolvedValue({
+        success: false,
+        error: 'Either id or name must be provided'
       });
 
       const result = await editItem({ itemType: 'task' });

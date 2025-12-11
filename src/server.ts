@@ -2,16 +2,21 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import * as addFolderTool from './tools/definitions/addFolder.js';
 import * as addOmniFocusTaskTool from './tools/definitions/addOmniFocusTask.js';
 import * as addProjectTool from './tools/definitions/addProject.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
 // Import tool definitions
 import * as dumpDatabaseTool from './tools/definitions/dumpDatabase.js';
+import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
+import * as listFoldersTool from './tools/definitions/listFolders.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
+import * as moveFolderTool from './tools/definitions/moveFolder.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
+import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 
 // Create an MCP server
@@ -89,6 +94,41 @@ server.tool(
   'Get the items visible in a specific OmniFocus perspective. Shows what tasks and projects are displayed when viewing that perspective',
   getPerspectiveViewTool.schema.shape,
   getPerspectiveViewTool.handler
+);
+
+server.tool(
+  'list_folders',
+  'List folders from the OmniFocus database with optional filtering by status, parent folder, and recursive children',
+  listFoldersTool.schema.shape,
+  listFoldersTool.handler
+);
+
+server.tool(
+  'add_folder',
+  'Create a new folder in the OmniFocus database at a specified position in the hierarchy',
+  addFolderTool.schema.shape,
+  addFolderTool.handler
+);
+
+server.tool(
+  'edit_folder',
+  'Edit folder properties (name and/or status) in OmniFocus. Supports lookup by ID or name with disambiguation for multiple matches.',
+  editFolderTool.schema.shape,
+  editFolderTool.handler
+);
+
+server.tool(
+  'remove_folder',
+  'Remove a folder and all its contents from OmniFocus. Supports lookup by ID or name with disambiguation for multiple matches.',
+  removeFolderTool.schema.shape,
+  removeFolderTool.handler
+);
+
+server.tool(
+  'move_folder',
+  'Move a folder to a new location in the OmniFocus hierarchy. Supports lookup by ID or name with disambiguation, and prevents circular moves.',
+  moveFolderTool.schema.shape,
+  moveFolderTool.handler
 );
 
 // Start the MCP server

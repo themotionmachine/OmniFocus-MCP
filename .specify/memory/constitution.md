@@ -1,9 +1,13 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version: 1.0.0 (RATIFIED)
-Last Updated: 2025-12-08
+Version: 1.1.0 (RATIFIED)
+Last Updated: 2025-12-10
 Changes in this revision:
+  - ADDED: X. Test-Driven Development (TDD) principle with Red-Green-Refactor cycle
+  - ADDED: Test-first task ordering requirements
+  - ADDED: Workflow requirements for TDD compliance
+Previous changes (1.0.0):
   - FIXED: Tool registration method (server.tool() or registerTool())
   - FIXED: Script execution architecture (AppleScript + OmniJS + JXA wrapper)
   - FIXED: OmniJS script return patterns (flexible success structure)
@@ -28,6 +32,7 @@ Sections:
   - VII. KISS (Keep It Simple, Stupid)
   - VIII. YAGNI (You Aren't Gonna Need It)
   - IX. SOLID Principles
+  - X. Test-Driven Development (TDD)
   - MCP Integration Standards
   - Script Execution Architecture
   - Platform Constraints
@@ -262,6 +267,52 @@ monolith. The definitions/primitives architecture already embodies these
 principles; this codifies them to ensure future development maintains the
 separation.
 
+### X. Test-Driven Development (TDD)
+
+All new functionality MUST be developed using the Red-Green-Refactor cycle.
+Tests are not optional; they are the specification. Writing tests first
+ensures requirements are understood before implementation begins.
+
+**Non-Negotiable Rules:**
+
+- **Red**: Write a failing test FIRST that defines expected behavior. The test
+  MUST fail before any implementation code is written. This validates the test
+  itself is meaningful.
+
+- **Green**: Write the MINIMUM code necessary to make the test pass. Do not
+  add functionality beyond what the test requires. Resist the urge to
+  "improve" or "optimize" at this stage.
+
+- **Refactor**: Once tests pass, improve code quality (duplication, naming,
+  structure) while keeping tests green. Refactoring MUST NOT change external
+  behavior—tests MUST continue passing.
+
+**Workflow Requirements:**
+
+- Tests MUST be written and verified to FAIL before implementation begins
+- Each user story phase MUST start with test tasks, not implementation tasks
+- Contract tests validate Zod schemas match expected structure
+- Unit tests validate primitive business logic with mocked dependencies
+- Manual OmniFocus verification is the final step, AFTER automated tests pass
+
+**Test-First Task Ordering:**
+
+```text
+For each user story:
+1. Write contract/schema tests → verify they FAIL
+2. Write unit tests for primitive → verify they FAIL
+3. Implement primitive → tests turn GREEN
+4. Implement definition → integration works
+5. Refactor if needed → tests stay GREEN
+6. Manual verification in OmniFocus
+```
+
+**Rationale:** TDD catches design flaws early, produces testable code by
+default, and creates living documentation. In an MCP server where script
+failures are silent, having comprehensive tests is the primary defense
+against regressions. Tests written after implementation often miss edge
+cases that test-first development naturally uncovers.
+
 ## MCP Integration Standards
 
 These standards ensure compatibility with the Model Context Protocol
@@ -409,4 +460,4 @@ principle cannot apply.
   this constitution
 - This constitution provides the foundational, non-negotiable rules
 
-**Version**: 1.0.0 | **Status**: RATIFIED | **Last Updated**: 2025-12-08
+**Version**: 1.1.0 | **Status**: RATIFIED | **Last Updated**: 2025-12-10
