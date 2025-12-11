@@ -1,12 +1,34 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version: 1.1.0 (RATIFIED)
-Last Updated: 2025-12-10
-Changes in this revision:
+Version: 2.0.0 (RATIFIED)
+Last Updated: 2025-12-11
+Changes in this revision (BREAKING):
+  - REMOVED: AppleScript (Tier 1) architecture and all references
+  - REMOVED: JXA wrapper (Tier 3) architecture and all references
+  - UPDATED: Principle III (Script Execution Safety) to OmniJS-only approach
+  - UPDATED: Script Execution Architecture section to document only OmniJS
+  - REMOVED: AppleScript error handling patterns and tool references
+  - REMOVED: JXA wrapper patterns and executeJXA() documentation
+  - UPDATED: Principle II (Separation of Concerns) to clarify OmniJS script generation
+  - UPDATED: Build Discipline to reflect OmniJS-only script handling
+  - UPDATED: MCP Integration Standards to remove JXA wrapper references
+  - UPDATED: Platform Constraints to remove AppleScript-specific limitations
+  - CLARIFIED: All read AND write operations now use pure OmniJS execution
+  - SIMPLIFIED: Script execution function documentation (executeOmniFocusScript only)
+
+Rationale for v2.0.0 (BREAKING CHANGE):
+  The project has migrated to pure OmniJS execution for all OmniFocus automation,
+  eliminating the complexity of maintaining three separate scripting tiers.
+  This simplifies the architecture, improves maintainability, and provides
+  consistent execution patterns across all operations. The removal of entire
+  scripting tiers (AppleScript and JXA) constitutes a breaking governance change.
+
+Previous changes (1.1.0):
   - ADDED: X. Test-Driven Development (TDD) principle with Red-Green-Refactor cycle
   - ADDED: Test-first task ordering requirements
   - ADDED: Workflow requirements for TDD compliance
+
 Previous changes (1.0.0):
   - FIXED: Tool registration method (server.tool() or registerTool())
   - FIXED: Script execution architecture (AppleScript + OmniJS + JXA wrapper)
@@ -22,10 +44,11 @@ Previous changes (1.0.0):
   - ADDED: Two execution functions documentation
   - ADDED: evaluateJavascript method name note (lowercase 's')
   - NOTED: dumpDatabase exception to definitions/primitives pattern
+
 Sections:
   - I. Type-First Development
   - II. Separation of Concerns
-  - III. Script Execution Safety
+  - III. Script Execution Safety (OmniJS-only)
   - IV. Structured Data Contracts
   - V. Defensive Error Handling
   - VI. Build Discipline
@@ -34,13 +57,15 @@ Sections:
   - IX. SOLID Principles
   - X. Test-Driven Development (TDD)
   - MCP Integration Standards
-  - Script Execution Architecture
+  - Script Execution Architecture (OmniJS-only)
   - Platform Constraints
+
 Templates requiring updates:
   - plan-template.md: ✅ Aligned (Constitution Check references principles)
   - spec-template.md: ✅ Compatible (MUST/SHOULD language maintained)
   - tasks-template.md: ✅ Compatible (phase structure supports principles)
-Follow-up TODOs: None (ratified 2025-12-08)
+
+Follow-up TODOs: None (ratified 2025-12-11)
 -->
 
 # OmniFocus MCP Server Constitution
@@ -79,24 +104,26 @@ maintainability, and evolution.
 - Tool definitions (`src/tools/definitions/`) handle schema, MCP interface,
   and response formatting
 - Tool primitives (`src/tools/primitives/`) contain core business logic and
-  script generation
+  generate pure OmniJS code for execution
 - Pre-built OmniJS scripts (`src/utils/omnifocusScripts/`) handle complex
   OmniFocus queries
 - New tools MUST follow the existing definitions/primitives pattern
 - Cross-cutting utilities (script execution, date handling) live in `src/utils/`
+- Primitives MUST generate only OmniJS code; no other scripting languages
 
 **Known Exception:** `dumpDatabase` exists at `src/tools/dumpDatabase.ts`
 (not in primitives) due to its unique data transformation requirements. This
 exception is documented, not a pattern to follow.
 
 **Rationale:** Separation allows testing primitives without MCP overhead,
-swapping script execution strategies, and evolving the protocol layer
-independently of automation logic.
+enables independent verification of OmniJS generation logic, and allows the
+protocol layer to evolve independently of automation logic.
 
 ### III. Script Execution Safety
 
-OmniFocus automation uses multiple scripting technologies with different
-failure modes. All script code MUST be treated as untrusted until verified.
+OmniFocus automation uses pure OmniJS for all read and write operations.
+All script code MUST be treated as untrusted until verified, with defensive
+error handling to surface failures as structured data.
 
 **Non-Negotiable Rules:**
 
@@ -108,13 +135,15 @@ failure modes. All script code MUST be treated as untrusted until verified.
 - Template literal interpolation in scripts MUST escape backticks, quotes,
   and special characters
 - Pre-built scripts MUST NOT be modified without verification in OmniFocus
+- All operations (read AND write) MUST use OmniJS execution
 
-**OmniJS Error Return Pattern (required for pre-built scripts):**
+**OmniJS Error Return Pattern (required for all scripts):**
 
 ```javascript
 (() => {
   try {
     // OmniJS logic accessing flattenedTasks, Task.Status, etc.
+    // Works for both read operations (queries) and write operations (create/edit/delete)
     return JSON.stringify({ success: true, /* result fields */ });
   } catch (error) {
     return JSON.stringify({ success: false, error: error.toString() });
@@ -122,22 +151,11 @@ failure modes. All script code MUST be treated as untrusted until verified.
 })()
 ```
 
-**AppleScript Error Handling (required for write operations):**
-
-```applescript
-try
-  tell application "OmniFocus"
-    -- AppleScript logic
-  end tell
-  return "{\"success\": true, \"id\": \"...\"}"
-on error errMsg
-  return "{\"success\": false, \"error\": \"" & errMsg & "\"}"
-end try
-```
-
-**Rationale:** Silent failures are common across all scripting methods.
-Defensive patterns ensure failures surface as structured data rather than
-disappearing into void.
+**Rationale:** OmniJS provides consistent execution patterns for both read
+and write operations. Silent failures are common, so defensive patterns
+ensure failures surface as structured data rather than disappearing into
+the void. Using a single scripting technology simplifies debugging and
+maintenance.
 
 ### IV. Structured Data Contracts
 
@@ -186,15 +204,18 @@ truth for execution. Build verification is mandatory before testing.
 
 - `npm run build` MUST be executed after any source changes before testing
 - OmniJS scripts MUST be copied from `src/utils/omnifocusScripts/` to
-  `dist/utils/omnifocusScripts/`
+  `dist/utils/omnifocusScripts/` during build
 - Build MUST make `dist/server.js` executable
 - Watch mode (`npm run dev`) recompiles TypeScript but DOES NOT copy OmniJS
   scripts
 - Full build MUST be run if OmniJS scripts change (not just watch mode)
+- Only OmniJS scripts (.js files containing OmniJS code) require copying;
+  no other script types exist in this project
 
 **Rationale:** The build step is not optional. Skipping it leads to testing
 stale code while editing fresh code, creating invisible divergence between
-expectation and reality.
+expectation and reality. Since all automation uses OmniJS, the build process
+only needs to handle one script type.
 
 ### VII. KISS (Keep It Simple, Stupid)
 
@@ -356,46 +377,45 @@ TypeScript SDK and proper integration with MCP clients.
 
 ## Script Execution Architecture
 
-OmniFocus automation uses a **three-tier scripting architecture**.
-Understanding this is critical for debugging and extending the server.
+OmniFocus automation uses **pure OmniJS** for all operations. Understanding
+this execution model is critical for debugging and extending the server.
 
-### Tier 1: AppleScript (Write Operations)
+### OmniJS Execution Model
 
-Used for: Creating, editing, and deleting tasks/projects.
-
-```text
-Primitive → Generates AppleScript string → osascript executes → JSON result
-```
-
-- Files: `addOmniFocusTask.ts`, `addProject.ts`, `editItem.ts`, `removeItem.ts`
-- Execution: Direct `osascript <tempfile>` or `osascript -e '<script>'`
-- Why: AppleScript is more stable for OmniFocus object manipulation
-
-### Tier 2: OmniJS via JXA Wrapper (Read Operations)
-
-Used for: Querying tasks, projects, perspectives, database dumps.
+Used for: All OmniFocus operations (reading, creating, editing, deleting).
 
 ```text
 Primitive → Generates OmniJS code → executeOmniFocusScript() wraps in JXA
 → JXA calls app.evaluateJavascript() → OmniJS runs inside OmniFocus → JSON result
 ```
 
-- Files: `queryOmnifocus.ts`, pre-built scripts in `omnifocusScripts/`
-- Execution: `executeOmniFocusScript('@scriptName.js')` from `scriptExecution.ts`
-- Why: OmniJS has access to OmniFocus's internal JavaScript object model
-  (`flattenedTasks`, `Task.Status`, etc.)
-- **Note:** Method name is `evaluateJavascript` (lowercase 's'), not `evaluateJavaScript`
+**Execution Flow:**
 
-### Tier 3: Direct JXA (Currently Unused)
+1. Primitives in `src/tools/primitives/` generate pure OmniJS code
+2. Pre-built scripts in `src/utils/omnifocusScripts/` contain OmniJS code
+3. `executeOmniFocusScript(path)` from `scriptExecution.ts` wraps OmniJS
+   in a minimal JXA wrapper that calls `app.evaluateJavascript()`
+4. The JXA wrapper is executed via `osascript -l JavaScript`
+5. OmniJS runs inside OmniFocus context with access to the object model
+6. Results are returned as JSON
 
-- Function: `executeJXA(script)` in `scriptExecution.ts`
-- Status: Available but not currently used by any primitives
-- Use case: Reserved for potential future JXA-only operations
+**Key Implementation Details:**
 
-**Script Execution Functions** (both in `src/utils/scriptExecution.ts`):
+- Files: All primitives in `src/tools/primitives/`, pre-built scripts in
+  `src/utils/omnifocusScripts/`
+- Execution function: `executeOmniFocusScript(path)` in `scriptExecution.ts`
+- OmniJS has direct access to OmniFocus's internal JavaScript object model
+  (`flattenedTasks`, `flattenedProjects`, `Task.Status`, `Project.Status`, etc.)
+- Method name is `evaluateJavascript` (lowercase 's'), not `evaluateJavaScript`
+- All scripts return JSON with success/failure structure
 
-- `executeOmniFocusScript(path)` - Wraps OmniJS in JXA, executes via osascript
-- `executeJXA(script)` - Direct JXA execution (currently unused)
+**Why OmniJS Only:**
+
+OmniJS provides consistent, reliable access to OmniFocus's internal object
+model for both read and write operations. Using a single scripting technology
+simplifies the codebase, reduces complexity, and makes debugging more
+straightforward. The JXA wrapper is minimal infrastructure that simply invokes
+OmniJS execution—it contains no business logic.
 
 ## Platform Constraints
 
@@ -413,8 +433,8 @@ documented to users.
 - Date handling: OmniFocus interprets dates as local time, not UTC
 - OmniJS object model uses `flattenedTasks`, `Task.Status` syntax (not
   SQL-style queries)
-- AppleScript uses `tell application` blocks with different object model
-  than OmniJS
+- OmniJS execution requires wrapping in minimal JXA infrastructure to
+  invoke `app.evaluateJavascript()`
 
 **Batch Operation Constraints:**
 
@@ -460,4 +480,4 @@ principle cannot apply.
   this constitution
 - This constitution provides the foundational, non-negotiable rules
 
-**Version**: 1.1.0 | **Status**: RATIFIED | **Last Updated**: 2025-12-10
+**Version**: 2.0.0 | **Status**: RATIFIED | **Last Updated**: 2025-12-11

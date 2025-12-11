@@ -3,7 +3,7 @@
 ## When to Research
 
 - Before implementing unfamiliar patterns
-- When debugging obscure JXA/OmniJS errors
+- When debugging obscure OmniJS errors
 - When evaluating new dependencies
 - Before making architectural decisions
 
@@ -24,8 +24,8 @@ Use Tavily to search official documentation:
 
 ### General Research
 
-- **Tavily** - JXA patterns, Stack Overflow, GitHub issues
-- **Web Search** - AppleScript/JXA conversion, debugging
+- **Tavily** - OmniJS patterns, Stack Overflow, GitHub issues
+- **Web Search** - OmniJS best practices, debugging techniques
 
 ## Key OmniFocus Documentation URLs
 
@@ -40,5 +40,5 @@ Use Tavily to search official documentation:
 Use `research-specialist` agent for complex multi-source research:
 
 - "Search omni-automation.com for [OmniFocus feature] API"
-- "How do others implement [pattern] in JXA?"
+- "How do others implement [pattern] in OmniJS?"
 - "Best practices for [automation technique]?"

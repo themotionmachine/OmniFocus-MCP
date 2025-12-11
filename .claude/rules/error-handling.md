@@ -1,15 +1,15 @@
 # Error Handling Patterns
 
-## JXA Error Handling
+## OmniJS Error Handling
 
-All JXA scripts MUST follow this pattern:
+All OmniJS scripts MUST follow this pattern:
 
 ```javascript
 try {
-    // ... JXA logic ...
+    // ... OmniJS logic ...
     JSON.stringify({ success: true, data: result });
 } catch (e) {
-    JSON.stringify({ success: false, error: e.message || String(e) });
+    JSON.stringify({ success: false, error: e.toString() });
 }
 ```
 
@@ -34,6 +34,6 @@ try {
 
 ## Silent Failures
 
-- JXA errors often produce empty results, not error messages
-- Always wrap JXA in try-catch with JSON returns
-- Test scripts in Script Editor before integrating
+- OmniJS errors often produce empty results, not error messages
+- Always wrap OmniJS in try-catch with JSON returns
+- Test scripts in Script Editor (⌘-⌃-O) before integrating

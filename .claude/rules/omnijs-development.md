@@ -10,7 +10,7 @@ paths:
 
 - OmniJS errors fail silently - test in Script Editor first
 - Always wrap in try-catch with JSON error returns
-- Use `executeOmniFocusScript()` to run OmniJS via JXA wrapper
+- Use `executeOmniFocusScript()` to run pure OmniJS (wrapper handled internally)
 - Use `writeSecureTempFile()` for script execution
 
 ## Script Structure

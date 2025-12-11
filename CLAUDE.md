@@ -5,9 +5,10 @@ This file provides guidance to Claude Code when working with this repository.
 ## Project Overview
 
 OmniFocus MCP Server bridges AI assistants with OmniFocus task management on
-macOS. It uses **Omni Automation JavaScript** (OmniJS) executed via JXA wrapper
-to interact with OmniFocus, providing tools to view, create, edit, and remove
-tasks, projects, and folders.
+macOS. It uses pure **Omni Automation JavaScript** (OmniJS) to interact with
+OmniFocus, providing tools to view, create, edit, and remove tasks, projects,
+and folders. All operations use OmniJS execution for consistency and
+reliability.
 
 ## Development Philosophy
 
@@ -15,7 +16,7 @@ tasks, projects, and folders.
 
 - **Learn before changing** - Read existing implementations before modifying
 - **Incremental progress** - Small changes that compile and pass
-- **JXA is fragile** - Syntax errors fail silently; test in Script Editor first
+- **OmniJS is fragile** - Syntax errors fail silently; test in Script Editor first
 - **Type safety first** - Trust TypeScript; if it compiles, you're halfway there
 - **Explicit over implicit** - Clear data flow, obvious dependencies
 
@@ -32,16 +33,16 @@ tasks, projects, and folders.
 - Open PRs against `themotionmachine/OmniFocus-MCP` (upstream fork)
 - Use `--no-verify` to bypass commit hooks
 - Skip the build step - server runs from `dist/`, not `src/`
-- Test JXA only through the MCP server - always test in Script Editor first
+- Test OmniJS only through the MCP server - always test in Script Editor first
 - Add new tools without the definitions/primitives separation
-- Silently swallow exceptions in JXA
+- Silently swallow exceptions in OmniJS
 - Use type assertions (`as Type`) - use Zod or type narrowing instead
 
 ### ALWAYS
 
 - Run `pnpm build` after any source changes
 - Use Zod schemas for all tool input validation
-- Return structured JSON from JXA scripts (never raw strings)
+- Return structured JSON from OmniJS scripts (never raw strings)
 - Handle partial failures in batch operations
 - Follow existing patterns - find a similar tool and mirror its structure
 - End all text files with a newline
@@ -51,7 +52,7 @@ tasks, projects, and folders.
 | Command | Description |
 |---------|-------------|
 | `pnpm install` | Install dependencies |
-| `pnpm build` | Compile TypeScript and copy JXA scripts |
+| `pnpm build` | Compile TypeScript and copy OmniJS scripts |
 | `pnpm dev` | Watch mode (auto-recompile) |
 | `pnpm test` | Run tests |
 | `pnpm test:coverage` | Tests with V8 coverage |
@@ -66,7 +67,7 @@ tasks, projects, and folders.
 | `src/server.ts` | MCP server entry point |
 | `src/tools/definitions/` | Tool schemas and MCP handlers |
 | `src/tools/primitives/` | Core business logic |
-| `src/utils/omnifocusScripts/` | Pre-built JXA scripts |
+| `src/utils/omnifocusScripts/` | Pre-built OmniJS scripts |
 | `specs/` | Feature specifications |
 | `.claude/rules/` | Modular Claude rules |
 
@@ -156,7 +157,7 @@ Domain-specific rules in `.claude/rules/` load automatically:
 
 **Path-scoped (load when working with matching files):**
 
-- `jxa-development.md` - JXA scripts, primitives
+- `omnijs-development.md` - OmniJS scripts, primitives
 - `mcp-development.md` - MCP SDK patterns
 - `tool-architecture.md` - Tool definitions/primitives
 - `typescript-standards.md` - All TypeScript files
@@ -180,7 +181,7 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - Unsure which architectural pattern to follow
 - A change would affect multiple tools
 - Adding a new dependency
-- Modifying JXA script execution logic
+- Modifying OmniJS script execution logic
 - After 3 failed attempts at the same problem
 
 **Proceed confidently:**
@@ -188,11 +189,15 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - Following an existing tool's implementation pattern
 - The change is isolated to one primitive
 - Build and type checks pass
-- You've tested JXA scripts independently
+- You've tested OmniJS scripts independently
 
 ## Recent Changes
 
+- **Constitution v2.0.0**: Migrated to pure OmniJS execution model
+  - Removed AppleScript tier (Tier 1) - all write operations now use OmniJS
+  - Removed direct JXA tier (Tier 3) - unused execution path eliminated
+  - All operations (read AND write) now use consistent OmniJS execution
 - **002-folder-tools**: Adding folder management tools (in progress)
-  - Migrated all primitives from AppleScript to Omni Automation JavaScript
-  - addProject, addOmniFocusTask, editItem, removeItem now use OmniJS
+  - All primitives use pure Omni Automation JavaScript (OmniJS)
+  - Consistent execution model across all tools
 - **001-tooling-modernization**: Migrated to tsup, Vitest, Biome, Node 24+

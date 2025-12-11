@@ -14,7 +14,7 @@ Repository-wide instructions for GitHub Copilot coding agent and code review.
 - **Language:** TypeScript 5.3+
 - **MCP Framework:** @modelcontextprotocol/sdk ^1.8.0
 - **Validation:** Zod ^3.22.4
-- **Automation:** JXA (JavaScript for Automation) via AppleScript
+- **Automation:** Pure OmniJS (Omni Automation JavaScript)
 - **Package Manager:** npm (NOT pnpm or yarn)
 - **Platform:** macOS only (requires OmniFocus)
 
@@ -24,7 +24,7 @@ All commands run from project root:
 
 ```bash
 npm install           # Install dependencies
-npm run build         # Compile TypeScript + copy JXA scripts
+npm run build         # Compile TypeScript + copy OmniJS scripts
 npm run start         # Start the MCP server (requires build first)
 npm run dev           # Watch mode (auto-recompile on changes)
 ```
@@ -41,8 +41,8 @@ omnifocus-mcp-pro/
 │   │   ├── definitions/             # Tool schemas + MCP handlers
 │   │   └── primitives/              # Core business logic
 │   ├── utils/
-│   │   ├── scriptExecution.ts       # JXA execution wrapper
-│   │   └── omnifocusScripts/        # Pre-built JXA scripts
+│   │   ├── scriptExecution.ts       # OmniJS execution wrapper
+│   │   └── omnifocusScripts/        # Pre-built OmniJS scripts
 │   │       ├── omnifocusDump.js
 │   │       ├── listPerspectives.js
 │   │       └── getPerspectiveView.js
@@ -86,40 +86,34 @@ export async function myToolHandler(params: z.infer<typeof myToolSchema>) {
 }
 ```
 
-### JXA Script Generation
+### OmniJS Script Generation
 
-When building JXA dynamically (e.g., in query tools):
-- Use template literals carefully - backticks inside JXA need escaping
-- Always wrap in IIFE: `(function() { ... })()`
+When building OmniJS dynamically (e.g., in query tools):
+- Use template literals carefully - backticks inside OmniJS need escaping
+- Always wrap in IIFE: `(() => { ... })()`
 - Return JSON: `return JSON.stringify({ success: true, data: result })`
 - Include error handling: try-catch around all OmniFocus operations
-- Use OmniFocus object model methods: `.tasks.whose()`, not SQL
+- Use OmniJS object model directly: `flattenedTasks`, `Task.Status`, etc.
 - Date comparisons: `.getTime()` for milliseconds since epoch
 
 **Example:**
 ```typescript
-const jxaScript = `
-(function() {
-  const app = Application('OmniFocus');
-  app.includeStandardAdditions = true;
-
+const omniJSScript = `
+(() => {
   try {
-    const doc = app.defaultDocument;
-    const tasks = doc.flattenedTasks.whose({
-      _and: [
-        { completed: false },
-        { effectiveDueDate: { _lessThan: new Date() } }
-      ]
+    // OmniJS has direct access to global objects
+    const tasks = flattenedTasks.filter(t => {
+      return !t.completed && t.dueDate && t.dueDate < new Date();
     });
 
     return JSON.stringify({
       success: true,
-      data: tasks.map(t => ({ id: t.id(), name: t.name() }))
+      data: tasks.map(t => ({ id: t.id.primaryKey, name: t.name }))
     });
   } catch (error) {
     return JSON.stringify({
       success: false,
-      error: error.message
+      error: error.toString()
     });
   }
 })();
@@ -131,7 +125,7 @@ const jxaScript = `
 - **Always use Zod schemas** for MCP tool parameters
 - **Structured error handling** - Return objects, don't throw in handlers
 - **Type safety** - Use `z.infer<typeof schema>` for parameter types
-- **Date handling** - Accept ISO 8601 strings, convert to Date objects for JXA
+- **Date handling** - Accept ISO 8601 strings, convert to Date objects for OmniJS
 - **Null safety** - Use optional chaining and nullish coalescing
 
 ### OmniFocus Domain Model
@@ -140,7 +134,7 @@ Follow the type definitions in `src/omnifocustypes.ts`:
 - **Task.Status**: `available`, `completed`, `dropped`
 - **Project.Status**: `active`, `done`, `dropped`, `onHold`
 - **Hierarchy**: Tasks can have parent tasks, projects, or be top-level
-- **Dates**: `dueDate`, `deferDate` (Date objects in JXA)
+- **Dates**: `dueDate`, `deferDate` (Date objects in OmniJS)
 - **Tags**: Multiple tags per task/project
 
 ## Validation Steps
@@ -149,7 +143,7 @@ Before committing, ensure:
 
 1. **TypeScript compiles:** `npm run build` succeeds
 2. **No type errors:** Implicit via build (tsconfig.json has strict mode)
-3. **JXA scripts copied:** Check `dist/utils/omnifocusScripts/` exists
+3. **OmniJS scripts copied:** Check `dist/utils/omnifocusScripts/` exists
 4. **Server starts:** `npm run start` doesn't crash immediately
 
 ## Testing MCP Tools
@@ -178,20 +172,20 @@ Since this is an MCP server, testing requires an MCP client:
 - **MCP SDK:** `@modelcontextprotocol/sdk` - Server, tools, stdio transport
 - **Validation:** `zod` - Schema definition and runtime validation
 - **Built-in:** `child_process` - For executing osascript commands
-- **Built-in:** `fs/promises` - For writing temp JXA files
+- **Built-in:** `fs/promises` - For writing temp OmniJS files
 
 **Import patterns:**
 ```typescript
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { executeJXA } from './utils/scriptExecution.js';
+import { executeOmniFocusScript } from './utils/scriptExecution.js';
 ```
 
 ## Common Gotchas
 
 1. **Build before test** - Server runs from `dist/`, not `src/`
-2. **JXA syntax errors** - Missing quotes or improper escaping causes silent failures
+2. **OmniJS syntax errors** - Missing quotes or improper escaping causes silent failures
 3. **Date timezones** - Be explicit with ISO 8601 format; OmniFocus interprets local time
 4. **Perspective state** - `get_perspective_view` reflects current UI state, not programmatic switch
 5. **Batch failures** - One invalid item doesn't fail entire batch; check individual statuses
@@ -210,7 +204,7 @@ When implementing batch tools:
 Provide actionable error messages:
 - ✅ "Task with ID 'abc123' not found in OmniFocus"
 - ✅ "Invalid date format '2024-13-45'. Use ISO 8601 (YYYY-MM-DD)"
-- ❌ "Error in JXA script"
+- ❌ "Error in OmniJS script"
 - ❌ "Operation failed"
 
 ## Documentation
