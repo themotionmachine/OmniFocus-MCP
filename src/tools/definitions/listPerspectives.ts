@@ -1,6 +1,7 @@
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import type { ServerNotification, ServerRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import { logger } from '../../utils/logger.js';
 import { listPerspectives } from '../primitives/listPerspectives.js';
 
 export const schema = z.object({
@@ -74,7 +75,7 @@ export async function handler(
     }
   } catch (err: unknown) {
     const error = err as Error;
-    console.error(`Error listing perspectives: ${error.message}`);
+    logger.error('Error listing perspectives', 'listPerspectives', { message: error.message });
     return {
       content: [
         {

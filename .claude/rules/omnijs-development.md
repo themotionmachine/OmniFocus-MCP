@@ -93,3 +93,22 @@ deleteObject(item)             // Delete task, project, or folder
 3. **OmniFocus**: Stores as native Date objects
 4. **Comparison**: Use `.getTime()` for milliseconds
 5. **Output**: Convert back to ISO 8601 for response
+
+## Migration from AppleScript to OmniJS
+
+As of 002-folder-tools, ALL primitives use Omni Automation JavaScript
+executed via `executeOmniFocusScript()`.
+
+Previous patterns (now obsolete):
+
+- Direct AppleScript (pre-002)
+- JXA execution (pre-001)
+
+When refactoring old code:
+
+1. Replace AppleScript tell blocks with OmniJS API calls
+2. Use Omni Automation's native methods (`new Task()`, `deleteObject()`, etc.)
+3. Wrap in IIFE with try-catch returning JSON
+4. Update tests to mock OmniJS output format
+
+See `specs/002-folder-tools/research.md` for OmniJS API reference.

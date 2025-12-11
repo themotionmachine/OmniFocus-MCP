@@ -1,5 +1,6 @@
 import type { EditFolderInput } from '../../contracts/folder-tools/edit-folder.js';
 import type { DisambiguationError } from '../../contracts/folder-tools/shared/disambiguation.js';
+import { logger } from '../../utils/logger.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
 
@@ -131,7 +132,7 @@ export async function editFolder(params: EditFolderInput): Promise<EditFolderRes
     // Pass through the result (success, error, or disambiguation)
     return result;
   } catch (error: unknown) {
-    console.error('Error in editFolder:', error);
+    logger.error('Error in editFolder', 'editFolder', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,

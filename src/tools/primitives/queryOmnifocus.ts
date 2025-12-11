@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
 
@@ -68,7 +69,7 @@ export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<Quer
       count: result.count
     };
   } catch (error) {
-    console.error('Error querying OmniFocus:', error);
+    logger.error('Error querying OmniFocus', 'queryOmnifocus', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'

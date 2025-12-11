@@ -7,6 +7,7 @@ import type {
   QueryProjectResult,
   QueryTaskResult
 } from '../../types.js';
+import { logger } from '../../utils/logger.js';
 import { type QueryOmnifocusParams, queryOmnifocus } from '../primitives/queryOmnifocus.js';
 
 export const schema = z.object({
@@ -171,7 +172,7 @@ export async function handler(
     }
   } catch (err: unknown) {
     const error = err as Error;
-    console.error(`Query execution error: ${error.message}`);
+    logger.error('Query execution error', 'queryOmnifocus', { message: error.message });
     return {
       content: [
         {

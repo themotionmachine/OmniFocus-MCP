@@ -14,9 +14,9 @@ Technical deep dive into how the UserPromptSubmit and PreToolUse hooks work.
 
 ## UserPromptSubmit Hook Flow
 
-### Execution Sequence
+### UserPromptSubmit - Execution Sequence
 
-```
+```text
 User submits prompt
     ↓
 .claude/settings.json registers hook
@@ -40,7 +40,7 @@ stdout becomes context for Claude (injected before prompt)
 Claude sees: [skill suggestion] + user's prompt
 ```
 
-### Key Points
+### UserPromptSubmit - Key Points
 
 - **Exit code**: Always 0 (allow)
 - **stdout**: → Claude's context (injected as system message)
@@ -48,7 +48,7 @@ Claude sees: [skill suggestion] + user's prompt
 - **Behavior**: Non-blocking, advisory only
 - **Purpose**: Make Claude aware of relevant skills
 
-### Input Format
+### UserPromptSubmit - Input Format
 
 ```json
 {
@@ -61,9 +61,9 @@ Claude sees: [skill suggestion] + user's prompt
 }
 ```
 
-### Output Format (to stdout)
+### UserPromptSubmit - Output Format
 
-```
+```text
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 SKILL ACTIVATION CHECK
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -81,9 +81,9 @@ Claude sees this output as additional context before processing the user's promp
 
 ## PreToolUse Hook Flow
 
-### Execution Sequence
+### PreToolUse - Execution Sequence
 
-```
+```text
 Claude calls Edit/Write tool
     ↓
 .claude/settings.json registers hook (matcher: Edit|Write)
@@ -119,7 +119,7 @@ IF ALLOWED:
   Tool executes normally
 ```
 
-### Key Points
+### PreToolUse - Key Points
 
 - **Exit code 2**: BLOCK (stderr → Claude)
 - **Exit code 0**: ALLOW
@@ -128,7 +128,7 @@ IF ALLOWED:
 - **Fail open**: On errors, allows operation (don't break workflow)
 - **Purpose**: Enforce critical guardrails
 
-### Input Format
+### PreToolUse - Input Format
 
 ```json
 {
@@ -146,9 +146,9 @@ IF ALLOWED:
 }
 ```
 
-### Output Format (to stderr when blocked)
+### PreToolUse - Output Format
 
-```
+```text
 ⚠️ BLOCKED - Database Operation Detected
 
 📋 REQUIRED ACTION:
@@ -190,7 +190,7 @@ This is THE critical mechanism for enforcement:
 
 ### Example Conversation Flow
 
-```
+```text
 User: "Add a new user service with Prisma"
 
 Claude: "I'll create the user service..."
@@ -230,7 +230,7 @@ Prevent repeated nagging in the same session - once Claude uses a skill, don't b
 }
 ```
 
-### How It Works
+### Session State - How It Works
 
 1. **First edit** of file with Prisma:
    - Hook blocks with exit code 2
@@ -287,20 +287,24 @@ The hook cannot detect when the skill is *actually* invoked - it just blocks onc
 ### Optimization Strategies
 
 **Reduce patterns:**
+
 - Use more specific patterns (fewer to check)
 - Combine similar patterns where possible
 
 **File path patterns:**
+
 - More specific = fewer files to check
 - Example: `form/src/services/**` better than `form/**`
 
 **Content patterns:**
+
 - Only add when truly necessary
 - Simpler regex = faster matching
 
 ---
 
 **Related Files:**
+
 - [SKILL.md](SKILL.md) - Main skill guide
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Debug hook issues
 - [SKILL_RULES_REFERENCE.md](SKILL_RULES_REFERENCE.md) - Configuration reference

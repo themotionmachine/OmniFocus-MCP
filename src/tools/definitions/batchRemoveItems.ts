@@ -1,6 +1,7 @@
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import type { ServerNotification, ServerRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import { logger } from '../../utils/logger.js';
 import { type BatchRemoveItemsParams, batchRemoveItems } from '../primitives/batchRemoveItems.js';
 
 export const schema = z.object({
@@ -89,7 +90,7 @@ export async function handler(
     }
   } catch (err: unknown) {
     const error = err as Error;
-    console.error(`Tool execution error: ${error.message}`);
+    logger.error('Tool execution error', 'batchRemoveItems', { message: error.message });
     return {
       content: [
         {

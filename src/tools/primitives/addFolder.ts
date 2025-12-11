@@ -1,4 +1,5 @@
 import type { AddFolderInput } from '../../contracts/folder-tools/add-folder.js';
+import { logger } from '../../utils/logger.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
 
@@ -107,7 +108,7 @@ export async function addFolder(params: AddFolderInput): Promise<AddFolderRespon
     // Pass through the result (success, or error)
     return result;
   } catch (error: unknown) {
-    console.error('Error in addFolder:', error);
+    logger.error('Error in addFolder', 'addFolder', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,

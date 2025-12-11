@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
 
@@ -208,7 +209,7 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     }
     return response;
   } catch (error: unknown) {
-    console.error('Error in addOmniFocusTask:', error);
+    logger.error('Error in addOmniFocusTask', 'addOmniFocusTask', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,

@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
 
@@ -368,7 +369,7 @@ export async function editItem(params: EditItemParams): Promise<{
     }
     return response;
   } catch (error: unknown) {
-    console.error('Error in editItem:', error);
+    logger.error('Error in editItem', 'editItem', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,

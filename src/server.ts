@@ -5,19 +5,26 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import * as addFolderTool from './tools/definitions/addFolder.js';
 import * as addOmniFocusTaskTool from './tools/definitions/addOmniFocusTask.js';
 import * as addProjectTool from './tools/definitions/addProject.js';
+import * as assignTagsTool from './tools/definitions/assignTags.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
+import * as createTagTool from './tools/definitions/createTag.js';
+import * as deleteTagTool from './tools/definitions/deleteTag.js';
 // Import tool definitions
 import * as dumpDatabaseTool from './tools/definitions/dumpDatabase.js';
 import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as editItemTool from './tools/definitions/editItem.js';
+import * as editTagTool from './tools/definitions/editTag.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
 import * as listFoldersTool from './tools/definitions/listFolders.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
+import * as listTagsTool from './tools/definitions/listTags.js';
 import * as moveFolderTool from './tools/definitions/moveFolder.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
+import * as removeTagsTool from './tools/definitions/removeTags.js';
+import { logger } from './utils/logger.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -131,19 +138,62 @@ server.tool(
   moveFolderTool.handler
 );
 
+server.tool(
+  'list_tags',
+  'List tags from OmniFocus with optional filtering by status, parent tag, and hierarchy. Returns tag metadata including task counts, hierarchy, and availability settings.',
+  listTagsTool.schema.shape,
+  listTagsTool.handler
+);
+server.tool(
+  'create_tag',
+  'Create a new tag in OmniFocus with optional parent, position, and settings. Supports hierarchical tags and precise placement (before/after siblings, beginning/ending of parent).',
+  createTagTool.schema.shape,
+  createTagTool.handler
+);
+
+server.tool(
+  'delete_tag',
+  'Delete a tag from OmniFocus by ID or name. Child tags are deleted recursively (OmniFocus native behavior). Tasks with the deleted tag will have the tag reference removed.',
+  deleteTagTool.schema.shape,
+  deleteTagTool.handler
+);
+
+server.tool(
+  'assign_tags',
+  'Assign one or more tags to one or more tasks in OmniFocus. Supports batch operations with per-task success/failure reporting. Idempotent (assigning an already-assigned tag is safe).',
+  assignTagsTool.schema.shape,
+  assignTagsTool.handler
+);
+
+server.tool(
+  'edit_tag',
+  'Edit tag properties (name, status, allowsNextAction) in OmniFocus. Supports lookup by ID or name with disambiguation for multiple matches.',
+  editTagTool.schema.shape,
+  editTagTool.handler
+);
+
+server.tool(
+  'remove_tags',
+  'Remove tags from tasks in OmniFocus. Can remove specific tags or clear all tags from specified tasks. Supports batch operations with per-task success/failure reporting. Idempotent (removing an unassigned tag is safe).',
+  removeTagsTool.schema.shape,
+  removeTagsTool.handler
+);
+
 // Start the MCP server
 const transport = new StdioServerTransport();
 
 // Use await with server.connect to ensure proper connection
 (async () => {
   try {
-    console.error('Starting MCP server...');
+    logger.info('Starting MCP server...', 'server');
     await server.connect(transport);
-    console.error('MCP Server connected and ready to accept commands from Claude');
+    logger.info('MCP Server connected and ready to accept commands from Claude', 'server');
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
-    console.error(`Failed to start MCP server: ${error.message}`);
-    console.error('Stack trace:', error.stack);
+    logger.error('Failed to start MCP server', 'server', {
+      message: error.message,
+      stack: error.stack
+    });
     // Exit with error code to signal failure
     process.exit(1);
   }
@@ -151,11 +201,11 @@ const transport = new StdioServerTransport();
 
 // For a cleaner shutdown if the process is terminated
 process.on('SIGINT', () => {
-  console.error('Received SIGINT, shutting down gracefully...');
+  logger.info('Received SIGINT, shutting down gracefully...', 'server');
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  console.error('Received SIGTERM, shutting down gracefully...');
+  logger.info('Received SIGTERM, shutting down gracefully...', 'server');
   process.exit(0);
 });

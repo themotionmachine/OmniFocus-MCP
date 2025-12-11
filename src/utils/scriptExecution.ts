@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { logger } from './logger.js';
 import { writeSecureTempFile } from './secureTempFile.js';
 
 const execFileAsync = promisify(execFile);
@@ -25,7 +26,7 @@ export async function executeJXA(script: string): Promise<unknown[]> {
     ]);
 
     if (stderr) {
-      console.error('Script stderr output:', stderr);
+      logger.warning('Script stderr output', 'executeJXA', { stderr });
     }
 
     // Parse the output as JSON
@@ -34,8 +35,10 @@ export async function executeJXA(script: string): Promise<unknown[]> {
       return result;
     } catch (e) {
       const parseError = e instanceof Error ? e : new Error(String(e));
-      console.error('Failed to parse script output as JSON:', parseError.message);
-      console.error('Script output was:', stdout);
+      logger.error('Failed to parse script output as JSON', 'executeJXA', {
+        message: parseError.message
+      });
+      logger.debug('Script output was', 'executeJXA', { stdout });
 
       // If this contains a "Found X tasks" message, treat it as a successful non-JSON response
       if (stdout.includes('Found') && stdout.includes('tasks')) {
@@ -43,13 +46,15 @@ export async function executeJXA(script: string): Promise<unknown[]> {
       }
 
       // Return empty array for backwards compatibility, but log the issue
-      console.error('Returning empty array due to parse failure');
+      logger.warning('Returning empty array due to parse failure', 'executeJXA');
       return [];
     }
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    console.error('Failed to execute JXA script:', err.message);
-    console.error('Script content (first 200 chars):', script.substring(0, 200));
+    logger.error('Failed to execute JXA script', 'executeJXA', { message: err.message });
+    logger.debug('Script content (first 200 chars)', 'executeJXA', {
+      snippet: script.substring(0, 200)
+    });
     // Re-throw with enhanced error message
     throw new Error(`JXA execution failed: ${err.message}`);
   } finally {
@@ -127,7 +132,7 @@ export async function executeOmniFocusScript(scriptPath: string): Promise<unknow
     ]);
 
     if (stderr) {
-      console.error('Script stderr output:', stderr);
+      logger.warning('Script stderr output', 'executeOmniFocusScript', { stderr });
     }
 
     // Parse the output as JSON
@@ -135,15 +140,19 @@ export async function executeOmniFocusScript(scriptPath: string): Promise<unknow
       return JSON.parse(stdout);
     } catch (parseError) {
       const err = parseError instanceof Error ? parseError : new Error(String(parseError));
-      console.error('Error parsing script output:', err.message);
-      console.error('Script output was:', stdout);
+      logger.error('Error parsing script output', 'executeOmniFocusScript', {
+        message: err.message
+      });
+      logger.debug('Script output was', 'executeOmniFocusScript', { stdout });
       // Return stdout as fallback but log the parsing failure
       return stdout;
     }
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    console.error('Failed to execute OmniFocus script:', err.message);
-    console.error('Script path:', scriptPath);
+    logger.error('Failed to execute OmniFocus script', 'executeOmniFocusScript', {
+      message: err.message
+    });
+    logger.debug('Script path', 'executeOmniFocusScript', { scriptPath });
     // Re-throw with enhanced context
     throw new Error(`OmniFocus script execution failed: ${err.message}`);
   } finally {

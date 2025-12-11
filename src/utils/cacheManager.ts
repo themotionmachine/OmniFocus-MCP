@@ -1,4 +1,5 @@
 import type { OmnifocusDatabase } from '../types.js';
+import { logger } from './logger.js';
 import { executeOmniFocusScript } from './scriptExecution.js';
 import { writeSecureTempFile } from './secureTempFile.js';
 
@@ -54,7 +55,7 @@ class OmniFocusCacheManager {
         }
       } catch (error) {
         // If checksum validation fails, invalidate cache to be safe
-        console.error('Error validating cache checksum:', error);
+        logger.error('Error validating cache checksum', 'OmniFocusCacheManager.get', { error });
         this.cache.delete(key);
         return null;
       }
@@ -80,7 +81,7 @@ class OmniFocusCacheManager {
       try {
         checksum = await this.getDatabaseChecksum();
       } catch (error) {
-        console.error('Error getting checksum for cache:', error);
+        logger.error('Error getting checksum for cache', 'OmniFocusCacheManager.set', { error });
         // Continue without checksum rather than failing the cache operation
         checksum = undefined;
       }
@@ -181,7 +182,9 @@ class OmniFocusCacheManager {
       }
       return result.checksum;
     } catch (error) {
-      console.error('Error getting database checksum:', error);
+      logger.error('Error getting database checksum', 'OmniFocusCacheManager.getDatabaseChecksum', {
+        error
+      });
       // Re-throw with context instead of returning fallback
       throw new Error(
         `Failed to get database checksum: ${error instanceof Error ? error.message : 'Unknown error'}`

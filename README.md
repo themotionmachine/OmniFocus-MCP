@@ -53,8 +53,8 @@ implementation phases.
 
 Bold items in the table above represent new capabilities:
 
-- **Tasks (Enhanced)** - Dedicated task tools with planned date support
-- **Projects** - Full project lifecycle management
+- **Tasks (Enhanced)** - Dedicated list/get, planned date (v4.7+), append note
+- **Projects** - Full project lifecycle management (CRUD + move)
 - **Review System** - Get projects for review, mark reviewed, set intervals
 - **Perspectives** - List, get details, switch perspectives, export configs
 - **Search & Database** - Smart search across all item types, DB utilities
@@ -63,9 +63,9 @@ Bold items in the table above represent new capabilities:
 - **Window & UI Control** - Reveal, expand, collapse, focus items (OF4+)
 - **Forecast** - Get forecast data and navigate to specific days
 - **Deep Links & URLs** - OmniFocus URL scheme support (OF4.5+)
-- **Pasteboard & Clipboard** - Copy/paste tasks between apps
-- **Document & Sync** - Database sync and window management
-- **MCP Optimization** - Dynamic toolsets, token-efficient responses
+- **Pasteboard** - Copy/paste tasks between apps
+- **Document & Sync** - Trigger sync, create windows/tabs, export database
+- **MCP Optimization** - Dynamic toolsets, TOON format, lazy schemas, protocol-native logging
 
 ---
 
@@ -455,11 +455,11 @@ Parameters:
 
 - `id`: (Optional) The folder's unique identifier
 - `name`: (Optional) The folder's name (used if id not provided)
-- `updates`: Object containing properties to change:
-  - `name`: (Optional) New name for the folder
-  - `status`: (Optional) New status ('active' or 'dropped')
+- `newName`: (Optional) New name for the folder (trimmed, must be non-empty)
+- `newStatus`: (Optional) New status ('active' or 'dropped')
 
 Note: At least one of `id` or `name` must be provided for identification.
+At least one of `newName` or `newStatus` must be provided.
 Returns disambiguation error if multiple folders match the name.
 
 ### `remove_folder`
@@ -489,6 +489,101 @@ Parameters:
 
 Note: Prevents circular moves (folder into its own descendant). Returns
 disambiguation error if multiple folders match the name.
+
+### `list_tags`
+
+List tags from the OmniFocus database with optional filtering.
+
+Parameters:
+
+- `status`: (Optional) Filter by tag status ('active', 'onHold', or 'dropped')
+- `parentId`: (Optional) Filter to children of a specific tag ID
+- `includeChildren`: (Optional) Include all nested descendants (default: true)
+
+Returns:
+
+- Array of tags with id, name, status, parentId, allowsNextAction, and taskCount
+
+### `create_tag`
+
+Create a new tag in OmniFocus.
+
+Parameters:
+
+- `name`: The name of the new tag (required, non-empty after trim)
+- `parentId`: (Optional) Parent tag ID to create a nested tag
+- `position`: (Optional) Where to place the tag:
+  - `placement`: 'beginning', 'ending', 'before', or 'after'
+  - `relativeTo`: Tag ID (required for before/after)
+- `allowsNextAction`: (Optional) Whether tasks with this tag can be next
+  actions (default: true)
+
+Returns:
+
+- The ID and name of the newly created tag
+
+### `edit_tag`
+
+Edit tag properties in OmniFocus.
+
+Parameters:
+
+- `id`: (Optional) The tag's unique identifier
+- `name`: (Optional) The tag's name (used if id not provided)
+- `newName`: (Optional) New name for the tag
+- `status`: (Optional) New status ('active', 'onHold', or 'dropped')
+- `allowsNextAction`: (Optional) Whether tasks can be next actions
+
+Note: At least one of `id` or `name` must be provided for identification.
+At least one of `newName`, `status`, or `allowsNextAction` must be provided.
+Returns disambiguation error if multiple tags match the name.
+
+### `delete_tag`
+
+Delete a tag from OmniFocus.
+
+Parameters:
+
+- `id`: (Optional) The tag's unique identifier
+- `name`: (Optional) The tag's name (used if id not provided)
+
+Note: Deleting a tag removes it from all tasks but does not delete the tasks.
+Child tags are also deleted. Returns disambiguation error if multiple tags
+match the name.
+
+### `assign_tags`
+
+Assign tags to multiple tasks in a single operation.
+
+Parameters:
+
+- `taskIds`: Array of task IDs to assign tags to (required, at least one)
+- `tagIds`: Array of tag IDs to assign (required, at least one)
+
+Returns:
+
+- `results`: Array of per-task results with success/failure status
+
+Note: This operation is idempotent - assigning a tag already on a task
+succeeds silently. Continues processing remaining tasks if one fails.
+
+### `remove_tags`
+
+Remove tags from multiple tasks in a single operation.
+
+Parameters:
+
+- `taskIds`: Array of task IDs to remove tags from (required, at least one)
+- `tagIds`: (Optional) Array of specific tag IDs to remove
+- `clearAll`: (Optional) If true, remove ALL tags from the tasks (default: false)
+
+Note: Must provide either `tagIds` OR set `clearAll: true`, but not both.
+This operation is idempotent - removing a tag not on a task succeeds silently.
+Continues processing remaining tasks if one fails.
+
+Returns:
+
+- `results`: Array of per-task results with success/failure status
 
 ## Development
 
@@ -567,12 +662,93 @@ macOS with OmniFocus. Test JXA changes manually:
 
 See `CLAUDE.md` for detailed JXA development guidelines.
 
+### Specification Documentation
+
+This project follows spec-driven development. Each phase has detailed
+documentation in the `/specs/` directory:
+
+- `spec.md` - Feature requirements and user stories
+- `plan.md` - Implementation strategy and architecture
+- `tasks.md` - Task breakdown and progress tracking
+- `research.md` - API research and technical decisions
+- `quickstart.md` - Developer implementation guide
+
+See `/specs/001-tooling-modernization/` and `/specs/002-folder-tools/` for
+examples.
+
 ## How It Works
 
-This server uses AppleScript to communicate with OmniFocus, allowing it
-to interact with the application's native functionality. The server is
-built using the Model Context Protocol SDK, which provides a standardized
-way for AI models to interact with external tools and systems.
+This server uses Omni Automation JavaScript (OmniJS) to communicate with
+OmniFocus, allowing it to interact with the application's native
+functionality. The server is built using the Model Context Protocol SDK,
+which provides a standardized way for AI models to interact with external
+tools and systems.
+
+## Logging
+
+This server uses MCP-compliant structured logging that writes to stderr.
+
+### MCP Specification Compliance
+
+Per the [MCP stdio transport specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports):
+
+> "Servers MAY send UTF-8 strings to their stderr stream. These are NOT
+> protocol messages and SHOULD NOT be parsed as JSON-RPC. Hosts SHOULD
+> capture stderr and expose it for diagnostics."
+
+This means:
+
+- **stdout**: Reserved exclusively for JSON-RPC protocol messages
+- **stderr**: May be used for logging (captured by host applications)
+
+### Log Format
+
+Logs are written as structured JSON for machine parseability:
+
+```json
+{
+  "timestamp": "2024-12-11T10:30:00.000Z",
+  "level": "error",
+  "context": "assignTags",
+  "message": "Failed to find task",
+  "data": { "taskId": "abc123" }
+}
+```
+
+### Log Levels
+
+| Level   | Usage                                    |
+| ------- | ---------------------------------------- |
+| debug   | Detailed diagnostic information          |
+| info    | General operational messages             |
+| warning | Potential issues or unexpected behavior  |
+| error   | Operation failures requiring attention   |
+
+### Viewing Logs
+
+Claude Desktop captures stderr logs to:
+
+```text
+~/Library/Logs/Claude/mcp-server-omnifocus-mcp.log
+```
+
+### Omni Automation Compatibility
+
+This logging approach is fully compatible with OmniJS scripts. OmniJS output
+flows through the JXA wrapper as JSON-RPC responses on stdout, while diagnostic
+logs remain separate on stderr.
+
+### Future: Protocol-Native Logging (Phase 20)
+
+Phase 20 will migrate to MCP's protocol-native logging using
+`server.sendLoggingMessage()`. This provides:
+
+- Client-visible logs in MCP Inspector and other debugging tools
+- Structured log levels (debug/info/warning/error/critical)
+- `logging: {}` capability declaration for client negotiation
+
+This requires refactoring from `McpServer` to the low-level `Server` class.
+See [MCP logging utilities spec](https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/logging).
 
 ## 🤝 Contributing
 

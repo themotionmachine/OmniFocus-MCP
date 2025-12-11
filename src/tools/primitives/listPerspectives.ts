@@ -1,4 +1,5 @@
 import type { OmnifocusPerspective } from '../../types.js';
+import { logger } from '../../utils/logger.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 
 export interface ListPerspectivesParams {
@@ -48,7 +49,7 @@ export async function listPerspectives(
       perspectives: perspectives
     };
   } catch (error) {
-    console.error('Error listing perspectives:', error);
+    logger.error('Error listing perspectives', 'listPerspectives', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'

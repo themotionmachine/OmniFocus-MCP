@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger.js';
 import { type RemoveItemParams, removeItem } from './removeItem.js';
 
 // Define the parameters for the batch removal operation
@@ -71,7 +72,7 @@ export async function batchRemoveItems(items: BatchRemoveItemsParams[]): Promise
       results: results
     };
   } catch (error: unknown) {
-    console.error('Error in batchRemoveItems:', error);
+    logger.error('Error in batchRemoveItems', 'batchRemoveItems', { error });
     return {
       success: false,
       results: [],

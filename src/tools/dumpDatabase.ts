@@ -1,4 +1,5 @@
 import type { OmnifocusDatabase } from '../types.js';
+import { logger } from '../utils/logger.js';
 import { executeOmniFocusScript } from '../utils/scriptExecution.js';
 
 // Define interfaces for the data returned from the script
@@ -187,7 +188,7 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
 
     return database;
   } catch (error) {
-    console.error('Error in dumpDatabase:', error);
+    logger.error('Error in dumpDatabase', 'dumpDatabase', { error });
     throw error;
   }
 }

@@ -46,6 +46,7 @@ reliability.
 - Handle partial failures in batch operations
 - Follow existing patterns - find a similar tool and mirror its structure
 - End all text files with a newline
+- Use the `logger` utility for all diagnostic output (never `console.error`)
 
 ## Build Commands
 
@@ -140,9 +141,12 @@ tempFile.cleanup();
 - **Task**: `Task.byIdentifier()`, `flattenedTasks.byName()`, `new Task(name, position)`
 - **Project**: `Project.byIdentifier()`, `flattenedProjects.byName()`, `new Project(name, folder)`
 - **Folder**: `Folder.byIdentifier()`, `flattenedFolders.byName()`, `new Folder(name)`
-- **Tag**: `flattenedTags.byName()`, `new Tag(name)`, `task.addTag()`, `task.clearTags()`
+- **Tag**: `Tag.byIdentifier()`, `flattenedTags.byName()`, `new Tag(name, parent)`
+  - Status: `tag.active = true/false`, `tag.status = Tag.Status.Active/OnHold/Dropped`
+  - Properties: `tag.allowsNextAction`, `tag.name`, `tag.parent`, `tag.children`
+  - Task operations: `task.addTag(tag)`, `task.removeTag(tag)`, `task.clearTags()`
 - **Status**: `task.markComplete()`, `task.markIncomplete()`, `task.active = false` (drop)
-- **Delete**: `deleteObject(item)` - works for tasks, projects, folders
+- **Delete**: `deleteObject(item)` - works for tasks, projects, folders, tags
 
 ## Modular Rules
 
@@ -196,12 +200,51 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - **Phase 2 Tags**: Completed tag management tools (2025-12-11)
   - `list_tags`, `create_tag`, `edit_tag`, `delete_tag`, `assign_tags`, `remove_tags`
   - Full hierarchy support with parent/child relationships
+  - Batch operations with per-item results for assign/remove
+  - Disambiguation support for name-based lookups
+  - Full TDD implementation with 150+ tests
 - **Phase 1 Folders**: Completed folder management tools (2025-12-10)
   - `list_folders`, `add_folder`, `edit_folder`, `remove_folder`, `move_folder`
   - All primitives use pure Omni Automation JavaScript (OmniJS)
+  - Established OmniJS-first architecture pattern for future tools
 - **Constitution v2.0.0**: Migrated to pure OmniJS execution model
   - Removed AppleScript tier (Tier 1) - all write operations now use OmniJS
   - Removed direct JXA tier (Tier 3) - unused execution path eliminated
   - All operations (read AND write) now use consistent OmniJS execution
 - **Phase 0.5 SDK Upgrade**: Upgraded to MCP SDK 1.24.3 and Zod 4.x
 - **Phase 0 Tooling**: Migrated to tsup, Vitest, Biome, Node 24+
+
+## Logging
+
+Use the MCP-compliant logger utility for all diagnostic output:
+
+```typescript
+import { logger } from './utils/logger.js';
+
+// Log levels: debug, info, warning, error
+logger.error('Operation failed', 'functionName', { taskId: 'abc123' });
+logger.warning('Unexpected state', 'functionName', { details });
+logger.info('Processing started', 'functionName');
+logger.debug('Verbose info', 'functionName', { data });
+```
+
+### Why stderr logging is MCP-compliant
+
+Per [MCP stdio transport spec](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports):
+
+> "Servers MAY send UTF-8 strings to their stderr stream. These are NOT
+> protocol messages and SHOULD NOT be parsed as JSON-RPC."
+
+- **stdout**: Reserved for JSON-RPC protocol messages only
+- **stderr**: Allowed for logging (captured by Claude Desktop)
+
+This is also compatible with OmniJS execution - script results flow through
+stdout as JSON-RPC, while diagnostic logs stay on stderr.
+
+**Never use `console.error` directly** - always use the logger utility.
+
+### Future: Protocol-Native Logging (Phase 20)
+
+Phase 20 will migrate to `server.sendLoggingMessage()` for client-visible logs.
+This requires refactoring from `McpServer` to the low-level `Server` class.
+See [MCP logging spec](https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/logging).
