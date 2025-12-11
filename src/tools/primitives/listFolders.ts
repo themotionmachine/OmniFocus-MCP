@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { Folder, ListFoldersInputSchema } from '../../contracts/folder-tools/list-folders.js';
+import { logger } from '../../utils/logger.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
 
@@ -132,7 +133,7 @@ export async function listFolders(params: ListFoldersParams = {}): Promise<ListF
       folders: result.folders
     };
   } catch (error: unknown) {
-    console.error('Error in listFolders:', error);
+    logger.error('Error in listFolders', 'listFolders', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,

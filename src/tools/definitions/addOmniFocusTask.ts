@@ -1,6 +1,7 @@
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import type { ServerNotification, ServerRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import { logger } from '../../utils/logger.js';
 import { type AddOmniFocusTaskParams, addOmniFocusTask } from '../primitives/addOmniFocusTask.js';
 
 export const schema = z.object({
@@ -49,8 +50,8 @@ export async function handler(
   try {
     // Call the addOmniFocusTask function
     const result = await addOmniFocusTask(args as AddOmniFocusTaskParams);
-    console.error('[add_omnifocus_task] args:', JSON.stringify(args));
-    console.error('[add_omnifocus_task] result:', JSON.stringify(result));
+    logger.debug('Add task request', 'addOmniFocusTask', { args });
+    logger.debug('Add task result', 'addOmniFocusTask', { result });
 
     if (result.success) {
       // Determine actual placement
@@ -99,7 +100,7 @@ export async function handler(
     }
   } catch (err: unknown) {
     const error = err as Error;
-    console.error(`Tool execution error: ${error.message}`);
+    logger.error('Tool execution error', 'addOmniFocusTask', { message: error.message });
     return {
       content: [
         {

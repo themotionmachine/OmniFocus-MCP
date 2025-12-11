@@ -24,6 +24,7 @@ import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as removeTagsTool from './tools/definitions/removeTags.js';
+import { logger } from './utils/logger.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -184,13 +185,15 @@ const transport = new StdioServerTransport();
 // Use await with server.connect to ensure proper connection
 (async () => {
   try {
-    console.error('Starting MCP server...');
+    logger.info('Starting MCP server...', 'server');
     await server.connect(transport);
-    console.error('MCP Server connected and ready to accept commands from Claude');
+    logger.info('MCP Server connected and ready to accept commands from Claude', 'server');
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
-    console.error(`Failed to start MCP server: ${error.message}`);
-    console.error('Stack trace:', error.stack);
+    logger.error('Failed to start MCP server', 'server', {
+      message: error.message,
+      stack: error.stack
+    });
     // Exit with error code to signal failure
     process.exit(1);
   }
@@ -198,11 +201,11 @@ const transport = new StdioServerTransport();
 
 // For a cleaner shutdown if the process is terminated
 process.on('SIGINT', () => {
-  console.error('Received SIGINT, shutting down gracefully...');
+  logger.info('Received SIGINT, shutting down gracefully...', 'server');
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  console.error('Received SIGTERM, shutting down gracefully...');
+  logger.info('Received SIGTERM, shutting down gracefully...', 'server');
   process.exit(0);
 });

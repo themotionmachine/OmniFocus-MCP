@@ -1,6 +1,7 @@
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import type { ServerNotification, ServerRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import { logger } from '../../utils/logger.js';
 import { type RemoveItemParams, removeItem } from '../primitives/removeItem.js';
 
 export const schema = z.object({
@@ -44,9 +45,11 @@ export async function handler(
     }
 
     // Log the remove operation for debugging
-    console.error(
-      `Removing ${args.itemType} with ID: ${args.id || 'not provided'}, Name: ${args.name || 'not provided'}`
-    );
+    logger.debug('Removing item', 'removeItem', {
+      itemType: args.itemType,
+      id: args.id || 'not provided',
+      name: args.name || 'not provided'
+    });
 
     // Call the removeItem function
     const result = await removeItem(args as RemoveItemParams);
@@ -90,7 +93,7 @@ export async function handler(
     }
   } catch (err: unknown) {
     const error = err as Error;
-    console.error(`Tool execution error: ${error.message}`);
+    logger.error('Tool execution error', 'removeItem', { message: error.message });
 
     return {
       content: [

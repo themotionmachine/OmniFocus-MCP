@@ -1,6 +1,7 @@
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import type { ServerNotification, ServerRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import { logger } from '../../utils/logger.js';
 import { type BatchAddItemsParams, batchAddItems } from '../primitives/batchAddItems.js';
 
 export const schema = z.object({
@@ -110,7 +111,7 @@ export async function handler(
         ]
       };
     } else {
-      console.error('[batch_add_items] failure result:', JSON.stringify(result));
+      logger.error('Batch add items operation failed', 'batchAddItems', result);
       // Batch operation failed completely or no items succeeded.
       const failureDetails =
         result.results && result.results.length > 0
@@ -137,7 +138,7 @@ export async function handler(
     }
   } catch (err: unknown) {
     const error = err as Error;
-    console.error(`Tool execution error: ${error.message}`);
+    logger.error('Tool execution error', 'batchAddItems', { message: error.message });
     return {
       content: [
         {

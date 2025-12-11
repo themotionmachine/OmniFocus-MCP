@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger.js';
 import { type AddOmniFocusTaskParams, addOmniFocusTask } from './addOmniFocusTask.js';
 import { type AddProjectParams, addProject } from './addProject.js';
 
@@ -229,7 +230,7 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
     const overallSuccess = results.some((r) => r?.success);
     return { success: overallSuccess, results };
   } catch (error: unknown) {
-    console.error('Error in batchAddItems:', error);
+    logger.error('Error in batchAddItems', 'batchAddItems', { error });
     return {
       success: false,
       results: [],

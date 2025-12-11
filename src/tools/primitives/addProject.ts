@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
 
@@ -152,7 +153,7 @@ export async function addProject(
     }
     return response;
   } catch (error: unknown) {
-    console.error('Error in addProject:', error);
+    logger.error('Error in addProject', 'addProject', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,

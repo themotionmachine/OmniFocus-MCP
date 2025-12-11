@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 
 export interface GetPerspectiveViewParams {
@@ -98,7 +99,7 @@ export async function getPerspectiveView(
       items: items
     };
   } catch (error) {
-    console.error('Error getting perspective view:', error);
+    logger.error('Error getting perspective view', 'getPerspectiveView', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'

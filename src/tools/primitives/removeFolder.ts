@@ -1,5 +1,6 @@
 import type { RemoveFolderInput } from '../../contracts/folder-tools/remove-folder.js';
 import type { DisambiguationError } from '../../contracts/folder-tools/shared/disambiguation.js';
+import { logger } from '../../utils/logger.js';
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { writeSecureTempFile } from '../../utils/secureTempFile.js';
 
@@ -120,7 +121,7 @@ export async function removeFolder(params: RemoveFolderInput): Promise<RemoveFol
     // Pass through the result (success, error, or disambiguation)
     return result;
   } catch (error: unknown) {
-    console.error('Error in removeFolder:', error);
+    logger.error('Error in removeFolder', 'removeFolder', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,
