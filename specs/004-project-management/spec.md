@@ -456,8 +456,8 @@ implementation MUST add this logic explicitly.
 - **FR-008**: System MUST support `includeCompleted` parameter (default: false)
   to include/exclude completed and dropped projects
 - **FR-009**: System MUST return project summary data including: id, name,
-  status, flagged, dueDate, deferDate, parentFolderId, parentFolderName,
-  taskCount, nextReviewDate
+  status, flagged, projectType, dueDate, deferDate, nextReviewDate,
+  parentFolderId, parentFolderName, taskCount, remainingCount (12 fields total)
 - **FR-010**: System MUST return empty array when no projects match filters
   (not error)
 - **FR-011**: System MUST support `limit` parameter to restrict result count
@@ -491,7 +491,9 @@ implementation MUST add this logic explicitly.
 - **FR-021**: System MUST create a new project with the specified name
 - **FR-022**: System MUST support optional target folder (ID or name) for placement
 - **FR-023**: System MUST support optional position within folder: 'beginning',
-  'ending' (default), or relative to another project (beforeProject, afterProject)
+  'ending' (default), or relative to another project (beforeProject, afterProject).
+  If `beforeProject` or `afterProject` is specified by name and matches multiple
+  projects, a disambiguation error MUST be returned.
 - **FR-024**: System MUST support setting initial properties: note, status,
   sequential, containsSingletonActions, deferDate, dueDate, flagged,
   estimatedMinutes, shouldUseFloatingTimeZone
@@ -539,7 +541,9 @@ implementation MUST add this logic explicitly.
 - **FR-046**: System MUST support identifying the target folder by ID, name,
   or 'root' for top-level
 - **FR-047**: System MUST support optional position within target folder:
-  'beginning', 'ending' (default), beforeProject, afterProject
+  'beginning', 'ending' (default), beforeProject, afterProject. If `beforeProject`
+  or `afterProject` is specified by name and matches multiple projects, a
+  disambiguation error MUST be returned.
 - **FR-048**: System MUST return success response with project id, name, and
   new parent folder: `{ success: true, id: string, name: string,
   parentFolderId: string | null, parentFolderName: string | null }`
@@ -698,9 +702,12 @@ Error messages follow these patterns (consistent with existing tools):
 - **SC-001**: AI assistants can list projects with filter criteria and receive
   results within 2 seconds for databases with up to 1,000 projects
 - **SC-002**: AI assistants can retrieve complete project details by ID with
-  99% success rate for valid requests
+  99% success rate for valid requests (measured as successful tool invocations
+  divided by total attempts with valid input in the automated test suite)
 - **SC-003**: AI assistants can create projects with configured settings and
-  folder placement with 99% success rate for valid inputs
+  folder placement with 99% success rate for valid inputs (measured as
+  successful tool invocations divided by total attempts with valid input in
+  the automated test suite)
 - **SC-004**: AI assistants can modify project properties without unintended
   side effects with 100% property preservation for unmodified fields
 - **SC-005**: AI assistants can delete projects with cascade deletion of all

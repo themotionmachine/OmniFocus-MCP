@@ -31,7 +31,7 @@ implementation phases.
 | 1     | Folders                        | 5     | Complete |
 | 2     | Tags                           | 6     | Complete |
 | 3     | **Tasks (Enhanced)**           | 4     | Complete |
-| 4     | **Projects**                   | 6     | Spec     |
+| 4     | **Projects**                   | 6     | Complete |
 | 5     | **Review System**              | 3     | Pending  |
 | 6     | Notifications                  | 5     | Pending  |
 | 7     | Repetition                     | 5     | Pending  |
@@ -600,6 +600,121 @@ Note: If the task has an existing note, appends with a newline separator. If the
 note is empty, sets the note directly (no leading newline). At least one of
 `id` or `name` must be provided. Returns disambiguation error if multiple tasks
 match the name.
+
+### `list_projects` ⭐ NEW
+
+List projects from OmniFocus with comprehensive filtering options. Supports
+GTD review workflows with review status filtering.
+
+Parameters:
+
+- `folderId`: (Optional) Filter to projects in a specific folder by ID
+- `folderName`: (Optional) Filter to projects in a specific folder by name
+- `status`: (Optional) Filter by project status array (e.g., ['Active', 'OnHold'])
+- `reviewStatus`: (Optional) Filter by review status: 'due', 'upcoming', or 'any'
+- `flagged`: (Optional) Filter to flagged projects only
+- `includeCompleted`: (Optional) Include completed/dropped projects (default: false)
+- `dueBefore`: (Optional) Projects due before this date (ISO 8601)
+- `dueAfter`: (Optional) Projects due after this date (ISO 8601)
+- `deferBefore`: (Optional) Projects deferred before this date
+- `deferAfter`: (Optional) Projects deferred after this date
+- `limit`: (Optional) Maximum number of projects to return (default: 100, max: 1000)
+
+Returns: Array of ProjectSummary objects with essential metadata (id, name,
+status, flagged, projectType, dates, task counts).
+
+### `get_project` ⭐ NEW
+
+Get detailed information about a single project by ID or name. Returns the
+complete project object with all properties.
+
+Parameters:
+
+- `id`: (Optional) The project's unique identifier
+- `name`: (Optional) The project's name (used if id not provided)
+
+Note: At least one of `id` or `name` must be provided. Returns disambiguation
+error if multiple projects match the name.
+
+Returns: Complete ProjectFull object with all 30 properties including notes,
+status, dates, review settings, hierarchy info, and relationships.
+
+### `create_project` ⭐ NEW
+
+Create a new project in OmniFocus with configurable settings.
+
+Parameters:
+
+- `name`: The name of the project (required)
+- `folderId`: (Optional) Parent folder ID (takes precedence over folderName)
+- `folderName`: (Optional) Parent folder name (used if no folderId)
+- `position`: (Optional) Position in folder: 'beginning' or 'ending' (default)
+- `beforeProject`: (Optional) Place before this project (ID or name)
+- `afterProject`: (Optional) Place after this project (ID or name)
+- `sequential`: (Optional) Create as sequential project (auto-clears single-actions)
+- `containsSingletonActions`: (Optional) Create as single-actions list (wins over sequential)
+- `note`: (Optional) Project notes
+- `status`: (Optional) Initial status: 'Active', 'OnHold', 'Done', 'Dropped'
+- `flagged`: (Optional) Whether the project is flagged
+- `deferDate`: (Optional) Defer date (ISO 8601)
+- `dueDate`: (Optional) Due date (ISO 8601)
+- `reviewInterval`: (Optional) Review schedule as { steps: number, unit: 'day'|'week'|'month'|'year' }
+- `estimatedMinutes`: (Optional) Time estimate in minutes (macOS v3.5+ only)
+
+### `edit_project` ⭐ NEW
+
+Modify existing project properties including status, type, dates, and review
+settings. Supports lookup by ID or name with disambiguation.
+
+Parameters:
+
+- `id`: (Optional) Project ID (takes precedence over name)
+- `name`: (Optional) Project name (used if no ID provided)
+- `newName`: (Optional) Rename the project
+- `note`: (Optional) Replace the project note
+- `status`: (Optional) Project status: 'Active', 'OnHold', 'Done', 'Dropped'
+- `sequential`: (Optional) Set as sequential project (auto-clears single-actions if true)
+- `containsSingletonActions`: (Optional) Set as single-actions list (auto-clears sequential if true)
+- `flagged`: (Optional) Flagged status
+- `deferDate`: (Optional) Defer date (ISO 8601, null to clear)
+- `dueDate`: (Optional) Due date (ISO 8601, null to clear)
+- `reviewInterval`: (Optional) Review schedule (null to clear)
+- Other properties: completedByChildren, defaultSingletonActionHolder, shouldUseFloatingTimeZone, estimatedMinutes
+
+Note: Project type auto-clear pattern applies when both sequential and
+containsSingletonActions are set to true - containsSingletonActions wins.
+
+### `delete_project` ⭐ NEW
+
+Delete a project from OmniFocus. Automatically removes all child tasks
+(cascade delete behavior).
+
+Parameters:
+
+- `id`: (Optional) Project ID (takes precedence over name)
+- `name`: (Optional) Project name (used if no ID provided)
+
+Note: At least one of `id` or `name` must be provided. Returns disambiguation
+error if multiple projects match the name. Success response includes
+confirmation message with task count.
+
+### `move_project` ⭐ NEW
+
+Move a project to a different folder or to the library root.
+
+Parameters:
+
+- `id`: (Optional) Project ID (takes precedence over name)
+- `name`: (Optional) Project name (used if no ID provided)
+- `targetFolderId`: (Optional) Target folder ID (takes precedence over targetFolderName)
+- `targetFolderName`: (Optional) Target folder name (used if no targetFolderId)
+- `root`: (Optional) Move to library root (mutually exclusive with targetFolder)
+- `position`: (Optional) Position in target: 'beginning' or 'ending' (default)
+- `beforeProject`: (Optional) Place before this sibling project (overrides position)
+- `afterProject`: (Optional) Place after this sibling project (overrides position)
+
+Note: Must specify either targetFolderId, targetFolderName, or root: true.
+Cannot specify both targetFolder and root.
 
 ## Development
 

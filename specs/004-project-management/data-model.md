@@ -561,63 +561,16 @@ interface MoveProjectSuccessResponse {
 
 ### Project Type Auto-Clear
 
-**This pattern is unique to Phase 4** - no similar mutual exclusion exists in
-Phase 1 (folders), Phase 2 (tags), or Phase 3 (tasks).
+For complete behavioral specification, precedence rules, and scenario matrix,
+see **spec.md §Project Type Mutual Exclusion (Auto-Clear Pattern)**.
 
-#### Behavior Specification
-
-Auto-clear is **silent** - no error response, no warning. Success response contains
-only `success: true`, `id`, `name`. This is **application logic**, not Zod schema
-validation. The schemas intentionally do NOT prevent both=true; auto-clear handles
-it at runtime.
-
-#### Precedence Rule
-
-When both `sequential: true` AND `containsSingletonActions: true` are provided in
-the same request, **`containsSingletonActions` takes precedence** (last processed wins).
-
-Implementation order (process `sequential` first, then `containsSingletonActions`):
-
-```javascript
-// MUST process in this order for consistent precedence
-if (params.sequential === true) {
-  project.containsSingletonActions = false;
-  project.sequential = true;
-}
-if (params.containsSingletonActions === true) {
-  project.sequential = false;  // Auto-clears the previous setting
-  project.containsSingletonActions = true;
-}
-```
-
-#### Setting to False
-
-Setting a property to `false` does NOT trigger auto-clear of the other property:
-
-```javascript
-// Setting to false - no auto-clear
-if (params.sequential === false) {
-  project.sequential = false;
-  // containsSingletonActions is NOT auto-set
-}
-if (params.containsSingletonActions === false) {
-  project.containsSingletonActions = false;
-  // sequential is NOT auto-set
-}
-```
-
-#### Omitting Parameters (edit_project)
-
-- **Both omitted**: Preserves existing project type
-- **One provided**: Only that property changes; auto-clear only if setting `true`
-  conflicts with existing state
-
-#### OmniFocus Native Behavior
-
-OmniFocus itself does NOT auto-clear - the implementation MUST add this logic
-explicitly. Setting both to `true` via OmniJS results in undefined behavior.
-
-See spec.md §Project Type Mutual Exclusion for the complete scenario matrix.
+**Implementation Summary** (derived from spec):
+- Auto-clear is **silent** (no error, no warning in response)
+- **Precedence**: `containsSingletonActions` wins when both are `true`
+- **Process order**: `sequential` first, then `containsSingletonActions`
+- Setting to `false` does NOT trigger auto-clear of the other property
+- This pattern is **unique to Phase 4** - no similar mutual exclusion exists in
+  Phase 1 (folders), Phase 2 (tags), or Phase 3 (tasks)
 
 ### Filter Interaction Matrix
 

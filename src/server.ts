@@ -9,20 +9,26 @@ import * as appendNoteTool from './tools/definitions/appendNote.js';
 import * as assignTagsTool from './tools/definitions/assignTags.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
+import * as createProjectTool from './tools/definitions/createProject.js';
 import * as createTagTool from './tools/definitions/createTag.js';
+import * as deleteProjectTool from './tools/definitions/deleteProject.js';
 import * as deleteTagTool from './tools/definitions/deleteTag.js';
 // Import tool definitions
 import * as dumpDatabaseTool from './tools/definitions/dumpDatabase.js';
 import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as editItemTool from './tools/definitions/editItem.js';
+import * as editProjectTool from './tools/definitions/editProject.js';
 import * as editTagTool from './tools/definitions/editTag.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
+import * as getProjectTool from './tools/definitions/getProject.js';
 import * as getTaskTool from './tools/definitions/getTask.js';
 import * as listFoldersTool from './tools/definitions/listFolders.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
+import * as listProjectsTool from './tools/definitions/listProjects.js';
 import * as listTagsTool from './tools/definitions/listTags.js';
 import * as listTasksTool from './tools/definitions/listTasks.js';
 import * as moveFolderTool from './tools/definitions/moveFolder.js';
+import * as moveProjectTool from './tools/definitions/moveProject.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
@@ -210,6 +216,49 @@ server.tool(
   "Append text to a task's existing note. Preserves existing note content and adds new text with proper line separation. Supports lookup by ID or name.",
   appendNoteTool.schema.shape,
   appendNoteTool.handler
+);
+
+// Phase 4 Project Management Tools
+server.tool(
+  'list_projects',
+  'List projects from OmniFocus with comprehensive filtering. Supports filtering by folder, status (Active/OnHold/Done/Dropped), review status (due/upcoming), flagged state, and date ranges (due, defer). Returns ProjectSummary objects with essential project metadata.',
+  listProjectsTool.schema.shape,
+  listProjectsTool.handler
+);
+
+server.tool(
+  'get_project',
+  'Get detailed information about a single project by ID or name. Returns complete ProjectFull object with all properties including notes, status, dates, review settings, hierarchy info, and relationships.',
+  getProjectTool.schema.shape,
+  getProjectTool.handler
+);
+
+server.tool(
+  'create_project',
+  'Create new projects with configurable settings. Supports folder placement, project type (sequential/single-actions), dates, review intervals, and all project properties. Auto-clears conflicting type flags.',
+  createProjectTool.schema.shape,
+  createProjectTool.handler
+);
+
+server.tool(
+  'edit_project',
+  'Modify existing project properties including status, type, dates, and review settings. Supports lookup by ID or name with disambiguation. Auto-clears conflicting type properties.',
+  editProjectTool.schema.shape,
+  editProjectTool.handler
+);
+
+server.tool(
+  'delete_project',
+  'Delete a project from OmniFocus by ID or name. Automatically removes all child tasks (cascade delete). Returns confirmation message with task count.',
+  deleteProjectTool.schema.shape,
+  deleteProjectTool.handler
+);
+
+server.tool(
+  'move_project',
+  'Move a project to a different folder or to the library root. Supports ID or name lookup with disambiguation, and precise positioning (beginning/ending or before/after a sibling project).',
+  moveProjectTool.schema.shape,
+  moveProjectTool.handler
 );
 
 // Start the MCP server

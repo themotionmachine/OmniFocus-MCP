@@ -300,7 +300,9 @@ All contracts implemented in [contracts/](./contracts/) following the task-tools
 
 The tools should be implemented in dependency order:
 
-1. **Contracts** (all 6) - Foundation for all tools
+1. **Contracts** (copy from `specs/` to `src/contracts/`) - Contracts already exist
+   in `specs/004-project-management/contracts/`; implementation copies them to
+   `src/contracts/project-tools/` for runtime use
 2. **`list_projects`** - Foundational for discovery, most complex filters
 3. **`get_project`** - Inspect single project, simpler than list
 4. **`create_project`** - Write operation with positioning
@@ -310,8 +312,8 @@ The tools should be implemented in dependency order:
 
 Each tool follows TDD Red-Green-Refactor:
 
-1. Contract tests (FAIL)
-2. Unit tests for primitive (FAIL)
+1. Contract tests (PASS - tests validate existing schema structure)
+2. Unit tests for primitive (FAIL - tests implementation before code exists)
 3. Implement primitive (GREEN)
 4. Implement definition (integration)
 5. Manual OmniFocus verification
