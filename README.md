@@ -31,7 +31,7 @@ implementation phases.
 | 1     | Folders                        | 5     | Complete |
 | 2     | Tags                           | 6     | Complete |
 | 3     | **Tasks (Enhanced)**           | 4     | Complete |
-| 4     | **Projects**                   | 6     | Pending  |
+| 4     | **Projects**                   | 6     | Spec     |
 | 5     | **Review System**              | 3     | Pending  |
 | 6     | Notifications                  | 5     | Pending  |
 | 7     | Repetition                     | 5     | Pending  |
