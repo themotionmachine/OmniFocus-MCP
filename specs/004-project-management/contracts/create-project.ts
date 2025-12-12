@@ -13,11 +13,21 @@ import { ProjectStatusSchema, ReviewIntervalSchema } from './shared/project.js';
  * - `position: 'beginning'`: Project added at start of container
  * - `beforeProject` / `afterProject`: Precise sibling positioning
  *
- * ## Project Type Auto-Clear
+ * ## Project Type Auto-Clear (Application Logic, NOT Schema Validation)
  *
  * Setting `sequential: true` auto-clears `containsSingletonActions`.
  * Setting `containsSingletonActions: true` auto-clears `sequential`.
- * This prevents invalid state (both true simultaneously).
+ *
+ * **This schema intentionally does NOT have a Zod refinement preventing both=true.**
+ * Auto-clear is handled at runtime in the primitive, not by schema validation.
+ * Reason: Silent auto-clear is the desired behavior (not validation error).
+ *
+ * **Precedence**: If both provided as `true`, `containsSingletonActions` wins
+ * (last processed). See spec.md §Project Type Mutual Exclusion.
+ *
+ * **Response**: Auto-clear is silent - success response does NOT mention it occurred.
+ *
+ * **Unique to Phase 4**: No similar pattern exists in folders, tags, or tasks.
  */
 export const CreateProjectInputSchema = z.object({
   // Required
@@ -105,8 +115,9 @@ export type CreateProjectError = z.infer<typeof CreateProjectErrorSchema>;
  * Complete response schema for create_project tool.
  *
  * Can return success, standard error, or disambiguation error (for folder/sibling lookup).
+ * Uses discriminated union on 'success' field for type narrowing.
  */
-export const CreateProjectResponseSchema = z.union([
+export const CreateProjectResponseSchema = z.discriminatedUnion('success', [
   CreateProjectSuccessSchema,
   DisambiguationErrorSchema,
   CreateProjectErrorSchema

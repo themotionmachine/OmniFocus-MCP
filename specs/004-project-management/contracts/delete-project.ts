@@ -49,8 +49,9 @@ export type DeleteProjectError = z.infer<typeof DeleteProjectErrorSchema>;
  * Complete response schema for delete_project tool.
  *
  * Can return success, standard error, or disambiguation error.
+ * Uses discriminated union on 'success' field for type narrowing.
  */
-export const DeleteProjectResponseSchema = z.union([
+export const DeleteProjectResponseSchema = z.discriminatedUnion('success', [
   DeleteProjectSuccessSchema,
   DisambiguationErrorSchema,
   DeleteProjectErrorSchema

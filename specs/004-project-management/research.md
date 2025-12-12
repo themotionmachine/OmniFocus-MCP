@@ -196,7 +196,9 @@ project.containsSingletonActions = true;
 ```
 
 **Critical Note:** `sequential` and `containsSingletonActions` are mutually
-exclusive. Official patterns explicitly clear the conflicting property:
+exclusive. **OmniFocus itself does NOT auto-clear** - setting both to `true` via
+OmniJS results in undefined behavior. The implementation MUST add auto-clear logic
+explicitly, following official Omni Automation defensive patterns:
 
 ```javascript
 // Setting Sequential (safe pattern)
@@ -459,22 +461,30 @@ deleteObject(object: DatabaseObject) → void
 **Question:** What happens when setting `sequential` on a project with
 `containsSingletonActions = true`?
 
-**Answer:** Official Omni Automation code examples show explicit clearing
-of the conflicting property before setting the desired one. No exception
-is thrown for simultaneous true values, but behavior is undefined.
+**Answer:** OmniFocus itself does NOT auto-clear - setting both to `true` via
+OmniJS results in **undefined behavior** (no exception thrown). Official Omni
+Automation code examples show explicit clearing of the conflicting property
+before setting the desired one as a defensive pattern.
 
-**Decision:** Auto-clear conflicting property (per spec clarification)
+**Decision:** Auto-clear conflicting property (per spec clarification 2025-12-12)
+
+**Precedence Rule:** When both provided as `true`, `containsSingletonActions` wins
+(processed second). Use separate `if` statements, NOT `else if`:
 
 ```javascript
-// Implementation pattern
+// Implementation pattern - containsSingletonActions wins if both true
 if (params.sequential === true) {
   project.containsSingletonActions = false;
   project.sequential = true;
-} else if (params.containsSingletonActions === true) {
-  project.sequential = false;
+}
+if (params.containsSingletonActions === true) {
+  project.sequential = false;  // Auto-clears sequential if it was just set
   project.containsSingletonActions = true;
 }
 ```
+
+**Silent Behavior:** Auto-clear is silent - no error, no warning. This is
+application logic, NOT Zod validation. Schemas intentionally allow both=true.
 
 ### Finding 2: Review Interval Value Object
 

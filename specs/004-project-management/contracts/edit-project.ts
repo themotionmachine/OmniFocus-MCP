@@ -11,11 +11,26 @@ import { ProjectStatusSchema, ReviewIntervalSchema } from './shared/project.js';
  *
  * At least one of `id` or `name` is required. If both provided, `id` takes precedence.
  *
- * ## Project Type Auto-Clear
+ * ## Project Type Auto-Clear (Application Logic, NOT Schema Validation)
  *
  * Setting `sequential: true` auto-clears `containsSingletonActions`.
  * Setting `containsSingletonActions: true` auto-clears `sequential`.
- * This prevents invalid state (both true simultaneously).
+ *
+ * **This schema intentionally does NOT have a Zod refinement preventing both=true.**
+ * Auto-clear is handled at runtime in the primitive, not by schema validation.
+ * Reason: Silent auto-clear is the desired behavior (not validation error).
+ *
+ * **Precedence**: If both provided as `true`, `containsSingletonActions` wins
+ * (last processed). See spec.md §Project Type Mutual Exclusion.
+ *
+ * **Response**: Auto-clear is silent - success response does NOT mention it occurred.
+ *
+ * **Setting to false**: Does NOT trigger auto-clear of the other property.
+ *
+ * **Omitting parameters**: Preserves existing project type. Auto-clear only
+ * triggers if setting `true` conflicts with existing state.
+ *
+ * **Unique to Phase 4**: No similar pattern exists in folders, tags, or tasks.
  *
  * ## Null Values
  *
@@ -99,8 +114,9 @@ export type EditProjectError = z.infer<typeof EditProjectErrorSchema>;
  * Complete response schema for edit_project tool.
  *
  * Can return success, standard error, or disambiguation error.
+ * Uses discriminated union on 'success' field for type narrowing.
  */
-export const EditProjectResponseSchema = z.union([
+export const EditProjectResponseSchema = z.discriminatedUnion('success', [
   EditProjectSuccessSchema,
   DisambiguationErrorSchema,
   EditProjectErrorSchema

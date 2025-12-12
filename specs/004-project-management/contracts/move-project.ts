@@ -111,8 +111,9 @@ export type MoveProjectError = z.infer<typeof MoveProjectErrorSchema>;
  * Complete response schema for move_project tool.
  *
  * Can return success, standard error, or disambiguation error.
+ * Uses discriminated union on 'success' field for type narrowing.
  */
-export const MoveProjectResponseSchema = z.union([
+export const MoveProjectResponseSchema = z.discriminatedUnion('success', [
   MoveProjectSuccessSchema,
   DisambiguationErrorSchema,
   MoveProjectErrorSchema

@@ -150,7 +150,11 @@ function getStatusString(project) {
   statusMap[Project.Status.OnHold] = 'OnHold';
   statusMap[Project.Status.Done] = 'Done';
   statusMap[Project.Status.Dropped] = 'Dropped';
-  return statusMap[project.status] || 'Active';
+  var str = statusMap[project.status];
+  if (!str) {
+    throw new Error('Unknown project status: ' + project.status);
+  }
+  return str;
 }
 
 // JSON String → OmniJS (input)
@@ -161,9 +165,16 @@ function getStatusEnum(statusStr) {
     'Done': Project.Status.Done,
     'Dropped': Project.Status.Dropped
   };
-  return map[statusStr] || Project.Status.Active;
+  var val = map[statusStr];
+  if (val === undefined) {
+    throw new Error('Invalid status: ' + statusStr + '. Expected: Active, OnHold, Done, Dropped');
+  }
+  return val;
 }
 ```
+
+**Note**: Unknown/invalid status values throw errors (fail-fast) rather than
+silently defaulting. This ensures data integrity.
 
 ### Project Type Derivation
 
@@ -178,18 +189,75 @@ function getProjectType(project) {
 
 ### Project Type Auto-Clear Pattern
 
-```javascript
-// When setting sequential or containsSingletonActions
-// Auto-clear the conflicting property first
+**This pattern is unique to Phase 4** - no similar mutual exclusion exists in
+Phase 1 (folders), Phase 2 (tags), or Phase 3 (tasks).
 
+#### Precedence: `containsSingletonActions` Wins
+
+When both `sequential: true` AND `containsSingletonActions: true` are provided,
+`containsSingletonActions` wins (last processed). Use separate `if` statements:
+
+```javascript
+// CORRECT: Separate if statements - containsSingletonActions wins if both provided
 if (params.sequential === true) {
   project.containsSingletonActions = false;
   project.sequential = true;
-} else if (params.containsSingletonActions === true) {
-  project.sequential = false;
+}
+if (params.containsSingletonActions === true) {
+  project.sequential = false;  // Auto-clears the previous setting
   project.containsSingletonActions = true;
 }
 ```
+
+**Silent behavior**: No error response, no warning. Success response contains only
+`success: true`, `id`, `name`. Users discover actual state via `get_project`.
+
+#### Setting to False (No Auto-Clear)
+
+Setting a property to `false` does NOT auto-set the other property:
+
+```javascript
+// Setting to false - no auto-clear occurs
+if (params.sequential === false) {
+  project.sequential = false;
+  // containsSingletonActions is NOT touched
+}
+if (params.containsSingletonActions === false) {
+  project.containsSingletonActions = false;
+  // sequential is NOT touched
+}
+```
+
+#### Omitting Parameters (edit_project)
+
+- Both omitted: Project type preserved
+- One provided: Only that property changes; auto-clear only if setting `true`
+
+#### Complete Implementation Pattern
+
+```javascript
+// Full project type handling for create/edit
+function applyProjectType(project, params) {
+  // Only process explicitly provided values
+  if (params.sequential === true) {
+    project.containsSingletonActions = false;
+    project.sequential = true;
+  } else if (params.sequential === false) {
+    project.sequential = false;
+  }
+
+  if (params.containsSingletonActions === true) {
+    project.sequential = false;  // Auto-clear (precedence)
+    project.containsSingletonActions = true;
+  } else if (params.containsSingletonActions === false) {
+    project.containsSingletonActions = false;
+  }
+  // Omitted parameters: no change to project
+}
+```
+
+This is **application logic**, not Zod validation. Schemas intentionally allow
+both=true; auto-clear handles it at runtime.
 
 ### Filter Generation Pattern (list_projects)
 
@@ -227,18 +295,26 @@ var filtered = projects.filter(function(p) {
   }
 
   // 4. Review status filter
+  // Note: 'any' filter (or reviewStatus not specified) = no filtering = include ALL projects
+  // 'any' includes projects WITH and WITHOUT reviewInterval, regardless of nextReviewDate value
   if (reviewStatus === 'due') {
-    if (!p.nextReviewDate) return false;
+    // nextReviewDate <= today (today at midnight local time)
+    // Boundary: nextReviewDate = exactly today → INCLUDED in 'due'
+    if (!p.nextReviewDate) return false;  // Exclude projects without review schedule
     var today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);  // Midnight local time = start of today
     if (p.nextReviewDate > today) return false;
   } else if (reviewStatus === 'upcoming') {
-    if (!p.nextReviewDate) return false;
+    // today < nextReviewDate <= today+7 days (7-day boundary is INCLUSIVE)
+    // Boundary: nextReviewDate = exactly today → EXCLUDED (handled by 'due')
+    // Boundary: nextReviewDate = exactly today+7 → INCLUDED in 'upcoming'
+    if (!p.nextReviewDate) return false;  // Exclude projects without review schedule
     var today = new Date();
     today.setHours(0, 0, 0, 0);
     var sevenDays = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     if (p.nextReviewDate <= today || p.nextReviewDate > sevenDays) return false;
   }
+  // reviewStatus === 'any' or undefined: no filtering - continue to next filter
 
   // 5. Date filters (inclusive, null excluded)
   if (dueAfter) {
@@ -258,6 +334,21 @@ if (limit && filtered.length > limit) {
   filtered = filtered.slice(0, limit);
 }
 ```
+
+### Efficient Filtering Guidance
+
+**Performance Best Practice**: Filter BEFORE serialization.
+
+- All filtering logic should execute within the OmniJS script (shown above)
+- Do NOT transfer entire database to Node.js then filter
+- OmniJS runs inside OmniFocus process - filtering there is fast
+- JSON serialization is expensive - serialize only the filtered results
+
+**Why this matters**:
+
+- Database with 1,000 projects: filtering in OmniJS = ~50ms, full transfer = ~500ms
+- Reduces memory usage in Node.js process
+- Matches SC-001 requirement: <2 seconds for 1,000 projects
 
 ### Disambiguation Pattern
 
@@ -475,15 +566,28 @@ if (setSequential) {
 
 ### Review Interval Value Object
 
-Remember that ReviewInterval is a value object:
+**CRITICAL**: ReviewInterval is a **value object** - when you read it, you get a COPY,
+not a reference to the internal data.
 
 ```javascript
-// WRONG - this doesn't work
+// WRONG - this doesn't work!
 project.reviewInterval.steps = 14; // changes local copy only
+// Why it fails: project.reviewInterval returns a COPY of the object.
+// Modifying the copy has no effect on the project's actual reviewInterval.
 
 // CORRECT - reassign the entire object
 project.reviewInterval = { steps: 14, unit: 'days' };
+// Why it works: Assignment triggers OmniFocus to update the project's
+// internal reviewInterval AND recalculate nextReviewDate.
+
+// CORRECT - clearing the review schedule
+project.reviewInterval = null;
+// Effect: nextReviewDate becomes null, lastReviewDate is preserved
 ```
+
+**Why value object semantics matter**: OmniFocus uses value objects for immutability
+and to trigger recalculation of dependent properties (like nextReviewDate). Always
+create a new object and assign it; never mutate properties on a retrieved copy.
 
 ### Cascade Delete Warning
 

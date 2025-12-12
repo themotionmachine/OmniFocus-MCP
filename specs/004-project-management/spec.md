@@ -347,6 +347,93 @@ folder and verifying its new location. Delivers value by enabling reorganization
 - **Project type combinations**: `sequential` and `containsSingletonActions` are
   mutually exclusive; setting one should clear the other
 
+### Project Type Mutual Exclusion (Auto-Clear Pattern)
+
+This pattern is **unique to Phase 4 projects** - no similar mutual exclusion exists
+in Phase 1 (folders), Phase 2 (tags), or Phase 3 (tasks).
+
+#### Invalid State Definition
+
+The combination `sequential: true` AND `containsSingletonActions: true` is an
+**invalid state**. OmniFocus does not validate this at the API level - setting both
+to true simultaneously results in undefined behavior.
+
+#### Resolution: Silent Auto-Clear (NOT Validation Error)
+
+When a user provides both properties as `true` (or sets one to `true` on a project
+where the other is already `true`), the implementation MUST:
+
+1. **Silently auto-clear** the conflicting property (NOT return a validation error)
+2. **Not mention the auto-clear in the success response** (response contains only
+   `success: true`, `id`, `name`)
+3. **Not log a warning** - the auto-clear is expected behavior
+4. Users discover the actual state via subsequent `get_project` call
+
+This is **application logic**, not Zod schema validation. The schemas intentionally
+do NOT have a refinement preventing both properties from being `true` - the auto-clear
+handles it at runtime.
+
+#### Precedence Rule: `containsSingletonActions` Wins
+
+When both `sequential: true` AND `containsSingletonActions: true` are provided in the
+same request:
+
+- **`containsSingletonActions` takes precedence**
+- Result: `sequential=false`, `containsSingletonActions=true` (single-actions list)
+
+Implementation order (OmniJS):
+```javascript
+// Process in this order: sequential first, then containsSingletonActions
+if (params.sequential === true) {
+  project.containsSingletonActions = false;
+  project.sequential = true;
+}
+if (params.containsSingletonActions === true) {
+  project.sequential = false;  // Auto-clears the previous setting
+  project.containsSingletonActions = true;
+}
+```
+
+This ensures consistent, predictable behavior when both are accidentally provided.
+
+#### Setting Properties to `false`
+
+- **`sequential: false`**: Sets project to parallel type (if `containsSingletonActions`
+  is also false). Does NOT auto-set `containsSingletonActions` to any value.
+- **`containsSingletonActions: false`**: Sets project to parallel type (if `sequential`
+  is also false). Does NOT auto-set `sequential` to any value.
+- **Both `false`**: Results in `parallel` project type (valid state).
+
+Auto-clear only occurs when setting a property to `true` - setting to `false` never
+triggers auto-clear of the other property.
+
+#### Omitting Parameters (edit_project)
+
+- **Both omitted**: Preserves existing project type (no change)
+- **One provided, one omitted**: Only the provided property is updated; the omitted
+  property remains unchanged. Auto-clear triggers only if setting `true` conflicts
+  with the existing state.
+
+#### Complete Scenario Matrix
+
+| Input | Existing State | Action | Result |
+|-------|---------------|--------|--------|
+| `sequential: true` | parallel | Set sequential | sequential |
+| `sequential: true` | single-actions | Auto-clear CSA, set sequential | sequential |
+| `containsSingletonActions: true` | parallel | Set CSA | single-actions |
+| `containsSingletonActions: true` | sequential | Auto-clear sequential, set CSA | single-actions |
+| `sequential: true, containsSingletonActions: true` | any | CSA wins (precedence) | single-actions |
+| `sequential: false` | sequential | Set false | parallel |
+| `containsSingletonActions: false` | single-actions | Set false | parallel |
+| `sequential: false, containsSingletonActions: false` | any | Both false | parallel |
+| (both omitted) | any | No change | (unchanged) |
+
+#### Source of Truth
+
+This pattern follows the official Omni Automation defensive pattern documented in
+the 2025-12-12 clarification session. OmniFocus itself does NOT auto-clear - the
+implementation MUST add this logic explicitly.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -499,10 +586,52 @@ ALL provided filters to be included in results:
 
 #### Review Status Filter Behavior
 
-- `reviewStatus: 'due'`: nextReviewDate <= current date
-- `reviewStatus: 'upcoming'`: nextReviewDate within next 7 days (but not past due)
-- `reviewStatus: 'any'`: All projects regardless of review status
-- Projects without review intervals are excluded by review status filters
+- `reviewStatus: 'due'`: nextReviewDate <= current date (today at midnight local time)
+- `reviewStatus: 'upcoming'`: today < nextReviewDate <= today+7 days (INCLUSIVE at 7-day boundary)
+- `reviewStatus: 'any'`: All projects regardless of review status, INCLUDING projects without
+  review schedules and projects with any nextReviewDate value (null, past, or future)
+- Projects without review intervals (reviewInterval = null) are EXCLUDED from 'due' and
+  'upcoming' filters but INCLUDED in 'any' filter
+
+##### Boundary Conditions (Explicit Resolutions)
+
+- **nextReviewDate = exactly today**: Classified as `'due'` (today is included in `<=` check)
+- **nextReviewDate = exactly today+7 days**: Classified as `'upcoming'` (upper boundary is INCLUSIVE)
+- **nextReviewDate = today+8 days**: NOT included in `'upcoming'` (beyond 7-day window)
+
+##### Review Properties (Read-Only)
+
+The following properties are **computed by OmniFocus** and cannot be set via API:
+
+- **nextReviewDate**: Computed from `reviewInterval + lastReviewDate`. When a project is
+  first created with a reviewInterval, OmniFocus calculates nextReviewDate automatically.
+  Setting reviewInterval triggers OmniFocus to recalculate nextReviewDate.
+- **lastReviewDate**: Updated by OmniFocus when the user marks a project as reviewed (via
+  OmniFocus UI or Review perspective). API can read but CANNOT write this property.
+
+##### Review Workflow Chain (OmniFocus-Managed)
+
+1. **User sets reviewInterval** → OmniFocus calculates nextReviewDate (typically from today)
+2. **User clears reviewInterval (null)** → nextReviewDate becomes null (no scheduled review)
+3. **User marks project reviewed** (Out of Scope - Phase 5) → OmniFocus updates lastReviewDate
+   → OmniFocus recalculates nextReviewDate from lastReviewDate + reviewInterval
+
+##### Edge Case: reviewInterval Exists but nextReviewDate is Null
+
+This state is **transient and rare** but can occur:
+
+- **Cause**: Network sync delays, database initialization, or OmniFocus internal timing
+- **Behavior**: For filter purposes, projects in this state are treated as having NO
+  nextReviewDate - they are EXCLUDED from 'due' and 'upcoming' filters
+- **Resolution**: OmniFocus will populate nextReviewDate on next database refresh or sync
+
+##### Clearing Review Schedule
+
+Setting `reviewInterval: null` (create_project or edit_project):
+
+- Removes the review schedule from the project
+- Sets nextReviewDate to null
+- lastReviewDate is preserved (historical record of last review)
 
 #### Date Filter Behavior
 
@@ -526,6 +655,8 @@ Error messages follow these patterns (consistent with existing tools):
 | Disambiguation   | "Ambiguous {type} name '{name}'. Found N matches: {ids}. Use ID."          | "Ambiguous project name 'Work'. Found 2 matches: proj1, proj2. Use ID."       |
 | Invalid status   | "Invalid status '{value}'. Expected one of: active, onHold, done, dropped" | "Invalid status 'paused'. Expected one of: active, onHold, done, dropped"     |
 | Invalid folder   | "Folder '{identifier}' not found"                                          | "Folder 'Archive' not found"                                                  |
+| Invalid review status | "Invalid reviewStatus '{value}'. Expected one of: due, upcoming, any" | "Invalid reviewStatus 'overdue'. Expected one of: due, upcoming, any"         |
+| Invalid review interval | "Invalid reviewInterval: steps must be positive integer >= 1"         | "Invalid reviewInterval: steps must be positive integer >= 1"                 |
 
 ### Key Entities
 

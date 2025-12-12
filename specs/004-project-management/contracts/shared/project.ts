@@ -34,8 +34,15 @@ export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
  * - sequential: sequential=true, containsSingletonActions=false
  * - single-actions: sequential=false, containsSingletonActions=true
  *
- * **Note**: sequential=true AND containsSingletonActions=true is invalid;
- * implementation auto-clears the conflicting property.
+ * **Invalid State**: sequential=true AND containsSingletonActions=true is invalid.
+ * Implementation silently auto-clears the conflicting property (NOT a validation error).
+ *
+ * **Precedence**: When both provided as `true`, `containsSingletonActions` wins
+ * (it's processed after `sequential`).
+ *
+ * **Unique to Phase 4**: No similar mutual exclusion exists in folders, tags, or tasks.
+ *
+ * See spec.md §Project Type Mutual Exclusion for complete behavior specification.
  */
 export const ProjectTypeSchema = z.enum([
   'parallel', // All tasks available simultaneously (default)
@@ -61,10 +68,21 @@ export type ReviewUnit = z.infer<typeof ReviewUnitSchema>;
  * don't affect the project directly. Must create new object and re-assign
  * to `project.reviewInterval`.
  *
- * **OmniJS Usage**:
+ * **WRONG Pattern** (does NOT work):
  * ```javascript
- * project.reviewInterval = { steps: 2, unit: 'weeks' };
+ * project.reviewInterval.steps = 14; // ❌ Modifies local copy only
  * ```
+ * **WHY it fails**: `project.reviewInterval` returns a COPY of the object.
+ * Modifying the copy has no effect on the project's actual reviewInterval.
+ *
+ * **CORRECT Pattern** (works):
+ * ```javascript
+ * project.reviewInterval = { steps: 14, unit: 'days' }; // ✓ Full reassignment
+ * ```
+ * **WHY it works**: Assignment triggers OmniFocus to update the project's
+ * internal reviewInterval AND recalculate nextReviewDate.
+ *
+ * See quickstart.md §Review Interval Value Object for complete examples.
  */
 export const ReviewIntervalSchema = z.object({
   steps: z.number().int().min(1).describe('Number of units (e.g., 14 for "every 14 days")'),
@@ -104,8 +122,20 @@ export type TagReference = z.infer<typeof TagReferenceSchema>;
  * Contains essential project information for efficient listing.
  * This is a **denormalized projection** of ProjectFull optimized for list responses.
  *
- * **Subset Relationship**: Core fields have identical types in both ProjectSummary
- * and ProjectFull. The denormalized fields represent transformed views.
+ * **Subset Constraint**: ProjectSummary MUST be a proper subset of ProjectFull.
+ * All shared fields MUST have identical types. Type differences are NOT allowed.
+ *
+ * **Field Count**: 12 fields (vs 30 in ProjectFull)
+ *
+ * **Denormalized Fields**:
+ * - `parentFolderId`: Derived from `parentFolder?.id`
+ * - `parentFolderName`: Derived from `parentFolder?.name`
+ *
+ * **Exclusion Rationale - reviewInterval**: ProjectSummary includes `nextReviewDate`
+ * but excludes `reviewInterval` because:
+ * - Summary is optimized for list filtering (nextReviewDate enables 'due'/'upcoming' filters)
+ * - reviewInterval is configuration detail, not state information needed for filtering
+ * - Use get_project to retrieve full reviewInterval configuration
  */
 export const ProjectSummarySchema = z.object({
   // Identity
@@ -122,7 +152,10 @@ export const ProjectSummarySchema = z.object({
   // Dates
   deferDate: z.string().nullable().describe('Defer date (ISO 8601)'),
   dueDate: z.string().nullable().describe('Due date (ISO 8601)'),
-  nextReviewDate: z.string().nullable().describe('Next review date (ISO 8601)'),
+  nextReviewDate: z
+    .string()
+    .nullable()
+    .describe('Next review date (ISO 8601) - READ-ONLY: computed by OmniFocus'),
 
   // Relationships (denormalized)
   parentFolderId: z.string().nullable().describe('Containing folder ID (null if root)'),
@@ -188,8 +221,18 @@ export const ProjectFullSchema = z.object({
 
   // Review Settings
   reviewInterval: ReviewIntervalSchema.nullable().describe('Review schedule (null if no review)'),
-  lastReviewDate: z.string().nullable().describe('When last reviewed (ISO 8601)'),
-  nextReviewDate: z.string().nullable().describe('When next review due (ISO 8601)'),
+  lastReviewDate: z
+    .string()
+    .nullable()
+    .describe(
+      'When last reviewed (ISO 8601) - READ-ONLY: managed by OmniFocus when user marks reviewed'
+    ),
+  nextReviewDate: z
+    .string()
+    .nullable()
+    .describe(
+      'When next review due (ISO 8601) - READ-ONLY: computed from lastReviewDate + reviewInterval'
+    ),
 
   // Repetition
   repetitionRule: z.string().nullable().describe('Repetition rule (serialized)'),
@@ -221,11 +264,30 @@ export type ProjectFull = z.infer<typeof ProjectFullSchema>;
 /**
  * Review status filter for list_projects.
  *
- * - 'due': nextReviewDate <= today (review is overdue)
- * - 'upcoming': nextReviewDate within 7 days but not past due
- * - 'any': No review filtering (default)
+ * **Filter Semantics**:
+ * - `'due'`: nextReviewDate <= today (review is overdue or due today)
+ * - `'upcoming'`: today < nextReviewDate <= today+7 days (review coming soon)
+ * - `'any'`: No review filtering - returns ALL projects regardless of review state
  *
- * **Note**: Projects without review intervals are excluded from 'due' and 'upcoming' filters.
+ * **Boundary Conditions** (Explicit Resolutions):
+ * - **nextReviewDate = exactly today**: Classified as `'due'` (today is INCLUDED in `<=`)
+ * - **nextReviewDate = exactly today+7**: Classified as `'upcoming'` (upper boundary is INCLUSIVE)
+ *
+ * **'any' Filter Behavior**:
+ * Returns ALL projects including:
+ * - Projects WITH review intervals (any nextReviewDate value)
+ * - Projects WITHOUT review intervals (nextReviewDate = null)
+ *
+ * **Edge Case: reviewInterval Exists but nextReviewDate is Null**:
+ * - This state is transient (sync timing issue)
+ * - EXCLUDED from 'due' and 'upcoming' filters
+ * - INCLUDED in 'any' filter
+ *
+ * **Error Handling**:
+ * Invalid reviewStatus values are rejected by Zod schema validation.
+ * Error format: `Invalid enum value. Expected 'due' | 'upcoming' | 'any', received '...'`
+ *
+ * See spec.md §Review Status Filter Behavior for complete specification.
  */
 export const ReviewStatusFilterSchema = z.enum(['due', 'upcoming', 'any']);
 

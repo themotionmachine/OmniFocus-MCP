@@ -20,6 +20,19 @@ Projects are the primary organizational unit in OmniFocus's GTD-based workflow.
 
 Minimal representation for list results. Used by `list_projects`.
 
+**Subset Constraint**: ProjectSummary MUST be a proper subset of ProjectFull.
+All shared fields MUST have identical types. Type differences are NOT allowed.
+
+**Field Count**: ProjectSummary has **12 fields**; ProjectFull has **30 fields**.
+
+**Exclusion Rationale - reviewInterval**: ProjectSummary includes `nextReviewDate` but
+excludes `reviewInterval` because:
+
+- Summary is optimized for list filtering (nextReviewDate enables 'due'/'upcoming' filters)
+- reviewInterval is configuration detail, not state information
+- nextReviewDate is the actionable value (when review is needed, not the schedule definition)
+- Use `get_project` to retrieve the full reviewInterval structure if needed
+
 ```typescript
 interface ProjectSummary {
   // Identity
@@ -47,6 +60,20 @@ interface ProjectSummary {
   remainingCount: number;        // Number of incomplete tasks
 }
 ```
+
+### Denormalized Field Derivation (ProjectSummary)
+
+| ProjectSummary Field | Derived From (ProjectFull) | Derivation Rule |
+|---------------------|---------------------------|-----------------|
+| `parentFolderId` | `parentFolder` | `parentFolder?.id ?? null` |
+| `parentFolderName` | `parentFolder` | `parentFolder?.name ?? null` |
+
+### Statistics Field Derivation
+
+| Field | OmniJS Property | Description |
+|-------|-----------------|-------------|
+| `taskCount` | `project.flattenedTasks.length` | Count of all tasks (direct + nested) |
+| `remainingCount` | `project.flattenedTasks.filter(t => !t.completed).length` | Count of incomplete tasks |
 
 ### Project Full (Detail View)
 
@@ -176,9 +203,13 @@ Review scheduling configuration for a project.
 
 ```typescript
 interface ReviewInterval {
-  steps: number;  // Count of units (e.g., 14)
+  steps: number;  // Count of units (e.g., 14), minimum: 1 (positive integer)
   unit: ReviewUnit; // Unit type
 }
+
+// Validation constraints:
+// - steps: z.number().int().min(1) - must be positive integer >= 1
+// - unit: z.enum(['days', 'weeks', 'months', 'years'])
 
 type ReviewUnit = 'days' | 'weeks' | 'months' | 'years';
 ```
@@ -197,6 +228,43 @@ type ReviewUnit = 'days' | 'weeks' | 'months' | 'years';
 | 2 | 'weeks' | "Every 2 weeks" |
 | 1 | 'months' | "Monthly" |
 | 4 | 'weeks' | "Every 4 weeks" |
+
+### Review Date Properties (Read-Only)
+
+These properties are **computed by OmniFocus** and cannot be set via API:
+
+| Property | Type | Description | Settable via API |
+|----------|------|-------------|------------------|
+| `nextReviewDate` | string \| null | When next review is due (ISO 8601) | NO - computed |
+| `lastReviewDate` | string \| null | When project was last reviewed (ISO 8601) | NO - OmniFocus-managed |
+
+**nextReviewDate Computation**:
+
+- **Formula**: `lastReviewDate + reviewInterval` (or `creationDate + reviewInterval` if never reviewed)
+- **Trigger**: OmniFocus recalculates when reviewInterval changes or project is marked reviewed
+- **Clearing**: Setting `reviewInterval = null` sets `nextReviewDate = null`
+
+**lastReviewDate Behavior**:
+
+- Updated **only** by OmniFocus when user marks project as reviewed (via UI or Review perspective)
+- API can **read** but CANNOT **write** this property
+- Preserved when reviewInterval is cleared (historical record)
+
+**Relationship Between Properties**:
+
+```text
+User sets reviewInterval → OmniFocus calculates nextReviewDate
+User marks reviewed → OmniFocus updates lastReviewDate → recalculates nextReviewDate
+User clears reviewInterval → nextReviewDate becomes null (lastReviewDate preserved)
+```
+
+### Edge Case: reviewInterval Present but nextReviewDate Null
+
+This state is **transient and rare**:
+
+- **Cause**: Database sync timing, initialization delays
+- **Filter Behavior**: Projects in this state are EXCLUDED from 'due' and 'upcoming' filters
+- **Resolution**: OmniFocus will populate nextReviewDate on next sync/refresh
 
 ## Response Schemas
 
@@ -493,21 +561,63 @@ interface MoveProjectSuccessResponse {
 
 ### Project Type Auto-Clear
 
-When setting `sequential` or `containsSingletonActions`:
+**This pattern is unique to Phase 4** - no similar mutual exclusion exists in
+Phase 1 (folders), Phase 2 (tags), or Phase 3 (tasks).
+
+#### Behavior Specification
+
+Auto-clear is **silent** - no error response, no warning. Success response contains
+only `success: true`, `id`, `name`. This is **application logic**, not Zod schema
+validation. The schemas intentionally do NOT prevent both=true; auto-clear handles
+it at runtime.
+
+#### Precedence Rule
+
+When both `sequential: true` AND `containsSingletonActions: true` are provided in
+the same request, **`containsSingletonActions` takes precedence** (last processed wins).
+
+Implementation order (process `sequential` first, then `containsSingletonActions`):
 
 ```javascript
-// Setting sequential = true
-if (sequential === true) {
+// MUST process in this order for consistent precedence
+if (params.sequential === true) {
   project.containsSingletonActions = false;
   project.sequential = true;
 }
-
-// Setting containsSingletonActions = true
-if (containsSingletonActions === true) {
-  project.sequential = false;
+if (params.containsSingletonActions === true) {
+  project.sequential = false;  // Auto-clears the previous setting
   project.containsSingletonActions = true;
 }
 ```
+
+#### Setting to False
+
+Setting a property to `false` does NOT trigger auto-clear of the other property:
+
+```javascript
+// Setting to false - no auto-clear
+if (params.sequential === false) {
+  project.sequential = false;
+  // containsSingletonActions is NOT auto-set
+}
+if (params.containsSingletonActions === false) {
+  project.containsSingletonActions = false;
+  // sequential is NOT auto-set
+}
+```
+
+#### Omitting Parameters (edit_project)
+
+- **Both omitted**: Preserves existing project type
+- **One provided**: Only that property changes; auto-clear only if setting `true`
+  conflicts with existing state
+
+#### OmniFocus Native Behavior
+
+OmniFocus itself does NOT auto-clear - the implementation MUST add this logic
+explicitly. Setting both to `true` via OmniJS results in undefined behavior.
+
+See spec.md §Project Type Mutual Exclusion for the complete scenario matrix.
 
 ### Filter Interaction Matrix
 
@@ -602,22 +712,42 @@ For array parameters in inputs:
 
 ## Cross-Layer Traceability
 
-### Zod Schema ↔ OmniJS Property Mapping
+### Zod Schema ↔ OmniJS Property Mapping (Complete)
 
-| Zod Field | OmniJS Property | Transform |
-|-----------|-----------------|-----------|
-| `id` | `project.id.primaryKey` | Direct (string) |
-| `name` | `project.name` | Direct |
-| `note` | `project.task.note` | Via root task |
-| `status` | `project.status` | statusMap[value] (see below) |
-| `flagged` | `project.flagged` | Direct |
-| `sequential` | `project.sequential` | Direct |
-| `containsSingletonActions` | `project.containsSingletonActions` | Direct |
-| `deferDate` | `project.deferDate` | `date?.toISOString() ?? null` |
-| `dueDate` | `project.dueDate` | `date?.toISOString() ?? null` |
-| `reviewInterval` | `project.reviewInterval` | `{steps, unit}` object |
-| `parentFolder` | `project.parentFolder` | `{id: f.id.primaryKey, name: f.name}` |
-| `tags` | `project.tags` | `tags.map(t => ({id, name}))` |
+**ProjectFull has 30 fields. All are mapped below:**
+
+| # | Zod Field | OmniJS Property | Transform |
+|---|-----------|-----------------|-----------|
+| 1 | `id` | `project.id.primaryKey` | Direct (string) |
+| 2 | `name` | `project.name` | Direct |
+| 3 | `note` | `project.task.note` | Via root task |
+| 4 | `status` | `project.status` | getStatusString() (see below) |
+| 5 | `completed` | `project.completed` | Direct (boolean) |
+| 6 | `flagged` | `project.flagged` | Direct (boolean) |
+| 7 | `effectiveFlagged` | `project.effectiveFlagged` | Direct (boolean) |
+| 8 | `sequential` | `project.sequential` | Direct (boolean) |
+| 9 | `containsSingletonActions` | `project.containsSingletonActions` | Direct (boolean) |
+| 10 | `projectType` | Derived | getProjectType() (see Type Derivation) |
+| 11 | `completedByChildren` | `project.completedByChildren` | Direct (boolean) |
+| 12 | `defaultSingletonActionHolder` | `project.defaultSingletonActionHolder` | Direct (boolean) |
+| 13 | `deferDate` | `project.deferDate` | `date?.toISOString() ?? null` |
+| 14 | `dueDate` | `project.dueDate` | `date?.toISOString() ?? null` |
+| 15 | `effectiveDeferDate` | `project.effectiveDeferDate` | `date?.toISOString() ?? null` |
+| 16 | `effectiveDueDate` | `project.effectiveDueDate` | `date?.toISOString() ?? null` |
+| 17 | `completionDate` | `project.completionDate` | `date?.toISOString() ?? null` |
+| 18 | `dropDate` | `project.dropDate` | `date?.toISOString() ?? null` |
+| 19 | `estimatedMinutes` | `project.estimatedMinutes` | Direct (number or null) |
+| 20 | `reviewInterval` | `project.reviewInterval` | `{steps, unit}` object or null |
+| 21 | `lastReviewDate` | `project.lastReviewDate` | `date?.toISOString() ?? null` |
+| 22 | `nextReviewDate` | `project.nextReviewDate` | `date?.toISOString() ?? null` |
+| 23 | `repetitionRule` | `project.repetitionRule` | Serialized string or null |
+| 24 | `shouldUseFloatingTimeZone` | `project.shouldUseFloatingTimeZone` | Direct (boolean) |
+| 25 | `hasChildren` | `project.hasChildren` | Direct (boolean) |
+| 26 | `nextTask` | `project.nextTask` | `{id: t.id.primaryKey, name: t.name}` or null |
+| 27 | `parentFolder` | `project.parentFolder` | `{id: f.id.primaryKey, name: f.name}` or null |
+| 28 | `tags` | `project.tags` | `tags.map(t => ({id: t.id.primaryKey, name: t.name}))` |
+| 29 | `taskCount` | `project.flattenedTasks.length` | Count of all tasks |
+| 30 | `remainingCount` | `project.flattenedTasks.filter(t => !t.completed).length` | Count of incomplete tasks |
 
 ### ProjectStatus Bidirectional Mapping
 
@@ -629,6 +759,14 @@ statusMap[Project.Status.OnHold] = 'OnHold';
 statusMap[Project.Status.Done] = 'Done';
 statusMap[Project.Status.Dropped] = 'Dropped';
 
+function getStatusString(project) {
+  var str = statusMap[project.status];
+  if (!str) {
+    throw new Error('Unknown project status: ' + project.status);
+  }
+  return str;
+}
+
 // JSON String → OmniJS (input/filter)
 var reverseStatusMap = {
   'Active': Project.Status.Active,
@@ -636,7 +774,19 @@ var reverseStatusMap = {
   'Done': Project.Status.Done,
   'Dropped': Project.Status.Dropped
 };
+
+function getStatusEnum(statusStr) {
+  var val = reverseStatusMap[statusStr];
+  if (val === undefined) {
+    throw new Error('Invalid status: ' + statusStr + '. Expected one of: Active, OnHold, Done, Dropped');
+  }
+  return val;
+}
 ```
+
+**Unknown Status Handling**: Implementation MUST throw an error for unknown/unexpected
+status values rather than silently defaulting. This ensures data integrity and
+exposes API inconsistencies early.
 
 ### Zod Schema ↔ TypeScript Type Mapping
 

@@ -42,8 +42,9 @@ export type GetProjectError = z.infer<typeof GetProjectErrorSchema>;
  * Complete response schema for get_project tool.
  *
  * Can return success, standard error, or disambiguation error.
+ * Uses discriminated union on 'success' field for type narrowing.
  */
-export const GetProjectResponseSchema = z.union([
+export const GetProjectResponseSchema = z.discriminatedUnion('success', [
   GetProjectSuccessSchema,
   DisambiguationErrorSchema,
   GetProjectErrorSchema
