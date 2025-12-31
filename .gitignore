@@ -20,6 +20,9 @@ build/
 *.swo
 .DS_Store
 
+# Private journal (Claude Code)
+.private-journal/
+
 # Logs
 logs/
 *.log

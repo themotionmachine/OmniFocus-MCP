@@ -1,45 +1,81 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { writeFileSync, unlinkSync, readFileSync } from 'fs';
+import { spawn } from 'child_process';
+import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { existsSync } from 'fs';
 
-const execAsync = promisify(exec);
+/**
+ * Execute AppleScript via stdin to avoid shell escaping and temp file security issues
+ */
+export function executeAppleScript(script: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('osascript', ['-s', 'o', '-']); // -s o for output format, '-' for stdin
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => { stdout += data; });
+    proc.stderr.on('data', (data) => { stderr += data; });
+
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr.trim() || `osascript exited with code ${code}`));
+      } else {
+        resolve(stdout.trim());
+      }
+    });
+
+    proc.stdin.write(script);
+    proc.stdin.end();
+  });
+}
+
+/**
+ * Execute JXA (JavaScript for Automation) via stdin
+ */
+export function executeJXAScript(script: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('osascript', ['-l', 'JavaScript', '-s', 'o', '-']); // -l JavaScript for JXA, '-' for stdin
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => { stdout += data; });
+    proc.stderr.on('data', (data) => { stderr += data; });
+
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr.trim() || `osascript exited with code ${code}`));
+      } else {
+        resolve(stdout.trim());
+      }
+    });
+
+    proc.stdin.write(script);
+    proc.stdin.end();
+  });
+}
 
 // Helper function to execute OmniFocus scripts
 export async function executeJXA(script: string): Promise<any[]> {
   try {
-    // Write the script to a temporary file in the system temp directory
-    const tempFile = join(tmpdir(), `jxa_script_${Date.now()}.js`);
-    
-    // Write the script to the temporary file
-    writeFileSync(tempFile, script);
-    
-    // Execute the script using osascript
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`);
-    
-    if (stderr) {
-      console.error("Script stderr output:", stderr);
+    // Execute the script via stdin (no temp files, better security)
+    const stdout = await executeJXAScript(script);
+
+    if (stdout) {
+      console.error("Script output:", stdout);
     }
-    
-    // Clean up the temporary file
-    unlinkSync(tempFile);
-    
+
     // Parse the output as JSON
     try {
       const result = JSON.parse(stdout);
       return result;
     } catch (e) {
       console.error("Failed to parse script output as JSON:", e);
-      
+
       // If this contains a "Found X tasks" message, treat it as a successful non-JSON response
       if (stdout.includes("Found") && stdout.includes("tasks")) {
         return [];
       }
-      
+
       return [];
     }
   } catch (error) {
@@ -49,19 +85,18 @@ export async function executeJXA(script: string): Promise<any[]> {
 }
 
 // Function to execute scripts in OmniFocus using the URL scheme
-// Update src/utils/scriptExecution.ts
 export async function executeOmniFocusScript(scriptPath: string, args?: any): Promise<any> {
   try {
-    // Get the actual script path (existing code remains the same)
+    // Get the actual script path
     let actualPath;
     if (scriptPath.startsWith('@')) {
       const scriptName = scriptPath.substring(1);
       const __filename = fileURLToPath(import.meta.url);
       const __dirname = dirname(__filename);
-      
+
       const distPath = join(__dirname, '..', 'utils', 'omnifocusScripts', scriptName);
       const srcPath = join(__dirname, '..', '..', 'src', 'utils', 'omnifocusScripts', scriptName);
-      
+
       if (existsSync(distPath)) {
         actualPath = distPath;
       } else if (existsSync(srcPath)) {
@@ -72,26 +107,23 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     } else {
       actualPath = scriptPath;
     }
-    
+
     // Read the script file
     const scriptContent = readFileSync(actualPath, 'utf8');
-    
-    // Create a temporary file for our JXA wrapper script
-    const tempFile = join(tmpdir(), `jxa_wrapper_${Date.now()}.js`);
-    
+
     // Escape the script content properly for use in JXA
     const escapedScript = scriptContent.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-    
+
     // Create a JXA script that will execute our OmniJS script in OmniFocus
     const jxaScript = `
     function run() {
       try {
         const app = Application('OmniFocus');
         app.includeStandardAdditions = true;
-        
+
         // Run the OmniJS script in OmniFocus and capture the output
         const result = app.evaluateJavascript(\`${escapedScript}\`);
-        
+
         // Return the result
         return result;
       } catch (e) {
@@ -99,20 +131,14 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
       }
     }
     `;
-    
-    // Write the JXA script to the temporary file
-    writeFileSync(tempFile, jxaScript);
-    
-    // Execute the JXA script using osascript
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`);
-    
-    // Clean up the temporary file
-    unlinkSync(tempFile);
-    
-    if (stderr) {
-      console.error("Script stderr output:", stderr);
+
+    // Execute the JXA script via stdin (no temp files, better security)
+    const stdout = await executeJXAScript(jxaScript);
+
+    if (stdout) {
+      console.error("Script output:", stdout);
     }
-    
+
     // Parse the output as JSON
     try {
       return JSON.parse(stdout);

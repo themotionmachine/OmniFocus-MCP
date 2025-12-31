@@ -1,10 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { writeFileSync, unlinkSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { generateDateAssignmentV2 } from '../../utils/dateFormatting.js';
-const execAsync = promisify(exec);
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped';
@@ -447,49 +442,32 @@ end try
  * Edit a task or project in OmniFocus
  */
 export async function editItem(params: EditItemParams): Promise<{
-  success: boolean, 
-  id?: string, 
-  name?: string, 
+  success: boolean,
+  id?: string,
+  name?: string,
   changedProperties?: string,
   error?: string
 }> {
-  let tempFile: string | undefined;
-  
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
-    
-    console.error("Executing AppleScript for editing (V2)...");
+
+    console.error("Executing AppleScript for editing via stdin...");
     console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
-    
+
     // Log a preview of the script for debugging (first few lines)
     const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
     console.error("AppleScript preview:\n", scriptPreview);
-    
-    // Write script to temporary file to avoid shell escaping issues
-    tempFile = join(tmpdir(), `edit_omnifocus_${Date.now()}.applescript`);
-    writeFileSync(tempFile, script);
-    
-    // Execute AppleScript from file
-    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
-    
-    // Clean up temp file
-    try {
-      unlinkSync(tempFile);
-    } catch (cleanupError) {
-      console.error("Failed to clean up temp file:", cleanupError);
-    }
-    
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
-    }
-    
+
+    // Execute AppleScript via stdin (no temp files, better security)
+    const stdout = await executeAppleScript(script);
+
     console.error("AppleScript stdout:", stdout);
-    
+
     // Parse the result
     try {
       const result = JSON.parse(stdout);
-      
+
       // Return the result
       return {
         success: result.success,
@@ -506,22 +484,13 @@ export async function editItem(params: EditItemParams): Promise<{
       };
     }
   } catch (error: any) {
-    // Clean up temp file if it exists
-    if (tempFile) {
-      try {
-        unlinkSync(tempFile);
-      } catch (cleanupError) {
-        // Ignore cleanup errors
-      }
-    }
-    
     console.error("Error in editItem execution:", error);
-    
+
     // Include more detailed error information
     if (error.message && error.message.includes('syntax error')) {
       console.error("This appears to be an AppleScript syntax error. Review the script generation logic.");
     }
-    
+
     return {
       success: false,
       error: error?.message || "Unknown error in editItem"

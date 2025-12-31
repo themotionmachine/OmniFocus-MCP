@@ -1,9 +1,4 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { writeFileSync, unlinkSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-const execAsync = promisify(exec);
+import { executeAppleScript } from '../../utils/scriptExecution.js';
 
 // Interface for item removal parameters
 export interface RemoveItemParams {
@@ -167,29 +162,18 @@ export async function removeItem(params: RemoveItemParams): Promise<{success: bo
     // Generate AppleScript
     const script = generateAppleScript(params);
 
-    console.error("Executing AppleScript for removal via temp file...");
+    console.error("Executing AppleScript for removal via stdin...");
     console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
 
-    // Write to a temporary AppleScript file to avoid shell escaping issues
-    const tempFile = join(tmpdir(), `omnifocus_remove_${Date.now()}.applescript`);
-    writeFileSync(tempFile, script, { encoding: 'utf8' });
-
-    // Execute AppleScript from file
-    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
-
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
-    }
+    // Execute AppleScript via stdin (no temp files, better security)
+    const stdout = await executeAppleScript(script);
 
     console.error("AppleScript stdout:", stdout);
 
-    // Cleanup temp file
-    try { unlinkSync(tempFile); } catch {}
-    
     // Parse the result
     try {
       const result = JSON.parse(stdout);
-      
+
       // Return the result
       return {
         success: result.success,
@@ -206,12 +190,12 @@ export async function removeItem(params: RemoveItemParams): Promise<{success: bo
     }
   } catch (error: any) {
     console.error("Error in removeItem execution:", error);
-    
+
     // Include more detailed error information
     if (error.message && error.message.includes('syntax error')) {
       console.error("This appears to be an AppleScript syntax error. Review the script generation logic.");
     }
-    
+
     return {
       success: false,
       error: error?.message || "Unknown error in removeItem"

@@ -1,10 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { writeFileSync, unlinkSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
-const execAsync = promisify(exec);
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -226,28 +221,17 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
-    console.error("Executing AppleScript via temp file...");
+    console.error("Executing AppleScript via stdin...");
 
-    // Write to a temporary AppleScript file to avoid shell escaping issues
-    const tempFile = join(tmpdir(), `omnifocus_add_${Date.now()}.applescript`);
-    writeFileSync(tempFile, script, { encoding: 'utf8' });
+    // Execute AppleScript via stdin (no temp files, better security)
+    const stdout = await executeAppleScript(script);
 
-    // Execute AppleScript from file
-    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
-
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
-    }
-    
     console.error("AppleScript stdout:", stdout);
-    
-    // Cleanup temp file
-    try { unlinkSync(tempFile); } catch {}
-    
+
     // Parse the result
     try {
       const result = JSON.parse(stdout);
-      
+
       // Return the result
       return {
         success: result.success,
