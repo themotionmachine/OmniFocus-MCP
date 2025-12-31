@@ -1,5 +1,8 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
 const execAsync = promisify(exec);
 
@@ -21,14 +24,14 @@ export interface AddProjectParams {
  */
 function generateAppleScript(params: AddProjectParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = params.name.replace(/["\\]/g, '\\$&'); // Escape double quotes and backslashes
+  const note = params.note?.replace(/["\\]/g, '\\$&') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
+  const folderName = params.folderName?.replace(/["\\]/g, '\\$&') || '';
   const sequential = params.sequential === true;
   
   // Generate date constructions outside tell blocks
@@ -48,6 +51,23 @@ function generateAppleScript(params: AddProjectParams): string {
   
   // Construct AppleScript with error handling
   let script = datePreScript + `
+  -- Helper function to escape strings for JSON
+  on escapeForJSON(inputText)
+    set escapedText to inputText
+    -- First, escape backslashes
+    set AppleScript's text item delimiters to "\\\\"
+    set textItems to text items of escapedText
+    set AppleScript's text item delimiters to "\\\\\\\\"
+    set escapedText to textItems as string
+    -- Then, escape double quotes
+    set AppleScript's text item delimiters to "\\""
+    set textItems to text items of escapedText
+    set AppleScript's text item delimiters to "\\\\\\""
+    set escapedText to textItems as string
+    set AppleScript's text item delimiters to ""
+    return escapedText
+  end escapeForJSON
+
   try
     tell application "OmniFocus"
       tell front document
@@ -82,7 +102,7 @@ function generateAppleScript(params: AddProjectParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+          const sanitizedTag = tag.replace(/["\\]/g, '\\$&');
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
@@ -97,13 +117,16 @@ function generateAppleScript(params: AddProjectParams): string {
             end try
           end try`;
         }).join('\n') : ''}
-        
+
         -- Return success with project ID
-        return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\",\\\"name\\\":\\"${name}\\"}"
+        set projectName to name of newProject
+        set escapedName to my escapeForJSON(projectName)
+        return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\",\\\"name\\\":\\"" & escapedName & "\\"}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    set escapedError to my escapeForJSON(errorMessage)
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & escapedError & "\\"}"
   end try
   `;
   
@@ -117,17 +140,23 @@ export async function addProject(params: AddProjectParams): Promise<{success: bo
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
-    
-    console.error("Executing AppleScript directly...");
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
+    console.error("Executing AppleScript via temp file...");
+
+    // Write to a temporary AppleScript file to avoid shell escaping issues
+    const tempFile = join(tmpdir(), `omnifocus_addproject_${Date.now()}.applescript`);
+    writeFileSync(tempFile, script, { encoding: 'utf8' });
+
+    // Execute AppleScript from file
+    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
+
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
     }
-    
+
     console.error("AppleScript stdout:", stdout);
+
+    // Cleanup temp file
+    try { unlinkSync(tempFile); } catch {}
     
     // Parse the result
     try {

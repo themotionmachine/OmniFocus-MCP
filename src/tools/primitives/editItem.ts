@@ -41,8 +41,8 @@ export interface EditItemParams {
  */
 function generateAppleScript(params: EditItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/['"\\]/g, '\\$&') || ''; // Escape quotes and backslashes
-  const name = params.name?.replace(/['"\\]/g, '\\$&') || '';
+  const id = params.id?.replace(/["\\]/g, '\\$&') || ''; // Escape double quotes and backslashes
+  const name = params.name?.replace(/["\\]/g, '\\$&') || '';
   const itemType = params.itemType;
   
   // Verify we have at least one identifier
@@ -79,7 +79,27 @@ function generateAppleScript(params: EditItemParams): string {
   if (datePreScripts.length > 0) {
     script += datePreScripts.join('\n') + '\n\n';
   }
-  
+
+  // Add JSON escaping helper function
+  script += `-- Helper function to escape strings for JSON
+on escapeForJSON(inputText)
+  set escapedText to inputText
+  -- First, escape backslashes
+  set AppleScript's text item delimiters to "\\\\"
+  set textItems to text items of escapedText
+  set AppleScript's text item delimiters to "\\\\\\\\"
+  set escapedText to textItems as string
+  -- Then, escape double quotes
+  set AppleScript's text item delimiters to "\\""
+  set textItems to text items of escapedText
+  set AppleScript's text item delimiters to "\\\\\\""
+  set escapedText to textItems as string
+  set AppleScript's text item delimiters to ""
+  return escapedText
+end escapeForJSON
+
+`;
+
   // Start the main script
   script += `try
   tell application "OmniFocus"
@@ -207,15 +227,15 @@ function generateAppleScript(params: EditItemParams): string {
   if (params.newName !== undefined) {
     script += `
         -- Update name
-        set name of foundItem to "${params.newName.replace(/['"\\]/g, '\\$&')}"
+        set name of foundItem to "${params.newName.replace(/["\\]/g, '\\$&')}"
         set end of changedProperties to "name"
 `;
   }
-  
+
   if (params.newNote !== undefined) {
     script += `
         -- Update note
-        set note of foundItem to "${params.newNote.replace(/['"\\]/g, '\\$&')}"
+        set note of foundItem to "${params.newNote.replace(/["\\]/g, '\\$&')}"
         set end of changedProperties to "note"
 `;
   }
@@ -281,7 +301,7 @@ function generateAppleScript(params: EditItemParams): string {
     
     // Handle tag operations
     if (params.replaceTags && params.replaceTags.length > 0) {
-      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(", ");
+      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&')}"`).join(", ");
       script += `
         -- Replace all tags
         set tagNames to {${tagsList}}
@@ -310,7 +330,7 @@ function generateAppleScript(params: EditItemParams): string {
     } else {
       // Add tags if specified
       if (params.addTags && params.addTags.length > 0) {
-        const tagsList = params.addTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(", ");
+        const tagsList = params.addTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&')}"`).join(", ");
         script += `
         -- Add tags
         set tagNames to {${tagsList}}
@@ -332,7 +352,7 @@ function generateAppleScript(params: EditItemParams): string {
       
       // Remove tags if specified
       if (params.removeTags && params.removeTags.length > 0) {
-        const tagsList = params.removeTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(", ");
+        const tagsList = params.removeTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&')}"`).join(", ");
         script += `
         -- Remove tags
         set tagNames to {${tagsList}}
@@ -374,7 +394,7 @@ function generateAppleScript(params: EditItemParams): string {
     
     // Move to a new folder
     if (params.newFolderName !== undefined) {
-      const folderName = params.newFolderName.replace(/['"\\]/g, '\\$&');
+      const folderName = params.newFolderName.replace(/["\\]/g, '\\$&');
       script += `
         -- Move to new folder
         set destFolder to missing value
@@ -403,9 +423,11 @@ function generateAppleScript(params: EditItemParams): string {
             set changedPropsText to changedPropsText & ", "
           end if
         end repeat
-        
+
         -- Return success with details
-        return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & itemName & "\\",\\\"changedProperties\\\":\\"" & changedPropsText & "\\"}"
+        set escapedName to my escapeForJSON(itemName)
+        set escapedProps to my escapeForJSON(changedPropsText)
+        return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & escapedName & "\\",\\\"changedProperties\\\":\\"" & escapedProps & "\\"}"
       else
         -- Item not found
         return "{\\\"success\\\":false,\\\"error\\\":\\\"Item not found\\"}"
@@ -413,7 +435,8 @@ function generateAppleScript(params: EditItemParams): string {
     end tell
   end tell
 on error errorMessage
-  return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+  set escapedError to my escapeForJSON(errorMessage)
+  return "{\\\"success\\\":false,\\\"error\\\":\\"" & escapedError & "\\"}"
 end try
 `;
   

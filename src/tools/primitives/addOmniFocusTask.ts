@@ -27,16 +27,16 @@ export interface AddOmniFocusTaskParams {
  */
 function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = params.name.replace(/["\\]/g, '\\$&'); // Escape double quotes and backslashes
+  const note = params.note?.replace(/["\\]/g, '\\$&') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  const projectName = params.projectName?.replace(/["\\]/g, '\\$&') || '';
+  const parentTaskId = params.parentTaskId?.replace(/["\\]/g, '\\$&') || '';
+  const parentTaskName = params.parentTaskName?.replace(/["\\]/g, '\\$&') || '';
   
   // Generate date constructions outside tell blocks
   let datePreScript = '';
@@ -55,6 +55,23 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   
   // Construct AppleScript with error handling
   let script = datePreScript + `
+  -- Helper function to escape strings for JSON
+  on escapeForJSON(inputText)
+    set escapedText to inputText
+    -- First, escape backslashes
+    set AppleScript's text item delimiters to "\\\\"
+    set textItems to text items of escapedText
+    set AppleScript's text item delimiters to "\\\\\\\\"
+    set escapedText to textItems as string
+    -- Then, escape double quotes
+    set AppleScript's text item delimiters to "\\""
+    set textItems to text items of escapedText
+    set AppleScript's text item delimiters to "\\\\\\""
+    set escapedText to textItems as string
+    set AppleScript's text item delimiters to ""
+    return escapedText
+  end escapeForJSON
+
   try
     tell application "OmniFocus"
       tell front document
@@ -171,7 +188,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+          const sanitizedTag = tag.replace(/["\\]/g, '\\$&');
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
@@ -186,13 +203,16 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
             end try
           end try`;
         }).join('\n') : ''}
-        
+
         -- Return success with task ID and placement
-        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\\",\\\"placement\\\":\\"" & placement & "\\"}"
+        set taskName to name of newTask
+        set escapedName to my escapeForJSON(taskName)
+        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"" & escapedName & "\\\",\\\"placement\\\":\\"" & placement & "\\"}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    set escapedError to my escapeForJSON(errorMessage)
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & escapedError & "\\"}"
   end try
   `;
   

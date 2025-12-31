@@ -1,5 +1,8 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 const execAsync = promisify(exec);
 
 // Interface for item removal parameters
@@ -14,8 +17,8 @@ export interface RemoveItemParams {
  */
 function generateAppleScript(params: RemoveItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/['"\\]/g, '\\$&') || ''; // Escape quotes and backslashes
-  const name = params.name?.replace(/['"\\]/g, '\\$&') || '';
+  const id = params.id?.replace(/["\\]/g, '\\$&') || ''; // Escape double quotes and backslashes
+  const name = params.name?.replace(/["\\]/g, '\\$&') || '';
   const itemType = params.itemType;
   
   // Verify we have at least one identifier
@@ -25,6 +28,23 @@ function generateAppleScript(params: RemoveItemParams): string {
   
   // Construct AppleScript with error handling
   let script = `
+  -- Helper function to escape strings for JSON
+  on escapeForJSON(inputText)
+    set escapedText to inputText
+    -- First, escape backslashes
+    set AppleScript's text item delimiters to "\\\\"
+    set textItems to text items of escapedText
+    set AppleScript's text item delimiters to "\\\\\\\\"
+    set escapedText to textItems as string
+    -- Then, escape double quotes
+    set AppleScript's text item delimiters to "\\""
+    set textItems to text items of escapedText
+    set AppleScript's text item delimiters to "\\\\\\""
+    set escapedText to textItems as string
+    set AppleScript's text item delimiters to ""
+    return escapedText
+  end escapeForJSON
+
   try
     tell application "OmniFocus"
       tell front document
@@ -120,9 +140,10 @@ function generateAppleScript(params: RemoveItemParams): string {
           
           -- Delete the item
           delete foundItem
-          
+
           -- Return success
-          return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & itemName & "\\"}"
+          set escapedName to my escapeForJSON(itemName)
+          return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & escapedName & "\\"}"
         else
           -- Item not found
           return "{\\\"success\\\":false,\\\"error\\\":\\\"Item not found\\\"}"
@@ -130,7 +151,8 @@ function generateAppleScript(params: RemoveItemParams): string {
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    set escapedError to my escapeForJSON(errorMessage)
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & escapedError & "\\"}"
   end try
   `;
   
@@ -144,22 +166,25 @@ export async function removeItem(params: RemoveItemParams): Promise<{success: bo
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
-    
-    console.error("Executing AppleScript for removal...");
+
+    console.error("Executing AppleScript for removal via temp file...");
     console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
-    
-    // Log a preview of the script for debugging (first few lines)
-    const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
-    console.error("AppleScript preview:\n", scriptPreview);
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
+
+    // Write to a temporary AppleScript file to avoid shell escaping issues
+    const tempFile = join(tmpdir(), `omnifocus_remove_${Date.now()}.applescript`);
+    writeFileSync(tempFile, script, { encoding: 'utf8' });
+
+    // Execute AppleScript from file
+    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
+
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
     }
-    
+
     console.error("AppleScript stdout:", stdout);
+
+    // Cleanup temp file
+    try { unlinkSync(tempFile); } catch {}
     
     // Parse the result
     try {
