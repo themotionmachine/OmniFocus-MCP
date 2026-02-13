@@ -259,7 +259,7 @@ function generateAppleScript(params: EditItemParams): string {
     if (params.newStatus !== undefined) {
       if (params.newStatus === 'completed') {
         script += `
-        -- Mark task as completed using modern OmniFocus syntax
+        -- Mark task as completed (works reliably for all task types including inbox tasks)
         mark complete foundItem
         set end of changedProperties to "status (completed)"
 `;
