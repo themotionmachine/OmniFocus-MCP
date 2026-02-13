@@ -19,13 +19,13 @@ Some ways you could use it:
 - Dump_database tool currently fails for very large omnifocus databases. 
 
 ## Roadmap
-- ~~Enable the client to interact with perspectives~~ ✅ (Added list_perspectives and get_perspective_view)
+- ~~Enable the client to interact with perspectives~~ (Added list_perspectives and get_perspective_view)
 - Benefit from MCP `resource` and `prompt` features
 - Add support for the new `planned` date type in Omnifocus 4.7
 - Support manipulating notifications for projects and tasks
 
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - macOS with OmniFocus installed
@@ -91,11 +91,11 @@ Extract action items from meeting transcripts, academic research articles, or no
 > "I'm pasting in the transcript from today's meeting. Please analyze it and create tasks in OmniFocus for any action items assigned to me. Put them in my 'Product Development' project."
 
 
-## 🔧 Available Tools
+## Available Tools
 
 The server currently provides these tools:
 
-### `query_omnifocus` ⭐ NEW
+### `query_omnifocus` NEW
 Efficiently query your OmniFocus database with powerful filters. Get specific tasks, projects, or folders without loading the entire database.
 
 Key Features:
@@ -216,7 +216,7 @@ Parameters:
   - `name`: (Optional) The name of the item to remove
   - `itemType`: The type of item ('task' or 'project')
 
-### `list_perspectives` ⭐ NEW
+### `list_perspectives` NEW
 List all available perspectives in OmniFocus, including built-in and custom perspectives.
 
 Parameters:
@@ -226,7 +226,7 @@ Parameters:
 Returns:
 - List of perspectives with their names, types (builtin/custom), and whether they can be modified
 
-### `get_perspective_view` ⭐ NEW
+### `get_perspective_view` NEW
 Get the items visible in the current OmniFocus perspective. Shows what tasks and projects are displayed.
 
 Parameters:
@@ -245,6 +245,6 @@ Documentation to follow.
 
 This server uses AppleScript to communicate with OmniFocus, allowing it to interact with the application's native functionality. The server is built using the Model Context Protocol SDK, which provides a standardized way for AI models to interact with external tools and systems.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
