@@ -121,25 +121,23 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       (task.containingProject === null) === value;
     var evaluateActionIsInSingleActionsList = (task, value) => {
       const project = task.containingProject;
-      return (
-        project && (project.status === Project.Status.SingleActions) === value
-      );
+      if (!project) return false;
+      return (project.status === Project.Status.SingleActions) === value;
     };
     var evaluateActionHasProjectWithStatus = (task, value) => {
       const project = task.containingProject;
       if (!project) return false;
-      const statusMap = {
-        active: Project.Status.Active,
-        remaining: !project.effectivelyCompleted && !project.effectivelyDropped,
-        onHold: Project.Status.OnHold,
-        completed: project.effectivelyCompleted,
-        dropped: project.effectivelyDropped,
-        stalled: Project.Status.Stalled,
-        pending: Project.Status.Pending,
-      };
       if (value === "remaining") {
         return !project.effectivelyCompleted && !project.effectivelyDropped;
       }
+      if (value === "completed") return project.effectivelyCompleted;
+      if (value === "dropped") return project.effectivelyDropped;
+      const statusMap = {
+        active: Project.Status.Active,
+        onHold: Project.Status.OnHold,
+        stalled: Project.Status.Stalled,
+        pending: Project.Status.Pending,
+      };
       return project.status === statusMap[value];
     };
 
@@ -360,6 +358,8 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       }
     } catch (e) {
       // If we can't parse the rules, fall back to getting all available tasks
+      perspectiveRules = null;
+      var ruleParseError = e.toString();
     }
 
     let filteredTasks = [];
@@ -415,6 +415,7 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       isCustomPerspective: isCustomPerspective,
       rulesUsed: perspectiveRules !== null,
       aggregationType: perspectiveAggregation,
+      ruleParseError: typeof ruleParseError !== "undefined" ? ruleParseError : undefined,
       items: filteredTasks.slice(0, limit),
     };
 
