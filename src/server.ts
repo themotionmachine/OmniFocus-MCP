@@ -14,6 +14,7 @@ import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
+import * as listTagsTool from './tools/definitions/listTags.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -90,6 +91,13 @@ server.tool(
   "Get the items visible in a specific OmniFocus perspective. Shows what tasks and projects are displayed when viewing that perspective",
   getPerspectiveViewTool.schema.shape,
   getPerspectiveViewTool.handler
+);
+
+server.tool(
+  "list_tags",
+  "List all tags in OmniFocus with their hierarchy. Useful for discovering available tags before creating or editing tasks.",
+  listTagsTool.schema.shape,
+  listTagsTool.handler
 );
 
 // Start the MCP server
