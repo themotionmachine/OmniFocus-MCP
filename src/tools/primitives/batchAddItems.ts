@@ -43,7 +43,7 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
   try {
     const results: ItemResult[] = new Array(items.length);
     const processed: boolean[] = new Array(items.length).fill(false);
-    const tempToRealId = new Map<string, string>();
+    const tempResolved = new Map<string, { id: string; type: 'task' | 'project'; name: string }>();
 
     // Pre-validate cycles in tempId -> parentTempId references
     const tempIndex = new Map<string, number>();
@@ -135,6 +135,9 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
               id: projectResult.projectId,
               error: projectResult.error
             };
+            if (item.tempId && projectResult.projectId && projectResult.success) {
+              tempResolved.set(item.tempId, { id: projectResult.projectId, type: 'project', name: item.name });
+            }
             processed[i] = true;
             madeProgress = true;
             continue;
@@ -142,11 +145,17 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
 
           // task
           let parentTaskId = item.parentTaskId;
+          let projectName = item.projectName;
           if (!parentTaskId && item.parentTempId) {
-            parentTaskId = tempToRealId.get(item.parentTempId);
-            if (!parentTaskId) {
+            const resolved = tempResolved.get(item.parentTempId);
+            if (!resolved) {
               // Parent not created yet; skip this round
               continue;
+            }
+            if (resolved.type === 'project') {
+              projectName = resolved.name;
+            } else {
+              parentTaskId = resolved.id;
             }
           }
 
@@ -158,7 +167,7 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
             flagged: item.flagged,
             estimatedMinutes: item.estimatedMinutes,
             tags: item.tags,
-            projectName: item.projectName,
+            projectName,
             parentTaskId,
             parentTaskName: item.parentTaskName,
             hierarchyLevel: item.hierarchyLevel
@@ -171,7 +180,7 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
             error: taskResult.error
           };
           if (item.tempId && taskResult.taskId && taskResult.success) {
-            tempToRealId.set(item.tempId, taskResult.taskId);
+            tempResolved.set(item.tempId, { id: taskResult.taskId, type: 'task', name: item.name });
           }
           processed[i] = true;
           madeProgress = true;
@@ -190,7 +199,7 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
     for (const item of indexed) {
       const i = item.__index;
       if (!processed[i]) {
-        const reason = item.parentTempId && !tempToRealId.has(item.parentTempId)
+        const reason = item.parentTempId && !tempResolved.has(item.parentTempId)
           ? `Unresolved parentTempId: ${item.parentTempId}`
           : 'Unresolved dependency or cycle';
         results[i] = { success: false, error: reason };
