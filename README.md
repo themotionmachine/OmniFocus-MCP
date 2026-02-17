@@ -20,8 +20,8 @@ Some ways you could use it:
 
 ## Roadmap
 - ~~Enable the client to interact with perspectives~~ (Added list_perspectives and get_perspective_view)
+- ~~Add support for the new `planned` date type in Omnifocus 4.7~~ (Added plannedDate support for tasks)
 - Benefit from MCP `resource` and `prompt` features
-- Add support for the new `planned` date type in Omnifocus 4.7
 - Support manipulating notifications for projects and tasks
 
 
@@ -137,11 +137,12 @@ Parameters:
 - `note`: (Optional) Additional notes for the task
 - `dueDate`: (Optional) The due date of the task in ISO format
 - `deferDate`: (Optional) The defer date of the task in ISO format
+- `plannedDate`: (Optional) The planned date of the task in ISO format - indicates intention to work on this task on this date
 - `flagged`: (Optional) Whether the task is flagged or not
 - `estimatedMinutes`: (Optional) Estimated time to complete the task
 - `tags`: (Optional) Tags to assign to the task
- - `parentTaskId`: (Optional) Create under an existing parent task by ID
- - `parentTaskName`: (Optional) Create under first matching parent task by name (fallback)
+- `parentTaskId`: (Optional) Create under an existing parent task by ID
+- `parentTaskName`: (Optional) Create under first matching parent task by name (fallback)
 
 ### `add_project`
 Add a new project to OmniFocus.
@@ -184,6 +185,7 @@ Parameters:
   - `note`: (Optional) Additional notes
   - `dueDate`: (Optional) Due date in ISO format
   - `deferDate`: (Optional) Defer date in ISO format
+  - `plannedDate`: (Optional) Planned date in ISO format (tasks only)
   - `flagged`: (Optional) Whether the item is flagged
   - `estimatedMinutes`: (Optional) Estimated completion time
   - `tags`: (Optional) Array of tags

@@ -91,6 +91,28 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 }
 ```
 
+### Get tasks planned for this week
+```json
+{
+  "entity": "tasks",
+  "filters": {
+    "plannedWithin": 7
+  },
+  "sortBy": "plannedDate"
+}
+```
+
+### Get today's planned work
+```json
+{
+  "entity": "tasks",
+  "filters": {
+    "plannedWithin": 0,
+    "status": ["Next", "Available"]
+  }
+}
+```
+
 ### Get tasks with notes
 ```json
 {
@@ -279,6 +301,19 @@ Get your most important tasks for the day:
   },
   "sortBy": "dueDate",
   "limit": 15
+}
+```
+
+Or get tasks you planned to work on today:
+```json
+{
+  "entity": "tasks",
+  "filters": {
+    "plannedWithin": 0,
+    "status": ["Next", "Available"]
+  },
+  "sortBy": "plannedDate",
+  "fields": ["name", "plannedDate", "projectName", "estimatedMinutes"]
 }
 ```
 
