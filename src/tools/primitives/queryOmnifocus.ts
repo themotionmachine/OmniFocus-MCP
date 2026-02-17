@@ -13,6 +13,7 @@ export interface QueryOmnifocusParams {
     deferredUntil?: number;
     plannedWithin?: number;
     hasNote?: boolean;
+    inbox?: boolean;
   };
   fields?: string[];
   limit?: number;
@@ -239,6 +240,14 @@ function generateFilterConditions(entity: string, filters: any): string {
         const hasNote = item.note && item.note.trim().length > 0;
         if (hasNote !== ${filters.hasNote}) return false;
       `);
+    }
+
+    if (filters.inbox !== undefined) {
+      if (filters.inbox) {
+        conditions.push(`if (!item.inInbox) return false;`);
+      } else {
+        conditions.push(`if (item.inInbox) return false;`);
+      }
     }
   }
   
