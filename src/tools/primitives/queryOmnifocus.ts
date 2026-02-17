@@ -13,6 +13,9 @@ export interface QueryOmnifocusParams {
     deferredUntil?: number;
     plannedWithin?: number;
     hasNote?: boolean;
+    dueOn?: number;
+    deferOn?: number;
+    plannedOn?: number;
   };
   fields?: string[];
   limit?: number;
@@ -86,6 +89,16 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
         const futureDate = new Date();
         futureDate.setDate(futureDate.getDate() + daysFromNow);
         return itemDate <= futureDate;
+      }
+
+      // Helper to check exact day match
+      function checkSameDay(itemDate, daysFromNow) {
+        if (!itemDate) return false;
+        const target = new Date();
+        target.setDate(target.getDate() + daysFromNow);
+        return itemDate.getFullYear() === target.getFullYear() &&
+               itemDate.getMonth() === target.getMonth() &&
+               itemDate.getDate() === target.getDate();
       }
       
       // Status mappings
@@ -232,6 +245,18 @@ function generateFilterConditions(entity: string, filters: any): string {
           return false;
         }
       `);
+    }
+
+    if (filters.dueOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.dueDate, ${filters.dueOn})) return false;`);
+    }
+
+    if (filters.deferOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.deferDate, ${filters.deferOn})) return false;`);
+    }
+
+    if (filters.plannedOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.plannedDate, ${filters.plannedOn})) return false;`);
     }
 
     if (filters.hasNote !== undefined) {
