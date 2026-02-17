@@ -28,17 +28,17 @@ export interface AddOmniFocusTaskParams {
  */
 function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = params.name.replace(/["\\]/g, '\\$&'); // Escape quotes and backslashes
+  const note = params.note?.replace(/["\\]/g, '\\$&') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const plannedDate = params.plannedDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  const projectName = params.projectName?.replace(/["\\]/g, '\\$&') || '';
+  const parentTaskId = params.parentTaskId?.replace(/["\\]/g, '\\$&') || '';
+  const parentTaskName = params.parentTaskName?.replace(/["\\]/g, '\\$&') || '';
 
   // Generate date constructions outside tell blocks
   let datePreScript = '';
@@ -182,7 +182,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+          const sanitizedTag = tag.replace(/["\\]/g, '\\$&');
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"

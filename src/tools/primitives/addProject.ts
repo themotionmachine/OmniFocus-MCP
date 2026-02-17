@@ -21,14 +21,14 @@ export interface AddProjectParams {
  */
 function generateAppleScript(params: AddProjectParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = params.name.replace(/["\\]/g, '\\$&'); // Escape quotes and backslashes
+  const note = params.note?.replace(/["\\]/g, '\\$&') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
+  const folderName = params.folderName?.replace(/["\\]/g, '\\$&') || '';
   const sequential = params.sequential === true;
   
   // Generate date constructions outside tell blocks
@@ -82,7 +82,7 @@ function generateAppleScript(params: AddProjectParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+          const sanitizedTag = tag.replace(/["\\]/g, '\\$&');
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
