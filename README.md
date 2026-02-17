@@ -115,6 +115,14 @@ Common Uses:
 Parameters:
 - `entity`: Type to query ('tasks', 'projects', or 'folders')
 - `filters`: (Optional) Narrow results by project, tags, status, dates, etc.
+  - `projectName`, `projectId`, `folderId`: Filter by container
+  - `tags`: Filter by tag names (OR logic, case-sensitive)
+  - `status`: Filter by status (OR logic)
+  - `flagged`: Filter by flagged status
+  - `inbox`: Filter by inbox status (true = inbox only, false = exclude inbox)
+  - `dueWithin`, `deferredUntil`, `plannedWithin`: Range date filters (days from today)
+  - `dueOn`, `deferOn`, `plannedOn`: Exact date filters (0 = today, 1 = tomorrow, etc.)
+  - `hasNote`: Filter by note presence
 - `fields`: (Optional) Specific fields to return (id, name, note, dueDate, etc.)
 - `limit`: (Optional) Maximum items to return
 - `sortBy`: (Optional) Field to sort by
@@ -202,9 +210,10 @@ Examples:
 ```
 {
   "items": [
-    { "type": "task", "name": "Parent", "projectName": "My Project", "tempId": "p1" },
-    { "type": "task", "name": "Child A", "parentTempId": "p1" },
-    { "type": "task", "name": "Child B", "parentTempId": "p1" }
+    { "type": "project", "name": "My Project", "tempId": "proj1" },
+    { "type": "task", "name": "First task", "parentTempId": "proj1" },
+    { "type": "task", "name": "Parent task", "parentTempId": "proj1", "tempId": "t1" },
+    { "type": "task", "name": "Subtask", "parentTempId": "t1" }
   ]
 }
 ```
@@ -238,6 +247,15 @@ Parameters:
 - `fields`: (Optional) Specific fields to include in the response
 
 Note: This tool returns the content of the current perspective window. Due to OmniJS limitations, it cannot programmatically switch perspectives.
+
+### `list_tags`
+List all tags in OmniFocus with their hierarchy. Useful for discovering available tags before creating or editing tasks.
+
+Parameters:
+- `includeDropped`: (Optional) Include dropped/inactive tags (default: false)
+
+Returns:
+- List of tags with name, ID, parent hierarchy, active status, and task count
 
 ## Development
 
