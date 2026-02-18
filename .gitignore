@@ -43,10 +43,10 @@ devnotes.md
 devnotes.md
 devnotes.md
 ProjectDevNotes.md
-CLAUDE.md
 exampleDump.txt
 MCP_OPTIMIZATION_STRATEGY.md
 DEPLOYMENT_GUIDE.md
 Roadmap.md
 AGENTS.md
 GEMINI.md
+.claude/settings.local.json
