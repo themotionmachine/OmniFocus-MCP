@@ -36,7 +36,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
 }
 
 // Function to format date in compact format (M/D)
-function formatCompactDate(isoDate: string | null): string {
+export function formatCompactDate(isoDate: string | null): string {
   if (!isoDate) return '';
 
   const date = new Date(isoDate);
@@ -44,7 +44,7 @@ function formatCompactDate(isoDate: string | null): string {
 }
 
 // Function to format the database in the compact report format
-function formatCompactReport(database: any, options: { hideCompleted: boolean, hideRecurringDuplicates: boolean }): string {
+export function formatCompactReport(database: any, options: { hideCompleted: boolean, hideRecurringDuplicates: boolean }): string {
   const { hideCompleted, hideRecurringDuplicates } = options;
 
   // Get current date for the header
@@ -272,7 +272,7 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
 }
 
 // Compute minimum unique prefixes for all tags (minimum 3 characters)
-function computeMinimumUniquePrefixes(tagNames: string[]): Map<string, string> {
+export function computeMinimumUniquePrefixes(tagNames: string[]): Map<string, string> {
   const prefixMap = new Map<string, string>();
 
   // For each tag name

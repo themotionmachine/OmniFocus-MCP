@@ -11,7 +11,10 @@
     "build": "tsc && npm run copy-files && chmod 755 dist/server.js",
     "copy-files": "mkdir -p dist/utils/omnifocusScripts && cp src/utils/omnifocusScripts/*.js dist/utils/omnifocusScripts/",
     "start": "node dist/server.js",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
@@ -19,7 +22,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.19",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.18"
   },
   "repository": {
     "type": "git",

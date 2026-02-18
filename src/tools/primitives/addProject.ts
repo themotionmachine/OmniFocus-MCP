@@ -19,7 +19,7 @@ export interface AddProjectParams {
 /**
  * Generate pure AppleScript for project creation
  */
-function generateAppleScript(params: AddProjectParams): string {
+export function generateAppleScript(params: AddProjectParams): string {
   // Sanitize and prepare parameters for AppleScript
   const name = params.name.replace(/["\\]/g, '\\$&'); // Escape quotes and backslashes
   const note = params.note?.replace(/["\\]/g, '\\$&') || '';

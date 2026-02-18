@@ -50,7 +50,7 @@ export async function executeJXA(script: string): Promise<any[]> {
   }
 }
 
-const escapeContent = (content: string) => {
+export const escapeContent = (content: string) => {
   return content
     .replace(/\\/g, "\\\\") // Escape backslashes
     .replace(/`/g, "\\`") // Escape backticks

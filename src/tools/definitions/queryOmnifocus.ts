@@ -89,7 +89,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
 }
 
 // Helper function to format query results in a compact way
-function formatQueryResults(items: any[], entity: string, filters?: any): string {
+export function formatQueryResults(items: any[], entity: string, filters?: any): string {
   if (items.length === 0) {
     return `No ${entity} found matching the specified criteria.`;
   }
@@ -117,7 +117,7 @@ function formatQueryResults(items: any[], entity: string, filters?: any): string
   return output;
 }
 
-function formatFilters(filters: any): string {
+export function formatFilters(filters: any): string {
   const parts = [];
   if (filters.projectId) parts.push(`projectId: "${filters.projectId}"`);
   if (filters.projectName) parts.push(`project: "${filters.projectName}"`);
@@ -232,7 +232,7 @@ function formatFolders(folders: any[]): string {
   }).join('\n');
 }
 
-function formatDate(dateStr: string): string {
+export function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }

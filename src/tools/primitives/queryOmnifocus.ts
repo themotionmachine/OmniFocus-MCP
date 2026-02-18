@@ -70,7 +70,7 @@ export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<Quer
   }
 }
 
-function generateQueryScript(params: QueryOmnifocusParams): string {
+export function generateQueryScript(params: QueryOmnifocusParams): string {
   const { entity, filters = {}, fields, limit, sortBy, sortOrder, includeCompleted = false, summary = false } = params;
   
   // Build the JXA script based on the entity type and filters
@@ -190,7 +190,7 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
   })();`;
 }
 
-function generateFilterConditions(entity: string, filters: any): string {
+export function generateFilterConditions(entity: string, filters: any): string {
   const conditions: string[] = [];
   
   if (entity === 'tasks') {
@@ -297,7 +297,7 @@ function generateFilterConditions(entity: string, filters: any): string {
   return conditions.join('\n');
 }
 
-function generateSortLogic(sortBy: string, sortOrder?: string): string {
+export function generateSortLogic(sortBy: string, sortOrder?: string): string {
   const order = sortOrder === 'desc' ? -1 : 1;
   
   return `
@@ -322,7 +322,7 @@ function generateSortLogic(sortBy: string, sortOrder?: string): string {
   `;
 }
 
-function generateFieldMapping(entity: string, fields?: string[]): string {
+export function generateFieldMapping(entity: string, fields?: string[]): string {
   // If no specific fields requested, return common fields based on entity
   if (!fields || fields.length === 0) {
     if (entity === 'tasks') {

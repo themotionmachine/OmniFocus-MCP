@@ -88,7 +88,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
   }
 }
 
-function formatTag(tag: TagInfo, indent: string): string {
+export function formatTag(tag: TagInfo, indent: string): string {
   const status = tag.active ? '' : ' (inactive)';
   const tasks = tag.taskCount > 0 ? ` [${tag.taskCount} tasks]` : '';
   return `${indent}- **${tag.name}**${status}${tasks} (id: ${tag.id})\n`;

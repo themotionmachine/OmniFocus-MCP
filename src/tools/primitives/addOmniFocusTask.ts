@@ -26,7 +26,7 @@ export interface AddOmniFocusTaskParams {
 /**
  * Generate pure AppleScript for task creation
  */
-function generateAppleScript(params: AddOmniFocusTaskParams): string {
+export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
   const name = params.name.replace(/["\\]/g, '\\$&'); // Escape quotes and backslashes
   const note = params.note?.replace(/["\\]/g, '\\$&') || '';

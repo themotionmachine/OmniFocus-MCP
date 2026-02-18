@@ -11,5 +11,5 @@
     "rootDir": "src"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.e2e.test.ts", "vitest.config.ts", "vitest.e2e.config.ts"]
 }

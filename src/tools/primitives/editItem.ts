@@ -40,7 +40,7 @@ export interface EditItemParams {
 /**
  * Generate pure AppleScript for item editing with dates constructed outside tell blocks
  */
-function generateAppleScript(params: EditItemParams): string {
+export function generateAppleScript(params: EditItemParams): string {
   // Sanitize and prepare parameters for AppleScript
   const id = params.id?.replace(/["\\]/g, '\\$&') || ''; // Escape quotes and backslashes
   const name = params.name?.replace(/["\\]/g, '\\$&') || '';

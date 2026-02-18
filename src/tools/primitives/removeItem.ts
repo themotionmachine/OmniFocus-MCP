@@ -12,7 +12,7 @@ export interface RemoveItemParams {
 /**
  * Generate pure AppleScript for item removal
  */
-function generateAppleScript(params: RemoveItemParams): string {
+export function generateAppleScript(params: RemoveItemParams): string {
   // Sanitize and prepare parameters for AppleScript
   const id = params.id?.replace(/["\\]/g, '\\$&') || ''; // Escape quotes and backslashes
   const name = params.name?.replace(/["\\]/g, '\\$&') || '';
