@@ -21,7 +21,8 @@ Some ways you could use it:
 ## Roadmap
 - ~~Enable the client to interact with perspectives~~ (Added list_perspectives and get_perspective_view)
 - ~~Add support for the new `planned` date type in Omnifocus 4.7~~ (Added plannedDate support for tasks)
-- Benefit from MCP `resource` and `prompt` features
+- ~~Benefit from MCP `resource` features~~ (Added 6 resources in v1.6)
+- Add MCP `prompt` features
 - Support manipulating notifications for projects and tasks
 
 
@@ -90,6 +91,28 @@ Extract action items from meeting transcripts, academic research articles, or no
 
 > "I'm pasting in the transcript from today's meeting. Please analyze it and create tasks in OmniFocus for any action items assigned to me. Put them in my 'Product Development' project."
 
+
+## Resources
+
+Resources let MCP clients preload OmniFocus data as context without needing tool calls. Clients that support MCP resources (like Claude Desktop) can attach these directly to a conversation.
+
+### Fixed Resources
+
+| URI | Description |
+|---|---|
+| `omnifocus://inbox` | Current inbox items (tasks not assigned to any project) |
+| `omnifocus://today` | Today's agenda — tasks due today, planned for today, and overdue |
+| `omnifocus://flagged` | All flagged items |
+| `omnifocus://stats` | Quick database statistics (task counts, project counts, overdue, etc.) |
+
+### Template Resources
+
+| URI Pattern | Description |
+|---|---|
+| `omnifocus://project/{name}` | Tasks in a specific project (supports autocomplete) |
+| `omnifocus://perspective/{name}` | Items visible in a named perspective (supports autocomplete) |
+
+All resources return JSON (`application/json`). Template resources support listing all available values and autocompletion for the `{name}` parameter.
 
 ## Available Tools
 
@@ -256,6 +279,14 @@ Parameters:
 
 Returns:
 - List of tags with name, ID, parent hierarchy, active status, and task count
+
+## Server Instructions & Logging
+
+### Server Instructions
+The server provides built-in instructions to MCP clients during the initialization handshake. These guide AI assistants on tool selection (e.g., preferring `query_omnifocus` over `dump_database`), available resources, and query filter tips — no user configuration needed.
+
+### Structured Logging
+The server emits structured log messages via the MCP logging protocol. Clients can set the minimum log level (`debug`, `info`, `warning`, `error`, etc.) using the `logging/setLevel` request. Script execution timing and errors are logged automatically.
 
 ## Development
 
