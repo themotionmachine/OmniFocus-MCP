@@ -2,6 +2,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { SetLevelRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Logger } from './utils/logger.js';
+import { setScriptLogger } from './utils/scriptExecution.js';
+import { registerResources } from './resources/index.js';
 
 // Import tool definitions
 import * as dumpDatabaseTool from './tools/definitions/dumpDatabase.js';
@@ -16,11 +20,49 @@ import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
 import * as listTagsTool from './tools/definitions/listTags.js';
 
-// Create an MCP server
-const server = new McpServer({
-  name: "OmniFocus MCP",
-  version: "1.0.0"
+// Create an MCP server with instructions
+const server = new McpServer(
+  { name: "OmniFocus MCP", version: "1.5.0" },
+  {
+    instructions: `OmniFocus MCP server for macOS task management.
+
+TOOL GUIDANCE:
+- Prefer query_omnifocus over dump_database for targeted lookups (85-95% context savings)
+- Use the "fields" parameter to request only needed fields
+- Use "summary: true" for quick counts without full data
+- For batch operations, prefer batch_add_items/batch_remove_items over repeated single calls
+
+RESOURCES:
+- omnifocus://inbox — current inbox items
+- omnifocus://today — today's agenda (due, planned, overdue)
+- omnifocus://flagged — all flagged items
+- omnifocus://stats — quick database statistics
+- omnifocus://project/{name} — tasks in a specific project
+- omnifocus://perspective/{name} — items in a named perspective
+
+QUERY FILTER TIPS:
+- Tags filter is case-sensitive and exact match
+- projectName filter is case-insensitive partial match
+- Status values for tasks: Next, Available, Blocked, DueSoon, Overdue
+- Status values for projects: Active, OnHold, Done, Dropped
+- Combine filters with AND logic; within arrays, OR logic applies`
+  }
+);
+
+// Set up logging
+const logger = new Logger(server.server);
+setScriptLogger(logger);
+
+server.server.registerCapabilities({ logging: {} });
+
+server.server.setRequestHandler(SetLevelRequestSchema, async (request) => {
+  logger.setLevel(request.params.level);
+  logger.info("server", `Log level set to ${request.params.level}`);
+  return {};
 });
+
+// Register resources
+registerResources(server, logger);
 
 // Register tools
 server.tool(
@@ -106,9 +148,9 @@ const transport = new StdioServerTransport();
 // Use await with server.connect to ensure proper connection
 (async function() {
   try {
-    console.error("Starting MCP server...");
+    logger.info("server", "Starting OmniFocus MCP server");
     await server.connect(transport);
-    console.error("MCP Server connected and ready to accept commands from Claude");
+    logger.info("server", "MCP Server connected and ready");
   } catch (err) {
     console.error(`Failed to start MCP server: ${err}`);
   }

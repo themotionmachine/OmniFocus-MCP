@@ -6,17 +6,27 @@ import { tmpdir } from "os";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { existsSync } from "fs";
+import { Logger } from './logger.js';
 
 const execAsync = promisify(exec);
 
+let _logger: Logger | null = null;
+
+export function setScriptLogger(logger: Logger): void {
+  _logger = logger;
+}
+
 // Helper function to execute OmniFocus scripts
 export async function executeJXA(script: string): Promise<any[]> {
+  const start = Date.now();
   try {
     // Write the script to a temporary file in the system temp directory
     const tempFile = join(tmpdir(), `jxa_script_${Date.now()}.js`);
 
     // Write the script to the temporary file
     writeFileSync(tempFile, script);
+
+    _logger?.debug("scriptExecution", "Executing JXA script");
 
     // Execute the script using osascript
     const { stdout, stderr } = await execAsync(
@@ -29,6 +39,9 @@ export async function executeJXA(script: string): Promise<any[]> {
 
     // Clean up the temporary file
     unlinkSync(tempFile);
+
+    const elapsed = Date.now() - start;
+    _logger?.debug("scriptExecution", `JXA script completed in ${elapsed}ms`);
 
     // Parse the output as JSON
     try {
@@ -45,6 +58,8 @@ export async function executeJXA(script: string): Promise<any[]> {
       return [];
     }
   } catch (error) {
+    const elapsed = Date.now() - start;
+    _logger?.error("scriptExecution", `JXA script failed after ${elapsed}ms: ${error}`);
     console.error("Failed to execute JXA script:", error);
     throw error;
   }
@@ -58,13 +73,13 @@ const escapeContent = (content: string) => {
 };
 
 // Function to execute scripts in OmniFocus using the URL scheme
-// Update src/utils/scriptExecution.ts
 export async function executeOmniFocusScript(
   scriptPath: string,
   args?: string[]
 ): Promise<any> {
+  const start = Date.now();
   try {
-    // Get the actual script path (existing code remains the same)
+    // Get the actual script path
     let actualPath;
     if (scriptPath.startsWith("@")) {
       const scriptName = scriptPath.substring(1);
@@ -128,10 +143,10 @@ ${scriptContent}`;
       try {
         const app = Application('OmniFocus');
         app.includeStandardAdditions = true;
-        
+
         // Run the OmniJS script in OmniFocus and capture the output
         const result = app.evaluateJavascript(\`${escapedScript}\`);
-        
+
         // Return the result
         return result;
       } catch (e) {
@@ -139,6 +154,8 @@ ${scriptContent}`;
       }
     }
     `;
+
+    _logger?.debug("scriptExecution", `Executing OmniFocus script: ${scriptPath}`);
 
     // Write the JXA script to the temporary file
     writeFileSync(tempFile, jxaScript);
@@ -155,6 +172,9 @@ ${scriptContent}`;
       console.error("Script stderr output:", stderr);
     }
 
+    const elapsed = Date.now() - start;
+    _logger?.debug("scriptExecution", `OmniFocus script completed in ${elapsed}ms`);
+
     // Parse the output as JSON
     try {
       return JSON.parse(stdout);
@@ -163,6 +183,8 @@ ${scriptContent}`;
       return stdout;
     }
   } catch (error) {
+    const elapsed = Date.now() - start;
+    _logger?.error("scriptExecution", `OmniFocus script failed after ${elapsed}ms: ${error}`);
     console.error("Failed to execute OmniFocus script:", error);
     throw error;
   }
