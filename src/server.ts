@@ -22,7 +22,7 @@ import * as listTagsTool from './tools/definitions/listTags.js';
 
 // Create an MCP server with instructions
 const server = new McpServer(
-  { name: "OmniFocus MCP", version: "1.5.0" },
+  { name: "OmniFocus MCP", version: "1.6.1" },
   {
     instructions: `OmniFocus MCP server for macOS task management.
 
