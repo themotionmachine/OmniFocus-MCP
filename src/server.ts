@@ -148,9 +148,7 @@ const transport = new StdioServerTransport();
 // Use await with server.connect to ensure proper connection
 (async function() {
   try {
-    logger.info("server", "Starting OmniFocus MCP server");
     await server.connect(transport);
-    logger.info("server", "MCP Server connected and ready");
   } catch (err) {
     console.error(`Failed to start MCP server: ${err}`);
   }

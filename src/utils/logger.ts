@@ -28,12 +28,11 @@ export class Logger {
   private log(level: LoggingLevel, logger: string, data: unknown): void {
     if (!this.shouldLog(level)) return;
 
-    try {
-      this.server.sendLoggingMessage({ level, logger, data });
-    } catch {
+    // sendLoggingMessage is async — use .catch() to handle pre-handshake calls gracefully
+    this.server.sendLoggingMessage({ level, logger, data }).catch(() => {
       // Connection may not be established yet; fall back to stderr
       console.error(`[${level}] [${logger}]`, data);
-    }
+    });
   }
 
   debug(logger: string, data: unknown): void {
