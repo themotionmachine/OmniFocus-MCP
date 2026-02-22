@@ -9,6 +9,7 @@ import { existsSync } from "fs";
 import { Logger } from './logger.js';
 
 const execAsync = promisify(exec);
+const MAX_BUFFER = 10 * 1024 * 1024; // 10MB — default 1MB is too small for large OmniFocus databases
 
 let _logger: Logger | null = null;
 
@@ -30,7 +31,8 @@ export async function executeJXA(script: string): Promise<any[]> {
 
     // Execute the script using osascript
     const { stdout, stderr } = await execAsync(
-      `osascript -l JavaScript ${tempFile}`
+      `osascript -l JavaScript ${tempFile}`,
+      { maxBuffer: MAX_BUFFER }
     );
 
     if (stderr) {
@@ -162,7 +164,8 @@ ${scriptContent}`;
 
     // Execute the JXA script using osascript
     const { stdout, stderr } = await execAsync(
-      `osascript -l JavaScript ${tempFile}`
+      `osascript -l JavaScript ${tempFile}`,
+      { maxBuffer: MAX_BUFFER }
     );
 
     // Clean up the temporary file
