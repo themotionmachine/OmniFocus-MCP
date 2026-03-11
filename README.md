@@ -1,5 +1,7 @@
 # OmniFocus MCP Server
 
+[![npm version](https://img.shields.io/npm/v/omnifocus-mcp.svg)](https://www.npmjs.com/package/omnifocus-mcp)
+
 A Model Context Protocol (MCP) server that integrates with OmniFocus to enable Claude (or other MCP-compatible clients) to interact with your tasks and projects.
 
 ![OmniFocus MCP](assets/omnifocus-mcp-logo.png)
@@ -9,22 +11,16 @@ A Model Context Protocol (MCP) server that integrates with OmniFocus to enable C
 This MCP server creates a bridge between AI assistants (like Claude) and your OmniFocus task management system. It gives AI models the ability to view, create, edit, and remove tasks and projects in your OmniFocus database through natural language conversations.
 Some ways you could use it: 
 
-- Translate the PDF of a syllabus into a fully specificed project with tasks, tags, defer dates, and due dates.
+- Translate the PDF of a syllabus into a fully specified project with tasks, tags, defer dates, and due dates.
 - Turn a meeting transcript into a list of actions
 - Create visualizations of your tasks, projects, and tags
 - Process multiple tasks or projects in a single operation
 - Bulk manage your OmniFocus items efficiently
 
-**Known Issues**
-- Dump_database tool currently fails for very large omnifocus databases. 
-
 ## Roadmap
-- ~~Enable the client to interact with perspectives~~ (Added list_perspectives and get_perspective_view)
-- ~~Add support for the new `planned` date type in Omnifocus 4.7~~ (Added plannedDate support for tasks)
-- ~~Benefit from MCP `resource` features~~ (Added 6 resources in v1.6)
 - Add MCP `prompt` features
 - Support manipulating notifications for projects and tasks
-
+- See the [GitHub issues](https://github.com/themotionmachine/omnifocus-mcp-server/issues) for feature requests and known issues
 
 ## Quick Start
 
@@ -118,7 +114,7 @@ All resources return JSON (`application/json`). Template resources support listi
 
 The server currently provides these tools:
 
-### `query_omnifocus` NEW
+### `query_omnifocus`
 Efficiently query your OmniFocus database with powerful filters. Get specific tasks, projects, or folders without loading the entire database.
 
 Key Features:
@@ -250,7 +246,7 @@ Parameters:
   - `name`: (Optional) The name of the item to remove
   - `itemType`: The type of item ('task' or 'project')
 
-### `list_perspectives` NEW
+### `list_perspectives`
 List all available perspectives in OmniFocus, including built-in and custom perspectives.
 
 Parameters:
@@ -260,7 +256,7 @@ Parameters:
 Returns:
 - List of perspectives with their names, types (builtin/custom), and whether they can be modified
 
-### `get_perspective_view` NEW
+### `get_perspective_view`
 Get the items visible in the current OmniFocus perspective. Shows what tasks and projects are displayed.
 
 Parameters:
@@ -288,13 +284,11 @@ The server provides built-in instructions to MCP clients during the initializati
 ### Structured Logging
 The server emits structured log messages via the MCP logging protocol. Clients can set the minimum log level (`debug`, `info`, `warning`, `error`, etc.) using the `logging/setLevel` request. Script execution timing and errors are logged automatically.
 
-## Development
-
-Documentation to follow.
-
 ## How It Works
 
-This server uses AppleScript to communicate with OmniFocus, allowing it to interact with the application's native functionality. The server is built using the Model Context Protocol SDK, which provides a standardized way for AI models to interact with external tools and systems.
+This server uses JXA (JavaScript for Automation) to communicate with OmniFocus via `osascript`, allowing it to interact with the application's native functionality. The server is built using the [Model Context Protocol SDK](https://github.com/modelcontextprotocol/sdk), which provides a standardized way for AI models to interact with external tools and systems.
+
+For query tool usage details, see [QUERY_TOOL_REFERENCE.md](QUERY_TOOL_REFERENCE.md) and [QUERY_TOOL_EXAMPLES.md](QUERY_TOOL_EXAMPLES.md).
 
 ## Contributing
 

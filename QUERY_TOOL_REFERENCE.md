@@ -44,7 +44,7 @@ All available fields you can request for projects:
 | `note` | string | Project notes | "Phase 1 focus on UX" |
 | `folderName` | string | Containing folder name | "Work" |
 | `folderID` | string | Containing folder ID | "fold456" |
-|enser | boolean | Tasks must be done in order | true |
+| `sequential` | boolean | Tasks must be done in order | true |
 | `dueDate` | string | Project due date | "2024-12-31T00:00:00Z" |
 | `deferDate` | string | Project defer date | "2024-12-01T00:00:00Z" |
 | `effectiveDueDate` | string | Inherited or set due date | "2024-12-31T00:00:00Z" |
@@ -82,13 +82,8 @@ All available fields you can request for folders:
 ```
 
 ### `deferredUntil` Filter
-- **Behavior**: Returns tasks that are currently deferred but will become available within N days
-- **Example**: `"deferredUntil": 7` returns tasks deferred now but available within the next 7 days
-```json
-{
-  "deferredUntil": 3  // Tasks becoming available in next 3 days
-}
-```
+- **Status**: Accepted in schema but **not yet implemented** — the filter is silently ignored
+- **Intended behavior**: Return tasks currently deferred but becoming available within N days
 
 ### `dueWithin` Filter
 - **Behavior**: Returns tasks due from now until N days in the future (inclusive)
@@ -234,9 +229,10 @@ Instead of multiple queries, get everything at once:
 
 ## Common Gotchas
 
-1. **Tag names must be exact** - "Work" ≠ "work" 
+1. **Tag names must be exact** - "Work" ≠ "work"
 2. **Project names are partial matches** - "Review" matches "Weekly Review"
 3. **Null dates sort last** - Tasks without due dates appear at the end when sorting by dueDate
 4. **Inbox is a special project name** - Use `"projectName": "inbox"` for inbox tasks
 5. **Status values are case-sensitive** - Use exact values like "Next", not "next"
 6. **Fields that don't exist return undefined** - Requesting invalid fields won't error but returns undefined
+7. **`deferredUntil` is not yet implemented** - The filter is accepted but silently ignored
