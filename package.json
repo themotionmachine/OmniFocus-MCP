@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.8",
-    "@types/node": "^24.0.0",
+    "@types/node": "^25.5.0",
     "@vitest/coverage-v8": "^4.0.15",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
