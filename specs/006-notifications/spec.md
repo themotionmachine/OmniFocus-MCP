@@ -30,6 +30,15 @@ This phase builds on Phases 0-5 which established:
 
 Phase 6 adds dedicated notification management tools for per-task reminders.
 
+## Clarifications
+
+### Session 2026-03-17
+
+- Q: What notification properties should `list_notifications` return given that `absoluteFireDate` throws on relative notifications and `relativeFireOffset` throws on absolute? → A: Return `initialFireDate` (universal) + `nextFireDate` + kind-conditional fields (`absoluteFireDate` for Absolute, `relativeFireOffset` for relative kinds)
+- Q: How should `snooze_notification` handle relative (DueRelative/DeferRelative) notifications, given `absoluteFireDate` throws on them? → A: Restrict snooze to Absolute kind only; return error for relative kinds explaining the API limitation
+- Q: `addNotification(Number)` code examples use seconds but `relativeFireOffset` docs say "minutes" — which unit? → A: Both use SECONDS (same unit). Evidence: (1) official Task-to-Project script passes `relativeFireOffset` directly to `addNotification()` with no conversion; (2) task-notifications.html explicitly states "provide a positive or negative integer, indicating the number of **seconds**". The "minutes" in the relativeFireOffset API docs is incorrect. Still flag for Script Editor verification during plan phase.
+- Q: Should `add_notification` accept positive `offsetSeconds` values (after due date)? → A: Yes, per official docs: "provide a positive or negative integer, indicating the number of seconds before (negative), or after (positive), to due date/time". Accept any finite number.
+
 ## Assumptions
 
 - Notifications are managed per-task (not per-project). To set notifications for project tasks, the AI assistant calls the tool for each task individually.
@@ -59,7 +68,7 @@ and offset details. Delivers immediate value by surfacing reminder state.
 
 1. **Given** a task with two notifications (one absolute, one due-relative),
    **When** I call `list_notifications` with the task ID,
-   **Then** I receive an array of 2 notifications, each with `index`, `kind`, `absoluteFireDate`, `relativeFireOffset`, and `isSnoozed`.
+   **Then** I receive an array of 2 notifications, each with `index`, `kind`, `initialFireDate`, `isSnoozed`, and kind-conditional fields (`absoluteFireDate` for absolute, `relativeFireOffset` for relative).
 
 2. **Given** a task with no notifications,
    **When** I call `list_notifications` with the task ID,
@@ -75,7 +84,7 @@ and offset details. Delivers immediate value by surfacing reminder state.
 
 5. **Given** a snoozed notification,
    **When** I call `list_notifications`,
-   **Then** the snoozed notification shows `isSnoozed: true` and the updated `absoluteFireDate` (snooze target).
+   **Then** the snoozed notification shows `isSnoozed: true` and the updated `initialFireDate` reflecting the snooze target time.
 
 ---
 
@@ -98,11 +107,11 @@ the task's notification array grows by one with the correct kind and fire date.
    **Then** an Absolute notification is added firing at that exact time.
 
 2. **Given** a task with a due date of "2026-04-01T17:00:00",
-   **When** I call `add_notification` with `type: "relative"` and `offsetMinutes: -60`,
-   **Then** a DueRelative notification is added firing 60 minutes before the due date.
+   **When** I call `add_notification` with `type: "relative"` and `offsetSeconds: -3600`,
+   **Then** a DueRelative notification is added firing 1 hour before the due date.
 
 3. **Given** a task WITHOUT a due date,
-   **When** I call `add_notification` with `type: "relative"` and `offsetMinutes: -60`,
+   **When** I call `add_notification` with `type: "relative"` and `offsetSeconds: -3600`,
    **Then** I receive an error: "Cannot add relative notification: task has no due date".
 
 4. **Given** a valid task,
@@ -168,31 +177,31 @@ a preset name and verifying the correct relative notifications are added.
 
 1. **Given** a task with a due date,
    **When** I call `add_standard_notifications` with `preset: "day_before"`,
-   **Then** one DueRelative notification is added with offset -1440 minutes.
+   **Then** one DueRelative notification is added with offset -86400 seconds.
 
 2. **Given** a task with a due date,
    **When** I call `add_standard_notifications` with `preset: "hour_before"`,
-   **Then** one DueRelative notification is added with offset -60 minutes.
+   **Then** one DueRelative notification is added with offset -3600 seconds.
 
 3. **Given** a task with a due date,
    **When** I call `add_standard_notifications` with `preset: "15_minutes"`,
-   **Then** one DueRelative notification is added with offset -15 minutes.
+   **Then** one DueRelative notification is added with offset -900 seconds.
 
 4. **Given** a task with a due date,
    **When** I call `add_standard_notifications` with `preset: "week_before"`,
-   **Then** one DueRelative notification is added with offset -10080 minutes.
+   **Then** one DueRelative notification is added with offset -604800 seconds.
 
 5. **Given** a task with a due date,
    **When** I call `add_standard_notifications` with `preset: "standard"`,
-   **Then** two DueRelative notifications are added: -1440 (day before) and -60 (hour before).
+   **Then** two DueRelative notifications are added: -86400 (day before) and -3600 (hour before).
 
 6. **Given** a task WITHOUT a due date,
    **When** I call `add_standard_notifications` with any preset,
    **Then** I receive an error: "Cannot add preset notifications: task has no due date".
 
-7. **Given** a task that already has a -1440 offset notification,
+7. **Given** a task that already has a -86400 offset notification,
    **When** I call `add_standard_notifications` with `preset: "day_before"`,
-   **Then** a second -1440 notification is added (presets are additive, not idempotent).
+   **Then** a second -86400 notification is added (presets are additive, not idempotent).
 
 ---
 
@@ -227,6 +236,10 @@ ID, notification index, and target datetime, then verifying the notification's
    **When** I call `snooze_notification`,
    **Then** the snooze is applied (OmniFocus allows past dates; the notification fires immediately).
 
+5. **Given** a DueRelative notification at index 0,
+   **When** I call `snooze_notification` with `index: 0`,
+   **Then** I receive an error: "Cannot snooze notification at index 0: only Absolute notifications can be snoozed (this notification is DueRelative)".
+
 ---
 
 ### Edge Cases
@@ -248,9 +261,10 @@ ID, notification index, and target datetime, then verifying the notification's
   same fire date/offset. The tools do not deduplicate — this is the user's
   responsibility.
 
-- **Relative offset sign convention**: Negative values = before due date (e.g.,
-  -60 means "60 minutes before due"). Positive values = after due date. Zero
-  means "at due date". All values are in minutes.
+- **Relative offset sign convention**: Per official docs: "provide a positive or
+  negative integer, indicating the number of seconds before (negative), or after
+  (positive), to due date/time". Both positive and negative values are valid.
+  All values are in seconds. **⚠️ Verify unit in Script Editor during plan phase.**
 
 - **DeferRelative notifications**: These are created by OmniFocus when a task has
   a defer date. `list_notifications` reports them with `kind: "DeferRelative"`,
@@ -266,7 +280,9 @@ ID, notification index, and target datetime, then verifying the notification's
 - **FR-001**: Tool MUST accept task identifier as either `taskId` (string) or `taskName` (string)
 - **FR-002**: Tool MUST return disambiguation error when `taskName` matches multiple tasks
 - **FR-003**: Tool MUST return an array of notification objects for the specified task
-- **FR-004**: Each notification object MUST include: `index` (number), `kind` (string), `absoluteFireDate` (ISO 8601 string or null), `relativeFireOffset` (number or null, in minutes), `isSnoozed` (boolean), `repeatInterval` (number or null, in seconds)
+- **FR-004**: Each notification object MUST include: `index` (number), `kind` (string), `initialFireDate` (ISO 8601 string), `nextFireDate` (ISO 8601 string or null), `isSnoozed` (boolean), `repeatInterval` (number or null, in seconds)
+- **FR-004a**: When `kind` is "Absolute", notification object MUST additionally include `absoluteFireDate` (ISO 8601 string)
+- **FR-004b**: When `kind` is "DueRelative" or "DeferRelative", notification object MUST additionally include `relativeFireOffset` (number, in seconds — same unit as `addNotification(Number)`; **⚠️ verify in Script Editor during plan phase**)
 - **FR-005**: Tool MUST return `count` indicating total number of notifications
 - **FR-006**: Tool MUST return `taskId` and `taskName` in the response for context
 - **FR-007**: `kind` MUST be one of: "Absolute", "DueRelative", "DeferRelative", "Unknown"
@@ -277,11 +293,11 @@ ID, notification index, and target datetime, then verifying the notification's
 - **FR-009**: Tool MUST accept task identifier as either `taskId` or `taskName`
 - **FR-010**: Tool MUST accept `type` parameter: "absolute" or "relative"
 - **FR-011**: When `type: "absolute"`, Tool MUST accept `dateTime` as ISO 8601 string
-- **FR-012**: When `type: "relative"`, Tool MUST accept `offsetMinutes` as number (negative = before due)
+- **FR-012**: When `type: "relative"`, Tool MUST accept `offsetSeconds` as number (negative = before due; unit is seconds per OmniJS code examples)
 - **FR-013**: When `type: "relative"`, Tool MUST return error if task has no due date
 - **FR-014**: Tool MUST return the added notification details including its index in the notification array
 - **FR-015**: Tool MUST validate `dateTime` is a parseable ISO 8601 string
-- **FR-016**: Tool MUST validate `offsetMinutes` is a finite number
+- **FR-016**: Tool MUST validate `offsetSeconds` is a finite number
 - **FR-017**: Tool MUST return disambiguation error when `taskName` matches multiple tasks
 
 ### Functional Requirements - remove_notification
@@ -299,8 +315,8 @@ ID, notification index, and target datetime, then verifying the notification's
 
 - **FR-026**: Tool MUST accept task identifier as either `taskId` or `taskName`
 - **FR-027**: Tool MUST accept `preset` parameter with values: "day_before", "hour_before", "15_minutes", "week_before", "standard"
-- **FR-028**: Preset offsets MUST be: `day_before` = -1440 min, `hour_before` = -60 min, `15_minutes` = -15 min, `week_before` = -10080 min
-- **FR-029**: Preset `standard` MUST add two notifications: -1440 min AND -60 min
+- **FR-028**: Preset offsets MUST be: `day_before` = -86400 sec, `hour_before` = -3600 sec, `15_minutes` = -900 sec, `week_before` = -604800 sec (**⚠️ verify unit in Script Editor**)
+- **FR-029**: Preset `standard` MUST add two notifications: -86400 sec AND -3600 sec
 - **FR-030**: Tool MUST return error if task has no due date (all presets are due-relative)
 - **FR-031**: Tool MUST return details of all added notifications including their indices
 - **FR-032**: Tool MUST be additive (append to existing notifications, never clear)
@@ -312,6 +328,7 @@ ID, notification index, and target datetime, then verifying the notification's
 - **FR-035**: Tool MUST accept `index` as a non-negative integer
 - **FR-036**: Tool MUST accept `snoozeUntil` as ISO 8601 datetime string
 - **FR-037**: Tool MUST set `absoluteFireDate` on the notification at the specified index
+- **FR-037a**: Tool MUST validate the notification at the specified index has `kind` of Absolute; return error if kind is DueRelative, DeferRelative, or Unknown (OmniJS throws when setting `absoluteFireDate` on non-Absolute notifications)
 - **FR-038**: Tool MUST validate `index` is within bounds of `task.notifications` array
 - **FR-039**: Tool MUST validate `snoozeUntil` is a parseable ISO 8601 string
 - **FR-040**: Tool MUST return updated notification details after snooze
@@ -330,16 +347,18 @@ ID, notification index, and target datetime, then verifying the notification's
 - **Notification**: Represents a reminder attached to a task
   - `index`: Position in the task's notification array (0-based)
   - `kind`: Type of notification (Absolute, DueRelative, DeferRelative, Unknown)
-  - `absoluteFireDate`: The actual datetime the notification fires (present for all kinds)
-  - `relativeFireOffset`: Minutes offset from due/defer date (present for relative kinds)
-  - `isSnoozed`: Whether the notification has been snoozed
+  - `initialFireDate`: The computed fire datetime (universal, works for all kinds; dynamically adjusts for relative notifications when due/defer dates change)
+  - `nextFireDate`: Next fire time (null if already fired and non-repeating)
+  - `absoluteFireDate`: *(Absolute kind only)* The absolute fire datetime; throws if accessed on relative kinds
+  - `relativeFireOffset`: *(DueRelative/DeferRelative only)* Offset from due/defer date; throws if accessed on Absolute kind
+  - `isSnoozed`: Whether the notification has been snoozed (read-only)
   - `repeatInterval`: Seconds between repeats (null if non-repeating, read-only)
 
-- **Preset**: A named configuration that maps to one or more relative notification offsets
-  - `day_before`: -1440 minutes
-  - `hour_before`: -60 minutes
-  - `15_minutes`: -15 minutes
-  - `week_before`: -10080 minutes
+- **Preset**: A named configuration that maps to one or more relative notification offsets (in seconds)
+  - `day_before`: -86400 seconds (24 * 60 * 60)
+  - `hour_before`: -3600 seconds (60 * 60)
+  - `15_minutes`: -900 seconds (15 * 60)
+  - `week_before`: -604800 seconds (7 * 24 * 60 * 60)
   - `standard`: combination of day_before + hour_before
 
 ### Error Messages
@@ -355,8 +374,9 @@ ID, notification index, and target datetime, then verifying the notification's
 | Invalid preset | `Invalid preset: '{preset}'. Must be one of: day_before, hour_before, 15_minutes, week_before, standard` |
 | Invalid type | `Invalid notification type: '{type}'. Must be one of: absolute, relative` |
 | Invalid dateTime | `Invalid dateTime: cannot parse '{value}' as ISO 8601` |
-| Invalid offsetMinutes | `Invalid offsetMinutes: must be a finite number` |
+| Invalid offsetSeconds | `Invalid offsetSeconds: must be a finite number` |
 | Invalid snoozeUntil | `Invalid snoozeUntil: cannot parse '{value}' as ISO 8601` |
+| Snooze non-absolute | `Cannot snooze notification at index {index}: only Absolute notifications can be snoozed (this notification is {kind})` |
 
 ---
 
@@ -394,23 +414,32 @@ ID, notification index, and target datetime, then verifying the notification's
 ```javascript
 // Task notification properties
 task.notifications                    // Array of Task.Notification objects (read-only array)
-task.addNotification(dateOrOffset)    // Add notification: Date for absolute, Number for relative (minutes)
+task.addNotification(dateOrOffset)    // Add notification: Date for absolute, Number for relative
 task.removeNotification(notification) // Remove notification: takes notification OBJECT, not index
 
-// Notification object properties
-notification.kind                     // Task.Notification.Kind enum
-notification.absoluteFireDate         // Date - when the notification fires (WRITABLE for snooze)
-notification.relativeFireOffset       // Number - offset in MINUTES (negative = before due/defer)
-notification.isSnoozed               // Boolean - whether notification has been snoozed
-notification.repeatInterval           // Number - seconds between repeats (read-only, 0 = no repeat)
-notification.initialFireDate          // Date - original fire date before any snooze
+// Notification object properties (universal — work for all kinds)
+notification.kind                     // Task.Notification.Kind enum (read-only)
+notification.initialFireDate          // Date r/o - computed fire time; adjusts with due/defer dates for relative kinds
+notification.nextFireDate             // Date or null r/o - next fire time; null if already fired and non-repeating
+notification.isSnoozed               // Boolean r/o - whether notification has been snoozed
+notification.repeatInterval           // Number - seconds between repeats (0 = no repeat)
+notification.task                     // Task or null r/o - the owning task
+
+// Kind-conditional properties (THROW if accessed on wrong kind!)
+notification.absoluteFireDate         // Date - ONLY for Absolute kind; throws on relative kinds
+notification.relativeFireOffset       // Number - ONLY for DueRelative/DeferRelative; throws on Absolute
 
 // Task.Notification.Kind enum
 Task.Notification.Kind.Absolute       // Fires at specific date/time
 Task.Notification.Kind.DueRelative    // Fires relative to due date
 Task.Notification.Kind.DeferRelative  // Fires relative to defer date
-Task.Notification.Kind.Unknown        // Unknown type
+Task.Notification.Kind.Unknown        // Invalid state
 ```
+
+> **⚠️ UNIT VERIFICATION REQUIRED**: Official code examples use **seconds** for
+> `addNotification(Number)` (-300 = 5min, -3600 = 1hr, -86400 = 1day), but the
+> `relativeFireOffset` property docs say "minutes". Must verify in OmniFocus Script
+> Editor during plan phase. Spec assumes seconds based on code examples.
 
 ### Adding Notifications
 
@@ -419,12 +448,14 @@ Task.Notification.Kind.Unknown        // Unknown type
 var fireDate = new Date("2026-04-01T09:00:00");
 task.addNotification(fireDate);
 
-// Relative notification - pass minutes offset (NEGATIVE = before due)
-task.addNotification(-60);    // 60 minutes before due date
-task.addNotification(-1440);  // 1 day before due date (24 * 60)
+// Relative notification - pass SECONDS offset (NEGATIVE = before due)
+task.addNotification(-3600);   // 1 hour before due date (60 * 60)
+task.addNotification(-86400);  // 1 day before due date (24 * 60 * 60)
+task.addNotification(-900);    // 15 minutes before due (15 * 60)
 
 // NOTE: addNotification(Number) creates a DueRelative notification
-// The offset is in MINUTES, not seconds
+// Unit is SECONDS per official code examples
+// Throws error if task.effectiveDueDate is not set
 ```
 
 ### Removing Notifications
@@ -436,35 +467,42 @@ var notif = task.notifications[index];
 task.removeNotification(notif);
 ```
 
-### Snoozing Notifications
+### Snoozing Notifications (Absolute kind ONLY)
 
 ```javascript
 // Set absoluteFireDate to postpone the notification
+// ONLY works on Absolute notifications — throws on DueRelative/DeferRelative
 var notif = task.notifications[index];
+if (notif.kind !== Task.Notification.Kind.Absolute) {
+  throw new Error("Cannot snooze: only Absolute notifications support absoluteFireDate");
+}
 notif.absoluteFireDate = new Date("2026-04-01T14:00:00");
 // After this, notification.isSnoozed becomes true
 ```
 
 ### Preset Offset Definitions
 
-| Preset | Offset (minutes) | Equivalent |
+| Preset | Offset (seconds) | Equivalent |
 |--------|------------------|------------|
-| `day_before` | -1440 | 24 hours before due |
-| `hour_before` | -60 | 1 hour before due |
-| `15_minutes` | -15 | 15 minutes before due |
-| `week_before` | -10080 | 7 days before due (7 * 24 * 60) |
-| `standard` | -1440, -60 | Day before + hour before |
+| `day_before` | -86400 | 24 hours before due (24 * 60 * 60) |
+| `hour_before` | -3600 | 1 hour before due (60 * 60) |
+| `15_minutes` | -900 | 15 minutes before due (15 * 60) |
+| `week_before` | -604800 | 7 days before due (7 * 24 * 60 * 60) |
+| `standard` | -86400, -3600 | Day before + hour before |
 
 ### Important Constraints
 
-1. **`removeNotification()` takes an object, not an index** - must retrieve `task.notifications[index]` first and pass the notification object to `task.removeNotification()`
-2. **`relativeFireOffset` is in MINUTES** - not seconds. `addNotification(Number)` also uses minutes.
-3. **Negative offsets = before due date** - this is the OmniFocus convention. -60 means "60 minutes before due".
-4. **`absoluteFireDate` is writable** - this is the mechanism for snoozing. Setting it changes when the notification fires.
-5. **`isSnoozed` is read-only** - becomes true automatically when `absoluteFireDate` is changed on a relative notification.
-6. **`repeatInterval` is in seconds** - different unit from `relativeFireOffset` (minutes). Read-only; editing repeat intervals is out of scope.
-7. **Notification indices shift after removal** - removing notification at index 1 causes the former index 2 to become index 1. Users should re-list after removal.
-8. **DeferRelative notifications** - created by OmniFocus when defer dates exist. `list_notifications` reports them but `add_notification` does not create them.
+1. **`removeNotification()` takes an object, not an index** — must retrieve `task.notifications[index]` first and pass the notification object to `task.removeNotification()`
+2. **`addNotification(Number)` uses SECONDS** — per official code examples (-300 = 5min, -3600 = 1hr, -86400 = 1day). ⚠️ Verify in Script Editor during plan phase.
+3. **`absoluteFireDate` ONLY works on Absolute kind** — getting or setting throws on DueRelative/DeferRelative. Use `initialFireDate` for universal fire date access.
+4. **`relativeFireOffset` ONLY works on relative kinds** — getting or setting throws on Absolute. Access conditionally based on `kind`.
+5. **Negative offsets = before due date** — this is the OmniFocus convention. -3600 means "1 hour before due".
+6. **`absoluteFireDate` is writable (Absolute only)** — this is the mechanism for snoozing. Setting it changes when the notification fires.
+7. **`isSnoozed` is read-only** — becomes true automatically when `absoluteFireDate` is changed on an Absolute notification.
+8. **`repeatInterval` is in seconds** — read-only; editing repeat intervals is out of scope.
+9. **Notification indices shift after removal** — removing notification at index 1 causes the former index 2 to become index 1. Users should re-list after removal.
+10. **DeferRelative notifications** — created by OmniFocus when defer dates exist. `list_notifications` reports them but `add_notification` does not create them.
+11. **`initialFireDate` is the universal fire date** — read-only, works for all kinds. For relative notifications, dynamically adjusts when due/defer dates change.
 
 ---
 

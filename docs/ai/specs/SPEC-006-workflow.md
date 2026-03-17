@@ -10,7 +10,7 @@
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 46 FRs, 5 user stories, 10 SCs, 0 clarifications |
-| Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
+| Clarify | `/speckit.clarify` | ✅ Complete | 4 clarifications via OmniJS API research; 5 critical spec corrections |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
@@ -166,8 +166,16 @@ GTD practitioners using AI assistants to manage OmniFocus tasks who need reminde
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | OmniJS API | | |
-| 2 | Error Handling | | |
+| 1 | OmniJS API | 4 (2 user-answered, 2 resolved by docs) | 5 critical spec corrections (see below) |
+| 2 | Error Handling | 0 (all already covered) | No ambiguities — all 4 focus areas pre-addressed in spec |
+
+#### Critical Corrections from OmniJS API Research
+
+1. **`absoluteFireDate` is Absolute-kind-only** — throws on relative notifications. Spec updated: FR-004 split into FR-004/004a/004b with kind-conditional fields. `initialFireDate` is now the universal fire date.
+2. **`relativeFireOffset` is relative-kind-only** — throws on Absolute. Spec updated: conditional access based on `kind`.
+3. **Unit is SECONDS, not minutes** — official code examples + task-notifications.html confirm. All preset values updated (e.g., day_before: -86400 sec). `offsetMinutes` renamed to `offsetSeconds`.
+4. **Snooze restricted to Absolute kind** — `absoluteFireDate` setter throws on relative. FR-037a added. New error message for snooze on relative notifications.
+5. **Positive offsets are valid** — official docs explicitly support "before (negative) or after (positive)" offsets.
 
 ---
 
