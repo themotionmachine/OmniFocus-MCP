@@ -47,7 +47,8 @@ implementation phases.
 | 17    | **Deep Links & URLs** (OF4.5)  | 3     | Pending  |
 | 18    | **Pasteboard & Clipboard**     | 3     | Pending  |
 | 19    | **Document & Sync**            | 4     | Pending  |
-| 20    | **MCP Optimization**           | 8     | Pending  |
+| 20    | **Server Optimization**        | 3     | Pending  |
+| 21    | **Plugin & GTD Skills**        | 6 skills | Pending  |
 
 ### Key New Features
 
