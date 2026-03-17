@@ -19,7 +19,7 @@ import { z } from 'zod';
 import { type Position, PositionSchema } from './shared/index.js';
 
 // Re-export for backward compatibility
-export { PositionSchema, type Position };
+export { type Position, PositionSchema };
 
 /**
  * Input Schema for add_folder

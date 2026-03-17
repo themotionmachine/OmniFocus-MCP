@@ -27,9 +27,9 @@
 import { z } from 'zod';
 import { type DisambiguationError, DisambiguationSchema } from './shared/index.js';
 
+export type { DisambiguationError as RemoveFolderDisambiguationError };
 // Re-export disambiguation schema for backward compatibility
 export { DisambiguationSchema as RemoveFolderDisambiguationSchema };
-export type { DisambiguationError as RemoveFolderDisambiguationError };
 
 /**
  * Input Schema for remove_folder

@@ -29,9 +29,9 @@
 import { z } from 'zod';
 import { type DisambiguationError, DisambiguationSchema } from './shared/index.js';
 
+export type { DisambiguationError as EditFolderDisambiguationError };
 // Re-export disambiguation schema for backward compatibility
 export { DisambiguationSchema as EditFolderDisambiguationSchema };
-export type { DisambiguationError as EditFolderDisambiguationError };
 
 /**
  * Input Schema for edit_folder

@@ -39,10 +39,9 @@ import {
   PositionSchema
 } from './shared/index.js';
 
-// Re-export for backward compatibility
-export { PositionSchema, type Position };
-export { DisambiguationSchema as MoveFolderDisambiguationSchema };
 export type { DisambiguationError as MoveFolderDisambiguationError };
+// Re-export for backward compatibility
+export { DisambiguationSchema as MoveFolderDisambiguationSchema, type Position, PositionSchema };
 
 /**
  * Input Schema for move_folder

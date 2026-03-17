@@ -17,7 +17,7 @@ import { z } from 'zod';
 import { type Folder, FolderSchema } from './shared/index.js';
 
 // Re-export shared Folder schema for backward compatibility
-export { FolderSchema, type Folder };
+export { type Folder, FolderSchema };
 
 /**
  * Input Schema for list_folders
