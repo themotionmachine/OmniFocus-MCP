@@ -56,7 +56,7 @@
 |-------|-------|
 | **Spec ID** | SPEC-013 |
 | **Name** | Task Status & Completion |
-| **Branch** | `013-task-status` |
+| **Branch** | `worktree-013-task-status` |
 | **Dependencies** | None (Phases 0-5 complete) |
 | **Enables** | None |
 | **Priority** | P1 |
@@ -358,7 +358,7 @@ For each task:
 1. pnpm install
 2. pnpm build (verify clean)
 3. pnpm test (verify baseline)
-4. Branch: 013-task-status
+4. Branch: worktree-013-task-status
 
 ### Implementation Notes
 - Mirror review-tools pattern for batch contract structure
