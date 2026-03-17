@@ -9,7 +9,7 @@
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit.specify` | ⏳ Pending | |
+| Specify | `/speckit.specify` | ✅ Complete | 46 FRs, 5 user stories, 10 SCs, 0 clarifications |
 | Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
@@ -124,13 +124,25 @@ GTD practitioners using AI assistants to manage OmniFocus tasks who need reminde
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | 6 |
-| Acceptance Criteria | |
+| Functional Requirements | FR-001 through FR-046 (46 total) |
+| User Stories | 5 (2x P1, 2x P2, 1x P3) |
+| Acceptance Scenarios | 24 across all stories |
+| Success Criteria | SC-001 through SC-010 |
+| NEEDS CLARIFICATION | 0 (resolved via informed assumptions) |
+| Checklist | All items passing |
+
+### Key Design Decisions
+
+- Per-task only — no batch operations across tasks (AI assistants loop if needed)
+- Index-based notification identification (0-based, matching `task.notifications` order)
+- Additive presets — `add_standard_notifications` appends, never clears existing
+- Absolute snooze — `snooze_notification` takes ISO 8601 target time
+- No DeferRelative creation — `list_notifications` reports them, creation is OmniFocus-internal
 
 ### Files Generated
 
-- [ ] `specs/006-notifications/spec.md`
+- [x] `specs/006-notifications/spec.md`
+- [x] `specs/006-notifications/checklists/requirements.md`
 
 ---
 
