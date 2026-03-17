@@ -140,7 +140,7 @@ export function generateGetProjectScript(params: GetProjectInput): string {
         return { id: t.id.primaryKey, name: t.name };
       }),
       taskCount: project.task.children.length,
-      remainingCount: project.task.children.filter(function(t) { return !t.completed; }).length
+      remainingCount: project.task.children.filter(function(t) { return t.taskStatus !== Task.Status.Completed && t.taskStatus !== Task.Status.Dropped; }).length
     };
 
     return JSON.stringify({ success: true, project: result });

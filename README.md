@@ -32,7 +32,7 @@ implementation phases.
 | 2     | Tags                           | 6     | Complete |
 | 3     | **Tasks (Enhanced)**           | 4     | Complete |
 | 4     | **Projects**                   | 6     | Complete |
-| 5     | **Review System**              | 3     | Pending  |
+| 5     | **Review System**              | 3     | Complete |
 | 6     | Notifications                  | 5     | Pending  |
 | 7     | Repetition                     | 5     | Pending  |
 | 8     | **Perspectives**               | 5     | Pending  |
@@ -715,6 +715,66 @@ Parameters:
 
 Note: Must specify either targetFolderId, targetFolderName, or root: true.
 Cannot specify both targetFolder and root.
+
+### `get_projects_for_review` ⭐ NEW
+
+Query projects due for GTD periodic review with filtering by date, folder, and
+status. Returns projects sorted by most overdue first.
+
+Parameters:
+
+- `includeFuture`: (Optional) Include upcoming reviews, not just overdue (default: false)
+- `futureDays`: (Optional) Days ahead to look when includeFuture is true (default: 7)
+- `folderId`: (Optional) Scope results to a folder hierarchy by ID
+- `folderName`: (Optional) Scope results to a folder hierarchy by name
+- `includeAll`: (Optional) Return all reviewable projects regardless of date (default: false)
+- `includeInactive`: (Optional) Include Done/Dropped projects (default: false)
+- `limit`: (Optional) Maximum projects to return (default: 100, max: 1000)
+
+Returns: Array of projects with id, name, status, flagged, reviewInterval,
+lastReviewDate, nextReviewDate, and remainingCount. Includes totalCount,
+dueCount, and upcomingCount summary fields.
+
+### `mark_reviewed` ⭐ NEW
+
+Mark one or more projects as reviewed, advancing nextReviewDate by the
+configured review interval. Supports batch operations with per-item results.
+
+Parameters:
+
+- `projects`: Array of project identifiers (1-100 items), each with:
+  - `id`: (Optional) Project ID (takes precedence over name)
+  - `name`: (Optional) Project name (used if no ID provided)
+
+Note: At least one of `id` or `name` must be provided per project. Uses
+Calendar/DateComponents API for date calculations — correctly handles month
+boundaries, leap years, and DST transitions. Returns disambiguation error
+if a name matches multiple projects.
+
+Returns: Per-item results with previousNextReviewDate and newNextReviewDate,
+plus summary with total/succeeded/failed counts.
+
+### `set_review_interval` ⭐ NEW
+
+Configure the review frequency for one or more projects, or disable reviews
+by setting interval to null. Supports batch operations.
+
+Parameters:
+
+- `projects`: Array of project identifiers (1-100 items), each with:
+  - `id`: (Optional) Project ID (takes precedence over name)
+  - `name`: (Optional) Project name (used if no ID provided)
+- `interval`: Review interval object or null to disable:
+  - `steps`: Positive integer 1-365
+  - `unit`: One of 'days', 'weeks', 'months', 'years'
+- `recalculateNextReview`: (Optional) Reset nextReviewDate to today + interval (default: false)
+
+Note: When setting an interval on a project that has no nextReviewDate, or when
+recalculateNextReview is true, nextReviewDate is set to today + interval.
+When disabling (null), the project will no longer appear in review queries.
+
+Returns: Per-item results with previousInterval and newInterval, plus summary
+with total/succeeded/failed counts.
 
 ## Development
 

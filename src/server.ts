@@ -21,12 +21,14 @@ import * as editProjectTool from './tools/definitions/editProject.js';
 import * as editTagTool from './tools/definitions/editTag.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
 import * as getProjectTool from './tools/definitions/getProject.js';
+import * as getProjectsForReviewTool from './tools/definitions/getProjectsForReview.js';
 import * as getTaskTool from './tools/definitions/getTask.js';
 import * as listFoldersTool from './tools/definitions/listFolders.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
 import * as listProjectsTool from './tools/definitions/listProjects.js';
 import * as listTagsTool from './tools/definitions/listTags.js';
 import * as listTasksTool from './tools/definitions/listTasks.js';
+import * as markReviewedTool from './tools/definitions/markReviewed.js';
 import * as moveFolderTool from './tools/definitions/moveFolder.js';
 import * as moveProjectTool from './tools/definitions/moveProject.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
@@ -34,6 +36,7 @@ import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as removeTagsTool from './tools/definitions/removeTags.js';
 import * as setPlannedDateTool from './tools/definitions/setPlannedDate.js';
+import * as setReviewIntervalTool from './tools/definitions/setReviewInterval.js';
 import { logger } from './utils/logger.js';
 
 // Create an MCP server
@@ -259,6 +262,28 @@ server.tool(
   'Move a project to a different folder or to the library root. Supports ID or name lookup with disambiguation, and precise positioning (beginning/ending or before/after a sibling project).',
   moveProjectTool.schema.shape,
   moveProjectTool.handler
+);
+
+// Phase 5 Review System Tools
+server.tool(
+  'get_projects_for_review',
+  'Query projects due for GTD periodic review with filtering by date, folder, and status. Returns projects sorted by review urgency (most overdue first).',
+  getProjectsForReviewTool.schema.shape,
+  getProjectsForReviewTool.handler
+);
+
+server.tool(
+  'mark_reviewed',
+  'Mark one or more projects as reviewed, advancing nextReviewDate by the configured review interval. Supports batch operations with per-item success/failure reporting.',
+  markReviewedTool.schema.shape,
+  markReviewedTool.handler
+);
+
+server.tool(
+  'set_review_interval',
+  'Configure the review frequency for one or more projects, or disable reviews by setting interval to null. Supports batch operations with per-item results.',
+  setReviewIntervalTool.schema.shape,
+  setReviewIntervalTool.handler
 );
 
 // Start the MCP server

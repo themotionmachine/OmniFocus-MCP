@@ -81,7 +81,7 @@ reliability.
 | Build | tsup | 8.5+ |
 | Test | Vitest | 4.0+ |
 | Lint/Format | Biome | 2.3+ |
-| MCP SDK | @modelcontextprotocol/sdk | 1.24.3 |
+| MCP SDK | @modelcontextprotocol/sdk | 1.27.1 |
 | Validation | Zod | 4.1.x |
 
 ## Common Gotchas
@@ -207,6 +207,20 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - You've tested OmniJS scripts independently
 
 ## Recent Changes
+- 005-review-system: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
+
+- **Phase 5 Review System (Implementation Complete)**: Review System fully implemented (2026-03-16)
+  - 3 new tools: `get_projects_for_review`, `mark_reviewed`, `set_review_interval`
+  - `get_projects_for_review`: Query overdue/upcoming reviews with 6 filter params, pagination, sort
+  - `mark_reviewed`: Batch mark projects reviewed, advancing nextReviewDate via Calendar API
+  - `set_review_interval`: Configure review frequency or disable reviews; value object semantics
+  - All date calculations use Calendar/DateComponents API (no millisecond math)
+  - Critical constraint: No `markReviewed()` method — sets `nextReviewDate` directly
+  - `lastReviewDate` is READ-ONLY; `nextReviewDate` is WRITABLE
+  - Full TDD implementation with 214 new tests (contract + unit)
+  - Total: 1922 tests across 90 test files (was 1708 across 83)
+  - Contracts in `src/contracts/review-tools/` with shared schemas
+  - Integration test scaffold for OmniFocus round-trip verification
 
 - **Test Coverage (2025-12-12)**: Test coverage gaps filled with 10 new test files
   - Total: 1708 tests across 83 test files
@@ -214,9 +228,7 @@ Domain-specific rules in `.claude/rules/` load automatically:
   - Added 1 integration test (deleteProject cascade deletion verification)
   - All integration tests passing with recent bug fixes
 
-- 003-tasks: Added TypeScript 5.9+ with strict mode (`ES2024` target)
 
-- **Phase 4 Projects (Complete)**: Full project management tools (2025-12-12)
   - `list_projects`: Comprehensive filtering (folder, status, review status, dates)
   - `get_project`: Full project details with 30 properties
   - `create_project`: Create with folder placement, type settings, review intervals
@@ -228,7 +240,6 @@ Domain-specific rules in `.claude/rules/` load automatically:
   - Review status filtering for GTD workflows ('due', 'upcoming', 'any')
   - Project type mutual exclusion: containsSingletonActions wins over sequential
 
-- **Phase 3 Tasks (Enhanced)**: Completed enhanced task management tools (2025-12-11)
   - `list_tasks`: Comprehensive task filtering (project, folder, tags, status, dates)
   - `get_task`: Full task details by ID or name with disambiguation
   - `set_planned_date`: Set/clear planned dates (OmniFocus v4.7+ feature)
@@ -237,13 +248,11 @@ Domain-specific rules in `.claude/rules/` load automatically:
   - Full TDD implementation with 325+ tests (contract + unit)
   - Server-side OmniJS filtering for performance
 
-- **Phase 2 Tags**: Completed tag management tools (2025-12-11)
   - `list_tags`, `create_tag`, `edit_tag`, `delete_tag`, `assign_tags`, `remove_tags`
   - Full hierarchy support with parent/child relationships
   - Batch operations with per-item results for assign/remove
   - Disambiguation support for name-based lookups
   - Full TDD implementation with 150+ tests
-- **Phase 1 Folders**: Completed folder management tools (2025-12-10)
   - `list_folders`, `add_folder`, `edit_folder`, `remove_folder`, `move_folder`
   - All primitives use pure Omni Automation JavaScript (OmniJS)
   - Established OmniJS-first architecture pattern for future tools
@@ -287,6 +296,8 @@ This requires refactoring from `McpServer` to the low-level `Server` class.
 See [MCP logging spec](https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/logging).
 
 ## Active Technologies
+- TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+ (005-review-system)
+- N/A (OmniFocus internal database via OmniJS) (005-review-system)
 
 - TypeScript 5.9+ with strict mode (`ES2024` target) (003-tasks)
 - N/A (interfaces with OmniFocus via OmniJS execution) (003-tasks)
