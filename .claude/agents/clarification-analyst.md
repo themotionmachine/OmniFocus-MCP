@@ -228,15 +228,13 @@ Provide summary:
 **Input:** Specification documents, user context
 **Output:** Clarification report, updated specification sections
 
-**Research Delegation:**
+**Research Tools:**
 
-When clarifying technical requirements, PROACTIVELY delegate to the `research-specialist` agent for:
+When clarifying technical requirements, use these MCP tools directly:
 
-- API capabilities and limitations (e.g., "What are the rate limits for this service?")
-- Technical constraints research (e.g., "What are browser storage limits?")
-- Standard patterns for edge cases (e.g., "How do others handle concurrent edits?")
-- Security best practices (e.g., "What authentication patterns are recommended?")
-- Performance benchmarks and expectations
+- `mcp__context7__resolve-library-id` + `mcp__context7__get-library-docs` — API capabilities and library constraints
+- `mcp__tavily-mcp__tavily-search` — Technical constraints, standard patterns, security best practices
+- `mcp__tavily-mcp__tavily-extract` — Pull specific OmniFocus or MCP SDK documentation pages
 
 ## Anti-Patterns
 

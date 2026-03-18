@@ -178,15 +178,13 @@ Present completed specification with:
 - `/speckit.clarify` for ambiguities
 - `clarification-analyst` agent for complex Q&A
 
-**Research Delegation:**
+**Research Tools:**
 
-When you need additional context during specification writing, PROACTIVELY delegate to the `research-specialist` agent for:
+When you need additional context during specification writing, use these MCP tools directly:
 
-- Library/framework documentation (e.g., "What APIs does Motion for React provide?")
-- AWS service capabilities (e.g., "What are CloudFront's caching options?")
-- Best practices and patterns (e.g., "How do others implement newsletter signup?")
-- Technical comparisons (e.g., "Pros/cons of different form validation approaches")
-- Implementation examples from the community
+- `mcp__context7__resolve-library-id` + `mcp__context7__get-library-docs` — Library and framework documentation
+- `mcp__tavily-mcp__tavily-search` — Best practices, technical comparisons, community patterns
+- `mcp__tavily-mcp__tavily-extract` — Pull specific documentation pages (e.g., omni-automation.com)
 
 ## Output Format
 

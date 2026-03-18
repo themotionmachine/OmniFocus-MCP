@@ -243,15 +243,13 @@ Phase 4 (Parallel Polish):
 **Input:** Implementation plan (`plan.md`)
 **Output:** Task list (`tasks.md`)
 
-**Research Delegation:**
+**Research Tools:**
 
-When decomposing tasks, PROACTIVELY delegate to the `research-specialist` agent for:
+When decomposing tasks, use these MCP tools directly for research:
 
-- **Effort Estimation**: Research complexity of unfamiliar technologies or integrations
-- **Dependency Discovery**: Look up library dependencies and peer requirements
-- **Implementation Patterns**: Find examples of similar implementations for task breakdown
-- **Technical Constraints**: Research limitations that may affect task ordering
-- **Boilerplate Requirements**: Identify setup/configuration tasks from documentation
+- `mcp__context7__resolve-library-id` + `mcp__context7__get-library-docs` — Look up library APIs and dependencies
+- `mcp__tavily-mcp__tavily-search` — Find implementation patterns, community examples, and technical constraints
+- `mcp__tavily-mcp__tavily-extract` — Pull specific documentation pages for detailed reference
 
 ## Anti-Patterns
 

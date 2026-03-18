@@ -8,7 +8,7 @@ paths:
 
 ## SDK Version
 
-- Using @modelcontextprotocol/sdk 1.24.3
+- Using @modelcontextprotocol/sdk 1.27.x
 - Check Context7 for latest API changes before major modifications
 
 ## Tool Registration
@@ -23,7 +23,7 @@ server.tool("tool_name", schema, async (params, extra) => {
 
 ## Handler Signatures
 
-- SDK 1.15.x+ requires: `RequestHandlerExtra<ServerRequest, ServerNotification>`
+- `RequestHandlerExtra<ServerRequest, ServerNotification>` requires both type parameters
 - Always include both type parameters
 
 ## Response Format
@@ -39,6 +39,6 @@ server.tool("tool_name", schema, async (params, extra) => {
 
 ## Common SDK Gotchas
 
-- `RequestHandlerExtra` requires 2 type params in SDK 1.15.x+
+- `RequestHandlerExtra` requires 2 type params
 - Use `"moduleResolution": "NodeNext"` to avoid infinite type recursion
 - Legacy `"moduleResolution": "node"` causes type issues
