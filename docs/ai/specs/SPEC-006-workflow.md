@@ -15,7 +15,7 @@
 | Checklist | `/speckit.checklist` | ✅ Complete | api-workaround ✅ (30/30, 1 Script Editor), type-safety ✅ (40/40), requirements ✅ (existing) |
 | Tasks | `/speckit.tasks` | ✅ Complete | 49 tasks, 8 phases, 4 parallel stories, 5 US covered |
 | Analyze | `/speckit.analyze` | ✅ Complete | 10 findings (1 CRITICAL fixed), 97.9% FR coverage → 100% after remediation |
-| Implement | `/speckit.implement` | ⏳ Pending | |
+| Implement | `/speckit.implement` | ✅ Complete | 49/49 tasks, 240 new tests + 13 e2e, 5 tools registered, PR #40 merged |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -410,27 +410,27 @@ For each task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | |
-| 2 - List Notifications | | | |
-| 3 - Add Notification | | | |
-| 4 - Remove Notification | | | |
-| 5 - Standard Notifications | | | |
-| 6 - Snooze Notification | | | |
-| 7 - Integration | | | |
+| 1 - Foundation | 7 | 7 | Contracts, shared schemas |
+| 2 - List Notifications | 7 | 7 | Kind-conditional fields |
+| 3 - Add Notification | 7 | 7 | Absolute + relative |
+| 4 - Remove Notification | 7 | 7 | Index-to-object translation |
+| 5 - Standard Notifications | 7 | 7 | Preset patterns (day_before, standard, etc.) |
+| 6 - Snooze Notification | 7 | 7 | absoluteFireDate postpone |
+| 7 - Integration | 7 | 7 | 13 e2e tests, server registration |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] `pnpm lint` passes
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm test` passes (all existing + new)
-- [ ] `pnpm build` succeeds
-- [ ] OmniJS scripts verified in Script Editor
-- [ ] Manual OmniFocus verification
-- [ ] PR created targeting `main`
-- [ ] CLAUDE.md updated with phase status
+- [x] All tasks marked complete in tasks.md
+- [x] `pnpm lint` passes
+- [x] `pnpm typecheck` passes
+- [x] `pnpm test` passes (240 new + 13 e2e)
+- [x] `pnpm build` succeeds
+- [x] OmniJS scripts verified in Script Editor
+- [x] Manual OmniFocus verification
+- [x] PR #40 created and merged to `main`
+- [x] CLAUDE.md updated with phase status
 
 ---
 
