@@ -11,8 +11,8 @@
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 46 FRs, 5 user stories, 10 SCs, 0 clarifications |
 | Clarify | `/speckit.clarify` | ✅ Complete | 4 clarifications via OmniJS API research; 5 critical spec corrections |
-| Plan | `/speckit.plan` | ⏳ Pending | |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
+| Plan | `/speckit.plan` | ✅ Complete | 7 phases, 5 contracts, constitution pass, all research resolved |
+| Checklist | `/speckit.checklist` | ✅ Complete | api-workaround ✅ (30/30, 1 Script Editor), type-safety ✅ (40/40), requirements ✅ (existing) |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
@@ -102,11 +102,11 @@ GTD practitioners using AI assistants to manage OmniFocus tasks who need reminde
 ### Technical Context from Master Plan
 - 5 MCP tools: list_notifications, add_notification, remove_notification, add_standard_notifications, snooze_notification
 - OmniJS APIs: task.notifications, task.addNotification(dateOrOffset), task.removeNotification(notificationObject)
-- relativeFireOffset is in MINUTES (not seconds)
-- addNotification(Number) also takes minutes
-- Task.Notification.Kind: Absolute, DueRelative, DeferRelative, Unknown
+- relativeFireOffset and addNotification(Number) both use SECONDS (OF-API docs say "minutes" — confirmed documentation error via code examples and task-notifications.html)
+- Task.Notification.Kind: Absolute, DueRelative, Unknown (official enum). DeferRelative exists at runtime but NOT in official enum — verify in Script Editor.
 - remove_notification takes index in MCP contract but must retrieve object internally via task.notifications[index]
-- Presets: day_before (-1440 min), hour_before (-60 min), 15_minutes (-15 min), week_before (-10080 min), standard (day + hour)
+- Presets: day_before (-86400 sec), hour_before (-3600 sec), 15_minutes (-900 sec), week_before (-604800 sec), standard (day + hour)
+- Pre-condition for relative notifications: checks task.effectiveDueDate (not task.dueDate)
 - snooze_notification sets absoluteFireDate on existing notification
 
 ### Constraints
@@ -207,18 +207,26 @@ GTD practitioners using AI assistants to manage OmniFocus tasks who need reminde
 ## Architecture Notes
 - Mirror existing patterns from review-tools (005) or task-tools (003)
 - Notification removal requires object reference, not index — primitive must handle translation
-- relativeFireOffset in minutes (OmniFocus convention)
+- relativeFireOffset and addNotification(Number) use SECONDS (OF-API "minutes" is a doc error)
+- Pre-condition: task.effectiveDueDate (not task.dueDate) for relative notifications
 ```
 
 ### Plan Results
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | |
-| `research.md` | ⏳ | OmniJS notification API research |
-| `data-model.md` | ⏳ | Notification entities |
-| `contracts/` | ⏳ | 5 tool contracts |
-| `quickstart.md` | ⏳ | |
+| `plan.md` | ✅ | 7 implementation phases, constitution check, risk register |
+| `research.md` | ✅ | 6 decisions: unit=seconds, kind-conditional, snooze scope, stdin exec |
+| `data-model.md` | ✅ | NotificationOutput entity, kind enum, property access rules |
+| `contracts/` | ✅ | Schema designs for all 5 tools + shared schemas |
+| `quickstart.md` | ✅ | Copy-paste templates, gotchas, verification checklist |
+
+### Key Architecture Decisions
+
+- `executeOmniJS()` via stdin (not temp files — matches actual codebase pattern)
+- Unit is SECONDS for `addNotification(Number)` and `relativeFireOffset` (⚠️ verify in Script Editor)
+- Kind-conditional property access: check `kind` before accessing `absoluteFireDate`/`relativeFireOffset`
+- Reuse TaskIdentifier and DisambiguationError patterns from task-tools
 
 ---
 
@@ -228,7 +236,7 @@ GTD practitioners using AI assistants to manage OmniFocus tasks who need reminde
 
 | Signal | Domain | Justification |
 |--------|--------|---------------|
-| OmniJS notification API workarounds | **api-workaround** | Index-to-object translation, minutes convention |
+| OmniJS notification API workarounds | **api-workaround** | Index-to-object translation, seconds convention, effectiveDueDate, DeferRelative enum |
 | Input validation (dates, indices, presets) | **type-safety** | Zod contracts, edge cases |
 | Requirements coverage | **requirements** | Ensure all 6 user stories covered |
 
@@ -276,9 +284,18 @@ Focus on Notifications requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-workaround | | | |
-| type-safety | | | |
-| requirements | | | |
+| api-workaround | 30 | 1 open (CHK013: invalid Date — undocumented) | FR-007, FR-013, FR-021, FR-030, FR-037a, FR-046 |
+| type-safety | 40 | 0 (all remediated) | FR-001, FR-010-016, FR-019-020, FR-027-028, FR-035-039 |
+| requirements | ✅ (existing) | 0 | All items passing |
+
+**API Workaround Key Findings** (remediated via Tavily research of official OmniAutomation docs):
+
+- `effectiveDueDate` (not `dueDate`) is the correct pre-condition — API explicitly states this
+- `DeferRelative` NOT in official `Task.Notification.Kind` enum — only Absolute, DueRelative, Unknown listed
+- Index OOB → JS `undefined` → OmniJS error; pre-validation required
+- Seconds/minutes contingency plan documented (extremely unlikely to be minutes based on evidence)
+- 1 item requires Script Editor verification: invalid Date behavior (CHK013) — OmniJS behavior undocumented
+- DeferRelative enum handling addressed in plan.md with dual detection strategy (CHK030 ✅)
 
 ---
 
@@ -421,7 +438,7 @@ For each task:
 
 ## Project Structure Reference
 
-```
+```text
 omnifocus-mcp/
 ├── src/
 │   ├── server.ts                    # MCP server entry point

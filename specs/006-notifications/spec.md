@@ -39,6 +39,16 @@ Phase 6 adds dedicated notification management tools for per-task reminders.
 - Q: `addNotification(Number)` code examples use seconds but `relativeFireOffset` docs say "minutes" — which unit? → A: Both use SECONDS (same unit). Evidence: (1) official Task-to-Project script passes `relativeFireOffset` directly to `addNotification()` with no conversion; (2) task-notifications.html explicitly states "provide a positive or negative integer, indicating the number of **seconds**". The "minutes" in the relativeFireOffset API docs is incorrect. Still flag for Script Editor verification during plan phase.
 - Q: Should `add_notification` accept positive `offsetSeconds` values (after due date)? → A: Yes, per official docs: "provide a positive or negative integer, indicating the number of seconds before (negative), or after (positive), to due date/time". Accept any finite number.
 
+### Session 2026-03-17 (API Workaround Research)
+
+- Q: Should the pre-condition check for relative notifications use `effectiveDueDate` or `dueDate`? → A: **`effectiveDueDate`**. The official API explicitly states: "Specifying a due relative notification when this task's **effectiveDueDate** is not set will result in an error." `effectiveDueDate` includes inherited due dates from containing projects/groups; `dueDate` is task-local only. Note: official code examples use `task.dueDate` for guard checks, but the API validates `effectiveDueDate` internally.
+- Q: Is `DeferRelative` a documented value in `Task.Notification.Kind`? → A: **No.** The official `Task.Notification.Kind` enum lists only 3 values: `Absolute`, `DueRelative`, `Unknown`. DeferRelative is NOT listed. However, `relativeFireOffset` docs say it works for "DueRelative or DeferRelative", and `initialFireDate` docs reference "defer-relative notifications". The official Task-to-Project script only handles Absolute and DueRelative (skips DeferRelative entirely). DeferRelative likely exists at runtime but is undocumented. **⚠️ Verify `Task.Notification.Kind.DeferRelative` exists in Script Editor.**
+- Q: What happens if `task.notifications[index]` is out of bounds? → A: JavaScript returns `undefined`. Passing `undefined` to `removeNotification()` throws an OmniJS error per docs: "Supplying a notification that is not in this task's notifications array...results in an error." Our OmniJS script pre-validates index bounds before calling `removeNotification()`.
+- Q: What is the base date for `relativeFireOffset` on DeferRelative vs DueRelative? → A: The `relativeFireOffset` docs say "from the specified date on its task" — for DueRelative this is the due date, for DeferRelative this is the defer date. The `kind` field disambiguates which base date applies.
+- Q: What if a task's due date is removed after a DueRelative notification was added? → A: Per docs, `initialFireDate` "will change with its task object's due and defer dates." OmniFocus manages this internally — the notification remains attached but its fire date adjusts. This is OmniFocus internal behavior, not managed by our tools.
+- Q: Does having a defer date (but no due date) satisfy the pre-condition for adding relative notifications? → A: **No.** The API checks `effectiveDueDate` specifically. All presets create DueRelative notifications. A task with only a defer date will fail with the "no due date" error.
+- Q: What if seconds verification reveals the unit is minutes? → A: Contingency: divide all preset offset values by 60 (e.g., -86400→-1440), rename `offsetSeconds` parameter to `offsetMinutes`, update FR-012/FR-028 accordingly. However, this is extremely unlikely given: (1) `-300` = "5-minutes Before Due" only works in seconds (300min = 5hrs), (2) Task-to-Project script passes `relativeFireOffset` to `addNotification()` without conversion.
+
 ## Assumptions
 
 - Notifications are managed per-task (not per-project). To set notifications for project tasks, the AI assistant calls the tool for each task individually.
@@ -269,7 +279,43 @@ ID, notification index, and target datetime, then verifying the notification's
 - **DeferRelative notifications**: These are created by OmniFocus when a task has
   a defer date. `list_notifications` reports them with `kind: "DeferRelative"`,
   but `add_notification` does not support creating them (OmniFocus manages these
-  internally).
+  internally). **⚠️ `DeferRelative` is NOT in the official `Task.Notification.Kind`
+  enum (only Absolute, DueRelative, Unknown are listed). Verify
+  `Task.Notification.Kind.DeferRelative` exists in Script Editor. If it does not
+  exist, DeferRelative notifications may report as "Unknown" kind.**
+
+- **Index out of bounds for remove/snooze**: JavaScript `task.notifications[index]`
+  returns `undefined` for out-of-bounds indices. Passing `undefined` to
+  `removeNotification()` throws an OmniJS error ("Supplying a notification that
+  is not in this task's notifications array...results in an error"). All tools
+  MUST pre-validate index bounds in the OmniJS script before calling
+  `removeNotification()` or accessing `absoluteFireDate`.
+
+- **Due date removal after relative notification**: Per OmniJS docs,
+  `initialFireDate` "will change with its task object's due and defer dates."
+  If a task's due date is removed after a DueRelative notification was added,
+  OmniFocus manages this internally. This is out of scope for our tools (we
+  don't manage due dates through notification tools).
+
+- **Defer date without due date**: Having a defer date does NOT satisfy the
+  `effectiveDueDate` pre-condition for adding relative/preset notifications.
+  All presets create DueRelative notifications. A task with only a defer date
+  will fail with the "no due date" error.
+
+- **`effectiveDueDate` vs `dueDate`**: The OmniJS API validates
+  `effectiveDueDate` (includes inherited dates from containing projects/groups),
+  not `dueDate` (task-local only). Pre-condition checks in OmniJS scripts MUST
+  use `task.effectiveDueDate`. Official code examples use `task.dueDate` for
+  guard checks, but the API internally checks `effectiveDueDate`.
+
+- **`relativeFireOffset` base date**: For DueRelative notifications, the offset
+  is relative to the task's due date. For DeferRelative, relative to the defer
+  date. The `kind` field in the response disambiguates which base date applies.
+
+- **String escaping in OmniJS**: All user-provided strings (task names, datetime
+  strings) interpolated into OmniJS scripts MUST be escaped via `escapeForJS()`
+  to prevent injection and syntax errors. This follows the established pattern
+  in existing primitives.
 
 ---
 
@@ -285,7 +331,7 @@ ID, notification index, and target datetime, then verifying the notification's
 - **FR-004b**: When `kind` is "DueRelative" or "DeferRelative", notification object MUST additionally include `relativeFireOffset` (number, in seconds — same unit as `addNotification(Number)`; **⚠️ verify in Script Editor during plan phase**)
 - **FR-005**: Tool MUST return `count` indicating total number of notifications
 - **FR-006**: Tool MUST return `taskId` and `taskName` in the response for context
-- **FR-007**: `kind` MUST be one of: "Absolute", "DueRelative", "DeferRelative", "Unknown"
+- **FR-007**: `kind` MUST be one of: "Absolute", "DueRelative", "DeferRelative", "Unknown". Note: the official `Task.Notification.Kind` enum only documents Absolute, DueRelative, and Unknown. DeferRelative exists at runtime but is not in the official enum listing. **⚠️ Verify `Task.Notification.Kind.DeferRelative` in Script Editor.**
 - **FR-008**: Tool MUST return notifications in the same order as `task.notifications` array (index 0 = first notification)
 
 ### Functional Requirements - add_notification
@@ -294,9 +340,9 @@ ID, notification index, and target datetime, then verifying the notification's
 - **FR-010**: Tool MUST accept `type` parameter: "absolute" or "relative"
 - **FR-011**: When `type: "absolute"`, Tool MUST accept `dateTime` as ISO 8601 string
 - **FR-012**: When `type: "relative"`, Tool MUST accept `offsetSeconds` as number (negative = before due; unit is seconds per OmniJS code examples)
-- **FR-013**: When `type: "relative"`, Tool MUST return error if task has no due date
+- **FR-013**: When `type: "relative"`, Tool MUST return error if task's `effectiveDueDate` is null (includes inherited due dates from containing projects)
 - **FR-014**: Tool MUST return the added notification details including its index in the notification array
-- **FR-015**: Tool MUST validate `dateTime` is a parseable ISO 8601 string
+- **FR-015**: Tool MUST validate `dateTime` is a parseable ISO 8601 datetime string (accepts any format parseable by JavaScript `new Date()`; follows established codebase convention — existing tools use `z.string()` with "ISO 8601" description and `new Date(str)` for parsing)
 - **FR-016**: Tool MUST validate `offsetSeconds` is a finite number
 - **FR-017**: Tool MUST return disambiguation error when `taskName` matches multiple tasks
 
@@ -317,7 +363,7 @@ ID, notification index, and target datetime, then verifying the notification's
 - **FR-027**: Tool MUST accept `preset` parameter with values: "day_before", "hour_before", "15_minutes", "week_before", "standard"
 - **FR-028**: Preset offsets MUST be: `day_before` = -86400 sec, `hour_before` = -3600 sec, `15_minutes` = -900 sec, `week_before` = -604800 sec (**⚠️ verify unit in Script Editor**)
 - **FR-029**: Preset `standard` MUST add two notifications: -86400 sec AND -3600 sec
-- **FR-030**: Tool MUST return error if task has no due date (all presets are due-relative)
+- **FR-030**: Tool MUST return error if task's `effectiveDueDate` is null (all presets are due-relative; `effectiveDueDate` includes inherited dates from containers)
 - **FR-031**: Tool MUST return details of all added notifications including their indices
 - **FR-032**: Tool MUST be additive (append to existing notifications, never clear)
 - **FR-033**: Tool MUST return disambiguation error when `taskName` matches multiple tasks
@@ -330,7 +376,8 @@ ID, notification index, and target datetime, then verifying the notification's
 - **FR-037**: Tool MUST set `absoluteFireDate` on the notification at the specified index
 - **FR-037a**: Tool MUST validate the notification at the specified index has `kind` of Absolute; return error if kind is DueRelative, DeferRelative, or Unknown (OmniJS throws when setting `absoluteFireDate` on non-Absolute notifications)
 - **FR-038**: Tool MUST validate `index` is within bounds of `task.notifications` array
-- **FR-039**: Tool MUST validate `snoozeUntil` is a parseable ISO 8601 string
+- **FR-038a**: Tool MUST return error when task has no notifications: "Task '{name}' has no notifications to snooze"
+- **FR-039**: Tool MUST validate `snoozeUntil` is a parseable ISO 8601 datetime string (accepts any format parseable by JavaScript `new Date()`; follows established codebase convention)
 - **FR-040**: Tool MUST return updated notification details after snooze
 - **FR-041**: Tool MUST support re-snoozing (snoozing an already-snoozed notification)
 - **FR-042**: Tool MUST return disambiguation error when `taskName` matches multiple tasks
@@ -367,8 +414,8 @@ ID, notification index, and target datetime, then verifying the notification's
 |----------|---------------|
 | Task not found | `Task not found: {identifier}` |
 | Multiple task matches | `Multiple tasks match '{name}'. Use ID for precision.` |
-| No due date (relative) | `Cannot add relative notification: task '{name}' has no due date` |
-| No due date (presets) | `Cannot add preset notifications: task '{name}' has no due date` |
+| No due date (relative) | `Cannot add relative notification: task '{name}' has no effective due date` |
+| No due date (presets) | `Cannot add preset notifications: task '{name}' has no effective due date` |
 | Index out of range | `Notification index {index} out of range (task has {count} notifications, valid indices: 0-{max})` |
 | No notifications | `Task '{name}' has no notifications to remove` |
 | Invalid preset | `Invalid preset: '{preset}'. Must be one of: day_before, hour_before, 15_minutes, week_before, standard` |
@@ -376,6 +423,7 @@ ID, notification index, and target datetime, then verifying the notification's
 | Invalid dateTime | `Invalid dateTime: cannot parse '{value}' as ISO 8601` |
 | Invalid offsetSeconds | `Invalid offsetSeconds: must be a finite number` |
 | Invalid snoozeUntil | `Invalid snoozeUntil: cannot parse '{value}' as ISO 8601` |
+| No notifications (snooze) | `Task '{name}' has no notifications to snooze` |
 | Snooze non-absolute | `Cannot snooze notification at index {index}: only Absolute notifications can be snoozed (this notification is {kind})` |
 
 ---
@@ -492,17 +540,20 @@ notif.absoluteFireDate = new Date("2026-04-01T14:00:00");
 
 ### Important Constraints
 
-1. **`removeNotification()` takes an object, not an index** — must retrieve `task.notifications[index]` first and pass the notification object to `task.removeNotification()`
-2. **`addNotification(Number)` uses SECONDS** — per official code examples (-300 = 5min, -3600 = 1hr, -86400 = 1day). ⚠️ Verify in Script Editor during plan phase.
-3. **`absoluteFireDate` ONLY works on Absolute kind** — getting or setting throws on DueRelative/DeferRelative. Use `initialFireDate` for universal fire date access.
-4. **`relativeFireOffset` ONLY works on relative kinds** — getting or setting throws on Absolute. Access conditionally based on `kind`.
+1. **`removeNotification()` takes an object, not an index** — must retrieve `task.notifications[index]` first and pass the notification object to `task.removeNotification()`. Out-of-bounds index returns `undefined`; passing `undefined` throws OmniJS error.
+2. **`addNotification(Number)` uses SECONDS** — per official code examples (-300 = 5min, -3600 = 1hr, -86400 = 1day). ⚠️ Verify in Script Editor during plan phase. The OF-API.html `relativeFireOffset` docs say "minutes" — this is a documentation error (confirmed: -300 = "5-minutes Before Due" only works in seconds). **Contingency if verification reveals minutes**: divide all preset offsets by 60, rename `offsetSeconds`→`offsetMinutes`.
+3. **`absoluteFireDate` ONLY works on Absolute kind** — getting or setting throws on DueRelative/DeferRelative. Use `initialFireDate` for universal fire date access. Behavior with invalid Date (e.g., NaN from unparseable string) is undocumented — ⚠️ verify in Script Editor.
+4. **`relativeFireOffset` ONLY works on relative kinds** — getting or setting throws on Absolute. Access conditionally based on `kind`. For DueRelative, offset is from due date. For DeferRelative, offset is from defer date.
 5. **Negative offsets = before due date** — this is the OmniFocus convention. -3600 means "1 hour before due".
 6. **`absoluteFireDate` is writable (Absolute only)** — this is the mechanism for snoozing. Setting it changes when the notification fires.
-7. **`isSnoozed` is read-only** — becomes true automatically when `absoluteFireDate` is changed on an Absolute notification.
+7. **`isSnoozed` is read-only** — becomes true automatically when `absoluteFireDate` is changed on an Absolute notification. This is spec-level behavior, not just an implementation detail.
 8. **`repeatInterval` is in seconds** — read-only; editing repeat intervals is out of scope.
 9. **Notification indices shift after removal** — removing notification at index 1 causes the former index 2 to become index 1. Users should re-list after removal.
-10. **DeferRelative notifications** — created by OmniFocus when defer dates exist. `list_notifications` reports them but `add_notification` does not create them.
+10. **DeferRelative notifications** — created by OmniFocus when defer dates exist. `list_notifications` reports them but `add_notification` does not create them. **⚠️ `DeferRelative` is NOT in the official `Task.Notification.Kind` enum (only Absolute, DueRelative, Unknown listed). Verify `Task.Notification.Kind.DeferRelative` exists in Script Editor. If absent, DeferRelative notifications may report as "Unknown".**
 11. **`initialFireDate` is the universal fire date** — read-only, works for all kinds. For relative notifications, dynamically adjusts when due/defer dates change.
+12. **`effectiveDueDate` is the pre-condition for relative notifications** — the API checks `effectiveDueDate` (includes inherited dates from containers), not `dueDate` (task-local). OmniJS scripts MUST use `task.effectiveDueDate` for the guard check.
+13. **String escaping is mandatory** — all user-provided strings interpolated into OmniJS scripts MUST use `escapeForJS()` to prevent injection and syntax errors.
+14. **`relativeFireOffset` base date is kind-dependent** — for DueRelative, the offset is from the due date. For DeferRelative, from the defer date. The `kind` field in the response tells the consumer which base date applies.
 
 ---
 
