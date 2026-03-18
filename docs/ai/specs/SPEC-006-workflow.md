@@ -13,8 +13,8 @@
 | Clarify | `/speckit.clarify` | ✅ Complete | 4 clarifications via OmniJS API research; 5 critical spec corrections |
 | Plan | `/speckit.plan` | ✅ Complete | 7 phases, 5 contracts, constitution pass, all research resolved |
 | Checklist | `/speckit.checklist` | ✅ Complete | api-workaround ✅ (30/30, 1 Script Editor), type-safety ✅ (40/40), requirements ✅ (existing) |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
-| Analyze | `/speckit.analyze` | ⏳ Pending | |
+| Tasks | `/speckit.tasks` | ✅ Complete | 49 tasks, 8 phases, 4 parallel stories, 5 US covered |
+| Analyze | `/speckit.analyze` | ✅ Complete | 10 findings (1 CRITICAL fixed), 97.9% FR coverage → 100% after remediation |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -238,7 +238,7 @@ GTD practitioners using AI assistants to manage OmniFocus tasks who need reminde
 |--------|--------|---------------|
 | OmniJS notification API workarounds | **api-workaround** | Index-to-object translation, seconds convention, effectiveDueDate, DeferRelative enum |
 | Input validation (dates, indices, presets) | **type-safety** | Zod contracts, edge cases |
-| Requirements coverage | **requirements** | Ensure all 6 user stories covered |
+| Requirements coverage | **requirements** | Ensure all 5 user stories covered |
 
 ### Checklist Prompts
 
@@ -274,7 +274,7 @@ Focus on Notifications requirements:
 /speckit.checklist requirements
 
 Focus on Notifications requirements:
-- All 6 user stories have functional requirements
+- All 5 user stories have functional requirements
 - Edge cases: no due date, empty notification list, invalid index
 - Batch behavior for add_standard_notifications
 - Pay special attention to: complete coverage of NotificationKind enum in list output
@@ -328,17 +328,25 @@ Focus on Notifications requirements:
 - Contracts in src/contracts/notification-tools/
 - Primitives in src/tools/primitives/
 - Definitions in src/tools/definitions/
-- Tests in tests/unit/notification-tools/ and tests/contracts/notification-tools/
+- Tests in tests/unit/notification-tools/ and tests/contract/notification-tools/
 ```
 
 ### Tasks Results
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 49 (T001–T049) |
+| **Phases** | 8 (Setup, Foundation, US1–US5, Integration) |
+| **Parallel Opportunities** | 4 stories in parallel after Foundation (US1+US2+US3+US5); US4 depends on US2 |
+| **User Stories Covered** | US1 (List P1), US2 (Add P1), US3 (Remove P2), US4 (Standard P2), US5 (Snooze P3) |
+
+### Task Decomposition Highlights
+
+- TDD mandatory: RED → GREEN → REFACTOR per story with contract + unit tests
+- Foundation phase (shared schemas) blocks all user stories
+- US4 (Standard Presets) depends on US2 (Add) OmniJS pattern; all other stories independent
+- 3 Script Editor verification gates before implementation: unit=seconds, DeferRelative enum, invalid Date
+- Parallel execution: 4 agents after Foundation, then US4 sequentially, then Integration
 
 ---
 
@@ -351,7 +359,7 @@ Focus on Notifications requirements:
 
 Focus on:
 1. Constitution alignment — Zod validation, TDD, OmniJS-first
-2. Coverage gaps — all 6 user stories and FRs have tasks
+2. Coverage gaps — all 5 user stories and FRs have tasks
 3. File path consistency with project structure
 4. Verify notification-specific edge cases covered (no due date, invalid index)
 ```
@@ -360,7 +368,13 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| F1 | CRITICAL | `tests/contracts/` path wrong (codebase uses `tests/contract/` singular) | ✅ Fixed in tasks.md, plan.md, quickstart.md, workflow files |
+| F2 | HIGH | Shared test file `shared.test.ts` should be `shared-schemas.test.ts` | ✅ Fixed in tasks.md, plan.md |
+| F3 | HIGH | `executeOmniFocusScript` in constitution/CLAUDE.md vs actual `executeOmniJS` | ℹ️ tasks.md already correct; constitution outdated (out of scope) |
+| F4 | MEDIUM | "6 user stories" referenced but spec defines 5 | ✅ Fixed in both workflow files |
+| F5 | MEDIUM | FR-045 (disambiguation candidates) not explicitly referenced | ✅ Added to all 5 unit test tasks |
+| F6 | MEDIUM | Per-tool disambiguation FRs implicit only | ✅ Covered via FR ranges + FR-045 addition |
+| F9 | LOW | T003/T004 marked [P] but target same file | ✅ Removed [P], updated parallel docs |
 
 ---
 
@@ -451,6 +465,6 @@ omnifocus-mcp/
 │       └── logger.ts                # MCP-compliant logger
 ├── tests/
 │   ├── unit/notification-tools/     # Unit tests (NEW)
-│   └── contracts/notification-tools/ # Contract tests (NEW)
+│   └── contract/notification-tools/  # Contract tests (NEW)
 └── specs/006-notifications/         # Spec artifacts (NEW)
 ```
