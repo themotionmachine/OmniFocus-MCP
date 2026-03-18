@@ -6,9 +6,9 @@ This file provides guidance to Claude Code when working with this repository.
 
 OmniFocus MCP Server bridges AI assistants with OmniFocus task management on
 macOS. It uses pure **Omni Automation JavaScript** (OmniJS) to interact with
-OmniFocus, providing tools to view, create, edit, and remove tasks, projects,
-and folders. All operations use OmniJS execution for consistency and
-reliability.
+OmniFocus, providing 50 tools across 8 domains: tasks, projects, folders, tags,
+reviews, notifications, repetition, and task status/completion. All operations
+use OmniJS execution for consistency and reliability.
 
 ## Development Philosophy
 
@@ -53,12 +53,16 @@ reliability.
 | Command | Description |
 |---------|-------------|
 | `pnpm install` | Install dependencies |
-| `pnpm build` | Compile TypeScript and copy OmniJS scripts |
-| `pnpm dev` | Watch mode (auto-recompile) |
+| `pnpm build` | Compile TypeScript to `dist/` |
+| `pnpm start` | Run the compiled server |
+| `pnpm dev` | Watch mode (auto-recompile via tsx) |
 | `pnpm test` | Run tests |
+| `pnpm test:watch` | Run tests in watch mode |
 | `pnpm test:coverage` | Tests with V8 coverage |
+| `pnpm test:integration` | Integration tests (requires OmniFocus running) |
 | `pnpm lint` | Check code (Biome) |
 | `pnpm lint:fix` | Fix lint issues |
+| `pnpm format` | Format code (Biome) |
 | `pnpm typecheck` | TypeScript checking |
 
 ## Key Directories
@@ -66,11 +70,13 @@ reliability.
 | Directory | Purpose |
 |-----------|---------|
 | `src/server.ts` | MCP server entry point |
+| `src/contracts/` | Zod schemas per tool domain (8 dirs: folder, notification, project, repetition, review, status, tag, task) |
 | `src/tools/definitions/` | Tool schemas and MCP handlers |
-| `src/tools/primitives/` | Core business logic |
-| `src/utils/omnifocusScripts/` | Pre-built OmniJS scripts |
+| `src/tools/primitives/` | Core business logic (OmniJS script generation + execution) |
+| `src/utils/` | Shared utilities (logger, OmniJS execution, temp files) |
+| `tests/` | Contract, unit, and integration tests |
 | `specs/` | Feature specifications |
-| `.claude/rules/` | Modular Claude rules (including RepoPrompt MCP guide) |
+| `.claude/rules/` | Modular Claude rules |
 
 ## Technology Stack
 
@@ -80,9 +86,9 @@ reliability.
 | Language | TypeScript | 5.9+ |
 | Build | tsup | 8.5+ |
 | Test | Vitest | 4.0+ |
-| Lint/Format | Biome | 2.3+ |
+| Lint/Format | Biome | 2.4+ |
 | MCP SDK | @modelcontextprotocol/sdk | 1.27.1 |
-| Validation | Zod | 4.1.x |
+| Validation | Zod | 4.2.x |
 
 ## Common Gotchas
 
@@ -154,10 +160,6 @@ Domain-specific rules in `.claude/rules/` load automatically:
 
 **Always loaded:**
 
-- `security.md` - Security policies, input validation
-- `error-handling.md` - Error patterns, partial failures
-- `git-workflow.md` - Commit conventions, PR rules
-- `research-workflow.md` - Research patterns and tools
 - `repoprompt-mcp.md` - RepoPrompt MCP context management and editing
 
 **Path-scoped (load when working with matching files):**
@@ -206,90 +208,20 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - Build and type checks pass
 - You've tested OmniJS scripts independently
 
-## Recent Changes
-- 007-repetition-rules: TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
+## Implemented Tool Domains
 
-- **Phase 7 Repetition Rules (Implementation Complete)**: Repetition Rule Management fully implemented (2026-03-17)
-  - 5 new tools: `get_repetition`, `set_repetition`, `clear_repetition`, `set_common_repetition`, `set_advanced_repetition`
-  - `get_repetition`: Read ICS rule string, schedule type (v4.7+), anchor date (v4.7+), catch-up (v4.7+), deprecated method
-  - `set_repetition`: Set repetition via raw ICS string using legacy 2-param constructor (all versions)
-  - `clear_repetition`: Remove repetition rule (idempotent — succeeds on already-cleared tasks)
-  - `set_common_repetition`: Set from 8 named presets (daily, weekdays, weekly, biweekly, monthly, monthly_last_day, quarterly, yearly) with optional day/dayOfMonth modifiers; ICS generated server-side in TypeScript
-  - `set_advanced_repetition`: Configure v4.7+ params (scheduleType, anchorDateKey, catchUpAutomatically) with read-then-merge pattern; version-gated via `app.userVersion.atLeast(new Version('4.7'))`
-  - All tools accept task OR project IDs — projects resolve to root task
-  - Dual-discriminator response for get_repetition: `success: true/false` + `hasRule: true/false`
-  - Zod 4.x: `z.union()` for get_repetition response (dual success variants share `success: true`); `z.discriminatedUnion('success', [...])` for other 4 tools
-  - Full TDD implementation with 292 new tests (contract + unit)
-  - Total: 2216 tests across 101 test files (was 1924 across 90)
-  - Contracts in `src/contracts/repetition-tools/` with shared schemas (enums, RepetitionRuleData)
+| Domain | Tools | Contracts | Key Patterns |
+|--------|-------|-----------|--------------|
+| Folders | 5 | `folder-tools/` | OmniJS-first CRUD |
+| Tags | 6 | `tag-tools/` | Hierarchy, batch assign/remove |
+| Tasks | 4+ | `task-tools/` | Server-side OmniJS filtering, disambiguation |
+| Projects | 6 | `project-tools/` | Review status filtering, type mutual exclusion |
+| Reviews | 3 | `review-tools/` | Calendar/DateComponents API, no `markReviewed()` method |
+| Notifications | 5 | `notification-tools/` | Relative offsets in seconds, kind-conditional fields |
+| Repetition | 5 | `repetition-tools/` | ICS pass-through, v4.7+ version gating |
+| Status | 6 | `status-tools/` | Batch with idempotent no-op codes, v3.8+ drop API |
 
-- 005-review-system: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
-
-- **Phase 13 Task Status & Completion (Implementation Complete)**: 6 status tools implemented (2026-03-17)
-  - 6 new tools: `mark_complete`, `mark_incomplete`, `drop_items`, `set_project_type`, `get_next_task`, `set_floating_timezone`
-  - `mark_complete`: Batch complete tasks/projects (1-100) with optional backdating
-  - `mark_incomplete`: Batch reopen completed/dropped items with auto-state detection
-  - `drop_items`: Batch drop tasks/projects with v3.8+ version detection; tasks use `drop(allOccurrences)`, projects use status assignment
-  - `set_project_type`: Set sequential/parallel/single-actions with mutual exclusion
-  - `get_next_task`: Query next available task with distinct reasons (NO_AVAILABLE_TASKS, SINGLE_ACTIONS_PROJECT)
-  - `set_floating_timezone`: Enable/disable floating timezone on tasks and projects
-  - All batch tools follow Phase 5 pattern: per-item results, partial failures, disambiguation
-  - Idempotent no-op codes: ALREADY_COMPLETED, ALREADY_ACTIVE, ALREADY_DROPPED
-  - Full TDD implementation with 367 new tests (contract + unit)
-  - Total: 2291 tests across 103 test files (was 1924 across 90)
-  - Contracts in `src/contracts/status-tools/` with shared schemas (ItemIdentifier, StatusBatchItemResult, Summary, Disambiguation)
-  - Integration test scaffold for OmniFocus round-trip verification
-
-- **Phase 5 Review System (Implementation Complete)**: Review System fully implemented (2026-03-16)
-  - 3 new tools: `get_projects_for_review`, `mark_reviewed`, `set_review_interval`
-  - `get_projects_for_review`: Query overdue/upcoming reviews with 6 filter params, pagination, sort
-  - `mark_reviewed`: Batch mark projects reviewed, advancing nextReviewDate via Calendar API
-  - `set_review_interval`: Configure review frequency or disable reviews; value object semantics
-  - All date calculations use Calendar/DateComponents API (no millisecond math)
-  - Critical constraint: No `markReviewed()` method — sets `nextReviewDate` directly
-  - `lastReviewDate` is READ-ONLY; `nextReviewDate` is WRITABLE
-  - Full TDD implementation with 214 new tests (contract + unit)
-  - Total: 1922 tests across 90 test files (was 1708 across 83)
-  - Contracts in `src/contracts/review-tools/` with shared schemas
-  - Integration test scaffold for OmniFocus round-trip verification
-
-- **Test Coverage (2025-12-12)**: Test coverage gaps filled with 10 new test files
-  - Total: 1708 tests across 83 test files
-  - Added 9 missing unit tests (moveProject, editProject, createProject, getProject, deleteProject, listProjects, appendNote, getTask, listTasks)
-  - Added 1 integration test (deleteProject cascade deletion verification)
-  - All integration tests passing with recent bug fixes
-
-
-  - `list_projects`: Comprehensive filtering (folder, status, review status, dates)
-  - `get_project`: Full project details with 30 properties
-  - `create_project`: Create with folder placement, type settings, review intervals
-  - `edit_project`: Modify all properties with auto-clear for conflicting types
-  - `delete_project`: Remove with cascade deletion of child tasks
-  - `move_project`: Move to folder, root, or relative to siblings
-  - Contracts in `src/contracts/project-tools/` with shared schemas
-  - Full TDD implementation with 356+ tests (contract + unit)
-  - Review status filtering for GTD workflows ('due', 'upcoming', 'any')
-  - Project type mutual exclusion: containsSingletonActions wins over sequential
-
-  - `list_tasks`: Comprehensive task filtering (project, folder, tags, status, dates)
-  - `get_task`: Full task details by ID or name with disambiguation
-  - `set_planned_date`: Set/clear planned dates (OmniFocus v4.7+ feature)
-  - `append_note`: Append text to task notes without overwriting
-  - Contracts in `src/contracts/task-tools/` with shared schemas
-  - Full TDD implementation with 325+ tests (contract + unit)
-  - Server-side OmniJS filtering for performance
-
-  - `list_tags`, `create_tag`, `edit_tag`, `delete_tag`, `assign_tags`, `remove_tags`
-  - Full hierarchy support with parent/child relationships
-  - Batch operations with per-item results for assign/remove
-  - Disambiguation support for name-based lookups
-  - Full TDD implementation with 150+ tests
-  - `list_folders`, `add_folder`, `edit_folder`, `remove_folder`, `move_folder`
-  - All primitives use pure Omni Automation JavaScript (OmniJS)
-  - Established OmniJS-first architecture pattern for future tools
-  - Removed AppleScript tier (Tier 1) - all write operations now use OmniJS
-  - Removed direct JXA tier (Tier 3) - unused execution path eliminated
-  - All operations (read AND write) now use consistent OmniJS execution
+**Current baseline:** 2823 tests across 125 files. See workflow files in `docs/ai/specs/` for detailed implementation notes per spec.
 
 ## Logging
 
@@ -327,8 +259,7 @@ This requires refactoring from `McpServer` to the low-level `Server` class.
 See [MCP logging spec](https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/logging).
 
 ## Active Technologies
-- TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+ (005-review-system)
-- N/A (OmniFocus internal database via OmniJS) (005-review-system)
 
-- TypeScript 5.9+ with strict mode (`ES2024` target) (003-tasks)
-- N/A (interfaces with OmniFocus via OmniJS execution) (003-tasks)
+- TypeScript 5.9+ with strict mode (ES2024 target)
+- @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+, Biome 2.4+
+- OmniFocus internal database via OmniJS (no external DB)
