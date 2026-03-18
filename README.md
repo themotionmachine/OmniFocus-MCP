@@ -40,7 +40,7 @@ implementation phases.
 | 10    | **Bulk Operations**            | 6     | Pending  |
 | 11    | Attachments & Linked Files     | 5     | Pending  |
 | 12    | **TaskPaper Import/Export**    | 3     | Pending  |
-| 13    | **Task Status & Completion**   | 6     | Pending  |
+| 13    | **Task Status & Completion**   | 6     | Complete |
 | 14    | **Window & UI Control** (OF4)  | 8     | Pending  |
 | 15    | **Forecast**                   | 3     | Pending  |
 | 16    | **Settings**                   | 2     | Pending  |
@@ -57,6 +57,7 @@ Bold items in the table above represent new capabilities:
 - **Tasks (Enhanced)** - Dedicated list/get, planned date (v4.7+), append note
 - **Projects** - Full project lifecycle management (CRUD + move)
 - **Review System** - Get projects for review, mark reviewed, set intervals
+- **Task Status & Completion** - Complete, reopen, drop items; project type; next task; floating timezone
 - **Perspectives** - List, get details, switch perspectives, export configs
 - **Search & Database** - Smart search across all item types, DB utilities
 - **Bulk Operations** - Move, duplicate, convert, and batch update items

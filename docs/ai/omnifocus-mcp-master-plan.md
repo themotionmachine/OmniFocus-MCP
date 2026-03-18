@@ -50,8 +50,8 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 
 ```text
 ═══════════════════════════════════════════════════════════════════
-  FOUNDATION (Complete: Phases 0-5, 28 tools)
-  Folders │ Tags │ Tasks │ Projects │ Review System
+  FOUNDATION (Complete: Phases 0-5 + 7 + 13, 39 tools)
+  Folders │ Tags │ Tasks │ Projects │ Review │ Repetition │ Status
 ═══════════════════════════════════════════════════════════════════
     │
     ├──► TIER 1 (All parallel — Task/Project Property Extensions)
@@ -95,7 +95,7 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 |------|------|-------|--------|----------|------------|
 | SPEC-006 | Notifications | 5 | 🔄 In Progress | `specs/006-notifications/` | Tasks |
 | SPEC-007 | Repetition | 5 | ✅ Complete | `specs/007-repetition-rules/` | Merged ([PR #38](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/38)) |
-| SPEC-013 | Task Status & Completion | 6 | 🔄 In Progress | `specs/013-task-status/` | Specify |
+| SPEC-013 | Task Status & Completion | 6 | ✅ Complete | `specs/013-task-status/` | Merged ([PR #39](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/39)) |
 | SPEC-008 | Perspectives | 5 | ⏳ Pending | `specs/008-perspectives/` | Specify |
 | SPEC-009 | Search & Database | 10 | ⏳ Pending | `specs/009-search-database/` | Specify |
 | SPEC-011 | Attachments & Linked Files | 5 | ⏳ Pending | `specs/011-attachments/` | Specify |
@@ -185,9 +185,9 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 
 ---
 
-### SPEC-013: Task Status & Completion
+### SPEC-013: Task Status & Completion ✅
 
-**Priority:** P1 | **Depends On:** None (Phases 0-5 complete) | **Enables:** None
+**Priority:** P1 | **Depends On:** None (Phases 0-5 complete) | **Enables:** None | **Status:** Complete ([PR #39](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/39))
 
 **Goal:** Provide explicit task/project lifecycle operations — complete, incomplete, drop, project type configuration, next task retrieval, and timezone handling.
 

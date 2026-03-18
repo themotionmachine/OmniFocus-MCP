@@ -225,6 +225,21 @@ Domain-specific rules in `.claude/rules/` load automatically:
 
 - 005-review-system: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
 
+- **Phase 13 Task Status & Completion (Implementation Complete)**: 6 status tools implemented (2026-03-17)
+  - 6 new tools: `mark_complete`, `mark_incomplete`, `drop_items`, `set_project_type`, `get_next_task`, `set_floating_timezone`
+  - `mark_complete`: Batch complete tasks/projects (1-100) with optional backdating
+  - `mark_incomplete`: Batch reopen completed/dropped items with auto-state detection
+  - `drop_items`: Batch drop tasks/projects with v3.8+ version detection; tasks use `drop(allOccurrences)`, projects use status assignment
+  - `set_project_type`: Set sequential/parallel/single-actions with mutual exclusion
+  - `get_next_task`: Query next available task with distinct reasons (NO_AVAILABLE_TASKS, SINGLE_ACTIONS_PROJECT)
+  - `set_floating_timezone`: Enable/disable floating timezone on tasks and projects
+  - All batch tools follow Phase 5 pattern: per-item results, partial failures, disambiguation
+  - Idempotent no-op codes: ALREADY_COMPLETED, ALREADY_ACTIVE, ALREADY_DROPPED
+  - Full TDD implementation with 367 new tests (contract + unit)
+  - Total: 2291 tests across 103 test files (was 1924 across 90)
+  - Contracts in `src/contracts/status-tools/` with shared schemas (ItemIdentifier, StatusBatchItemResult, Summary, Disambiguation)
+  - Integration test scaffold for OmniFocus round-trip verification
+
 - **Phase 5 Review System (Implementation Complete)**: Review System fully implemented (2026-03-16)
   - 3 new tools: `get_projects_for_review`, `mark_reviewed`, `set_review_interval`
   - `get_projects_for_review`: Query overdue/upcoming reviews with 6 filter params, pagination, sort

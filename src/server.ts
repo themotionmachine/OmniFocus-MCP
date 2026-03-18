@@ -15,11 +15,13 @@ import * as createTagTool from './tools/definitions/createTag.js';
 import * as deleteProjectTool from './tools/definitions/deleteProject.js';
 import * as deleteTagTool from './tools/definitions/deleteTag.js';
 // Import tool definitions
+import * as dropItemsTool from './tools/definitions/dropItems.js';
 import * as dumpDatabaseTool from './tools/definitions/dumpDatabase.js';
 import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as editProjectTool from './tools/definitions/editProject.js';
 import * as editTagTool from './tools/definitions/editTag.js';
+import * as getNextTaskTool from './tools/definitions/getNextTask.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
 import * as getProjectTool from './tools/definitions/getProject.js';
 import * as getProjectsForReviewTool from './tools/definitions/getProjectsForReview.js';
@@ -30,6 +32,8 @@ import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
 import * as listProjectsTool from './tools/definitions/listProjects.js';
 import * as listTagsTool from './tools/definitions/listTags.js';
 import * as listTasksTool from './tools/definitions/listTasks.js';
+import * as markCompleteTool from './tools/definitions/markComplete.js';
+import * as markIncompleteTool from './tools/definitions/markIncomplete.js';
 import * as markReviewedTool from './tools/definitions/markReviewed.js';
 import * as moveFolderTool from './tools/definitions/moveFolder.js';
 import * as moveProjectTool from './tools/definitions/moveProject.js';
@@ -39,7 +43,9 @@ import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as removeTagsTool from './tools/definitions/removeTags.js';
 import * as setAdvancedRepetitionTool from './tools/definitions/setAdvancedRepetition.js';
 import * as setCommonRepetitionTool from './tools/definitions/setCommonRepetition.js';
+import * as setFloatingTimezoneTool from './tools/definitions/setFloatingTimezone.js';
 import * as setPlannedDateTool from './tools/definitions/setPlannedDate.js';
+import * as setProjectTypeTool from './tools/definitions/setProjectType.js';
 import * as setRepetitionTool from './tools/definitions/setRepetition.js';
 import * as setReviewIntervalTool from './tools/definitions/setReviewInterval.js';
 import { logger } from './utils/logger.js';
@@ -213,6 +219,13 @@ server.tool(
 );
 
 server.tool(
+  'get_next_task',
+  'Get the next available task in a sequential or parallel project. Returns full task details or a reason code when no task is available (completed or single-actions project).',
+  getNextTaskTool.schema.shape,
+  getNextTaskTool.handler
+);
+
+server.tool(
   'set_planned_date',
   'Set or clear the planned date for a task (OmniFocus v4.7+ feature). Pass an ISO 8601 date string to set, or null to clear. Supports lookup by ID or name.',
   setPlannedDateTool.schema.shape,
@@ -320,10 +333,47 @@ server.tool(
 );
 
 server.tool(
+  'set_project_type',
+  'Set a project type to sequential, parallel, or single-actions. Handles mutual exclusion automatically (setting one type clears conflicting flags).',
+  setProjectTypeTool.schema.shape,
+  setProjectTypeTool.handler
+);
+
+server.tool(
+  'mark_incomplete',
+  'Reopen one or more completed or dropped tasks/projects. Auto-detects item state and uses the appropriate mechanism. Supports batch operations (1-100 items).',
+  markIncompleteTool.schema.shape,
+  markIncompleteTool.handler
+);
+
+server.tool(
   'set_review_interval',
   'Configure the review frequency for one or more projects, or disable reviews by setting interval to null. Supports batch operations with per-item results.',
   setReviewIntervalTool.schema.shape,
   setReviewIntervalTool.handler
+);
+
+// Phase 13 Status Tools
+server.tool(
+  'mark_complete',
+  'Mark one or more tasks or projects as complete. Supports batch operations (1-100 items) with optional completion date for backdating. Returns per-item results with success/failure details.',
+  markCompleteTool.schema.shape,
+  markCompleteTool.handler
+);
+
+// Phase 6 Task Status Tools
+server.tool(
+  'drop_items',
+  'Drop one or more tasks or projects (preserve in database, remove from active views). Requires OmniFocus 3.8+. For repeating tasks, controls whether all occurrences are stopped. Supports batch operations (1-100 items).',
+  dropItemsTool.schema.shape,
+  dropItemsTool.handler
+);
+
+server.tool(
+  'set_floating_timezone',
+  'Enable or disable floating timezone for a task or project. When enabled, dates follow the device timezone when traveling instead of being fixed to a specific timezone.',
+  setFloatingTimezoneTool.schema.shape,
+  setFloatingTimezoneTool.handler
 );
 
 // Start the MCP server
