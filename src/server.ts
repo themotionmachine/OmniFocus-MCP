@@ -9,6 +9,7 @@ import * as appendNoteTool from './tools/definitions/appendNote.js';
 import * as assignTagsTool from './tools/definitions/assignTags.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
+import * as clearRepetitionTool from './tools/definitions/clearRepetition.js';
 import * as createProjectTool from './tools/definitions/createProject.js';
 import * as createTagTool from './tools/definitions/createTag.js';
 import * as deleteProjectTool from './tools/definitions/deleteProject.js';
@@ -22,6 +23,7 @@ import * as editTagTool from './tools/definitions/editTag.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
 import * as getProjectTool from './tools/definitions/getProject.js';
 import * as getProjectsForReviewTool from './tools/definitions/getProjectsForReview.js';
+import * as getRepetitionTool from './tools/definitions/getRepetition.js';
 import * as getTaskTool from './tools/definitions/getTask.js';
 import * as listFoldersTool from './tools/definitions/listFolders.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
@@ -35,7 +37,10 @@ import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as removeTagsTool from './tools/definitions/removeTags.js';
+import * as setAdvancedRepetitionTool from './tools/definitions/setAdvancedRepetition.js';
+import * as setCommonRepetitionTool from './tools/definitions/setCommonRepetition.js';
 import * as setPlannedDateTool from './tools/definitions/setPlannedDate.js';
+import * as setRepetitionTool from './tools/definitions/setRepetition.js';
 import * as setReviewIntervalTool from './tools/definitions/setReviewInterval.js';
 import { logger } from './utils/logger.js';
 
@@ -270,6 +275,41 @@ server.tool(
   'Query projects due for GTD periodic review with filtering by date, folder, and status. Returns projects sorted by review urgency (most overdue first).',
   getProjectsForReviewTool.schema.shape,
   getProjectsForReviewTool.handler
+);
+
+server.tool(
+  'get_repetition',
+  'Get the repetition rule for a task or project, including ICS rule string, schedule type (v4.7+), anchor date (v4.7+), and catch-up setting (v4.7+)',
+  getRepetitionTool.schema.shape,
+  getRepetitionTool.handler
+);
+
+server.tool(
+  'set_common_repetition',
+  'Set a repetition rule using named presets (daily, weekdays, weekly, biweekly, monthly, monthly_last_day, quarterly, yearly)',
+  setCommonRepetitionTool.schema.shape,
+  setCommonRepetitionTool.handler
+);
+
+server.tool(
+  'set_repetition',
+  'Set a repetition rule on a task or project using an ICS recurrence string',
+  setRepetitionTool.schema.shape,
+  setRepetitionTool.handler
+);
+
+server.tool(
+  'clear_repetition',
+  'Remove the repetition rule from a task or project, making it non-recurring',
+  clearRepetitionTool.schema.shape,
+  clearRepetitionTool.handler
+);
+
+server.tool(
+  'set_advanced_repetition',
+  'Configure advanced v4.7+ repetition parameters (schedule type, anchor date, catch-up behavior) with read-then-merge',
+  setAdvancedRepetitionTool.schema.shape,
+  setAdvancedRepetitionTool.handler
 );
 
 server.tool(

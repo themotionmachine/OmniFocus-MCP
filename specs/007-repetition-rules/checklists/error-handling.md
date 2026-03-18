@@ -1,0 +1,71 @@
+# Error Handling Checklist: Repetition Rule Management
+
+**Purpose**: Validate completeness, clarity, and consistency of error handling requirements for all 5 repetition rule MCP tools, with special attention to version detection, OmniJS silent failures, and graceful fallback behavior.
+**Created**: 2026-03-17
+**Feature**: [spec.md](../spec.md) | [plan.md](../plan.md) | [quickstart.md](../quickstart.md)
+
+## Version Detection Requirements
+
+- [x] CHK001 - Is the version detection mechanism for set_advanced_repetition specified as `app.userVersion.atLeast(new Version('4.7'))` (not feature detection)? [Clarity, Spec §FR-005, Clarifications §Session 1 Q1] — spec.md §Clarifications Q1: "Version detection only via `app.userVersion.atLeast(new Version('4.7'))`." §FR-005 cites exact call. research.md §Version Detection: pattern documented with rationale.
+- [x] CHK002 - Is the version error message format specified with inclusion of the current OmniFocus version string for diagnostic purposes? [Clarity, Quickstart §Version Detection Pattern] — quickstart.md §Version Detection Pattern: error message includes `userVersion.versionString`. research.md §Version Detection: same pattern with version string.
+- [x] CHK003 - Is it explicitly specified that ONLY set_advanced_repetition is version-gated, while the other 4 tools work on all OmniFocus versions? [Completeness, Spec §FR-005, Plan §OmniFocus Version Requirements] — spec.md §Clarifications (Error Handling): "The other 3 tools (set_repetition, clear_repetition, set_common_repetition) have NO version dependency." §Assumptions: basic tools use legacy 2-param constructor. research.md §OmniFocus Version Requirements: version table.
+- [x] CHK004 - Is it specified that version detection happens inside OmniJS (not server-side TypeScript), since the OmniFocus version can only be queried at runtime? [Clarity, ~~Gap~~ Resolved] — Confirmed by `setPlannedDate.ts`: version check is embedded in the generated OmniJS script string. `app.userVersion` is a runtime-only OmniJS API. Documented in spec.md §Error Handling Gap Resolution.
+- [x] CHK005 - Is the version detection specified as the FIRST check in the set_advanced_repetition OmniJS script (before item resolution or parameter validation)? [Clarity, ~~Gap~~ Resolved] — Confirmed by `setPlannedDate.ts` ordering: (1) version check, (2) migration check, (3) task resolution. Avoids unnecessary operations on incompatible versions. Documented in spec.md §Error Handling Gap Resolution.
+
+## Graceful Degradation vs. Version Gating
+
+- [x] CHK006 - Is the distinction between "version gating" (set_advanced_repetition blocks entirely on pre-v4.7) and "version degradation" (get_repetition returns null for v4.7+ fields on pre-v4.7) clearly documented? [Clarity, ~~Gap~~ Resolved] — Two distinct strategies documented in spec.md §Error Handling Gap Resolution: gating = error response, degradation = null fields, 3 basic tools = no version dependency.
+- [x] CHK007 - Is it specified that get_repetition degrades gracefully on pre-v4.7 by returning null for scheduleType, anchorDateKey, and catchUpAutomatically rather than erroring? [Completeness, Spec §FR-001, Data Model §RepetitionRuleData] — spec.md §FR-001: "and (on v4.7+) the schedule type, anchor date key, and catch-up setting." data-model.md §Field Notes: v4.7+ fields use `.nullable()`, null on pre-v4.7. quickstart.md §get_repetition: conditional v4.7+ block.
+- [x] CHK008 - Is it specified that basic tools (set_repetition, clear_repetition, set_common_repetition) use the legacy 2-param constructor and therefore have NO version dependency? [Completeness, Spec §Clarifications §Session 1 Q3, Plan §Key OmniJS Patterns] — spec.md §Clarifications Q3: "Always legacy 2-param: `new Task.RepetitionRule(ruleString, null)` for universal compatibility." §Assumptions: explicit statement. quickstart.md §Two Constructor Forms: legacy form mapped to set_repetition, set_common_repetition.
+- [x] CHK009 - Are the v4.7+ field presence rules in get_repetition consistent between the spec (FR-001), data-model (RepetitionRuleData), and quickstart (get_repetition pattern)? [Consistency] — All three agree: ruleString + isRepeating + method = all versions; scheduleType + anchorDateKey + catchUpAutomatically = v4.7+ only. Verified across spec.md §FR-001, data-model.md §RepetitionRuleData, and quickstart.md §get_repetition pattern.
+
+## OmniJS Script Error Handling
+
+- [x] CHK010 - Is the try-catch + JSON error response pattern (`{ success: false, error: string }`) required for ALL 5 tool OmniJS scripts? [Completeness, Spec §FR-007, Constitution §Principle III] — spec.md §FR-007: "System MUST return structured JSON responses from all OmniJS scripts." quickstart.md §Error Response Format: universal try-catch pattern. All 5 quickstart tool patterns use this approach.
+- [x] CHK011 - Is the behavior specified for when OmniJS returns empty output (silent failure due to syntax error or uncaught exception)? [Completeness, Spec §Edge Cases] — spec.md §Edge Cases: "This indicates a silent failure — the tool wraps all OmniJS in try-catch and reports the failure." CLAUDE.md §Common Gotchas: "Empty script results: OmniJS errors produce empty output."
+- [x] CHK012 - Is the error message extraction pattern specified (`e.message || String(e)`) to handle both Error objects and thrown primitives? [Clarity, Quickstart §Error Response Format] — quickstart.md §Error Response Format: `error: e.message || String(e)`. All 5 tool patterns in quickstart.md use this extraction.
+- [x] CHK013 - Is it documented that OmniJS syntax errors produce silent failures (empty output) rather than thrown exceptions, and that try-catch alone is insufficient to detect them? [Clarity, CLAUDE.md §Common Gotchas] — CLAUDE.md §Common Gotchas: "OmniJS syntax errors: Missing quotes/escaping causes silent failures." .claude/rules/error-handling.md: "OmniJS errors often produce empty results, not error messages."
+- [x] CHK014 - Are the specific OmniJS error scenarios enumerated for each tool (e.g., invalid ICS string in set_repetition, invalid enum in set_advanced_repetition)? [Coverage, ~~Gap~~ Resolved] — Per-tool enumeration added to spec.md §Error Handling Gap Resolution: get (NOT_FOUND), set (NOT_FOUND, invalid ICS), clear (NOT_FOUND/idempotent), common (NOT_FOUND), advanced (VERSION_ERROR, NOT_FOUND, missing ruleString, constructor error).
+
+## Item Not Found Error Handling
+
+- [x] CHK015 - Is the NOT_FOUND error behavior specified for all 5 tools when the provided ID matches neither a task nor a project? [Completeness, Spec §US-1 Scenario 4, Data Model §ItemIdentifier] — spec.md §US-1 Scenario 4: "I receive a clear error indicating the item was not found." quickstart.md §Item Resolution Pattern: NOT_FOUND error for all tools. §Clarifications: per-tool enumeration lists NOT_FOUND for all 5.
+- [x] CHK016 - Is the NOT_FOUND error message format specified to include the item ID for diagnostic purposes? [Clarity, Quickstart §Item Resolution Pattern] — quickstart.md §Item Resolution Pattern: `"Item '${escapedId}' not found as task or project"` — includes the item ID.
+- [x] CHK017 - Is the item resolution order (Task.byIdentifier first, then Project.byIdentifier) documented as the canonical pattern for all 5 tools? [Consistency, Quickstart §Item Resolution Pattern] — quickstart.md §Item Resolution Pattern: Task first, then Project. plan.md §Key OmniJS Patterns: same order. data-model.md §ItemIdentifier §Resolution Logic: same order.
+- [x] CHK018 - Is the behavior specified for when a project ID is provided but `project.task` returns null (data integrity edge case)? [Edge Case, Spec §Edge Cases] — spec.md §Edge Cases: "Return an error — projects in OmniFocus always have a root task, so this would indicate a data integrity issue." §Assumptions: "OmniFocus always has a root task for every project."
+
+## Read-Then-Merge Error Handling (set_advanced_repetition)
+
+- [x] CHK019 - Is the error behavior specified when set_advanced_repetition is called without ruleString on a task with no existing rule (nothing to merge from)? [Completeness, Spec §US-5 Scenario 6, Data Model §set_advanced_repetition Cross-field Validation] — spec.md §US-5 Scenario 6: documented. data-model.md: error message "ruleString is required when the task has no existing repetition rule." quickstart.md: code pattern shown.
+- [x] CHK020 - Is it specified whether set_advanced_repetition reads existing rule properties BEFORE or AFTER applying the version check? [Clarity, ~~Gap~~ Resolved] — Version check is FIRST (before item resolution and merge), matching `setPlannedDate.ts` ordering pattern. Documented in spec.md §Error Handling Gap Resolution.
+- [x] CHK021 - Is the merge precedence clearly documented — provided values always override existing rule values, with existing values as fallback? [Clarity, Research §Read-Then-Merge Pattern] — spec.md §Clarifications: "reads existing...if not provided, constructs new rule with changes." research.md §Read-Then-Merge: "Merge: use provided values or fall back to existing." plan.md: "provided values override existing."
+- [x] CHK022 - Is the behavior specified when the existing rule has null/undefined properties during merge (e.g., pre-v4.7 rule missing scheduleType)? [Edge Case, ~~Gap~~ Resolved] — set_advanced_repetition is v4.7+ only. Legacy rules with null scheduleType/anchorDateKey pass null to 5-param constructor; OmniFocus applies defaults (Regularly, DueDate). Documented in spec.md §Error Handling Gap Resolution.
+
+## Cross-Tool Error Consistency
+
+- [x] CHK023 - Are error response shapes (`{ success: false, error: string }`) identical across all 5 tools? [Consistency, Data Model §API Response Formats] — data-model.md §API Response Formats: all response sections show identical `{ success: false, error: string }`. spec.md §Clarifications: "Flat `{ success: false, error: string }` for all 5 tools."
+- [x] CHK024 - Are error messages specified to include operation context (tool name or action type) for disambiguation when multiple tools produce similar errors? [Clarity, ~~Gap~~ Resolved] — Following codebase pattern: error messages are descriptive prose without tool name prefix. Single-item operations don't need it (contrast with batch-operations in review-tools). Errors include contextual detail in the message text (e.g., "Item 'abc' not found").
+- [x] CHK025 - Is the error categorization consistent — NOT_FOUND vs. VALIDATION vs. VERSION vs. OMNIJS_ERROR — or are all errors flattened to a single `error: string`? [Clarity, ~~Gap~~ Resolved] — Flat `{ success: false, error: string }` for all 5 tools. Error codes (`code` field) are a batch-operations-only pattern in this codebase. Repetition tools are single-item, ID-only — no disambiguation needed. Documented in spec.md §Error Handling Gap Resolution.
+
+## Idempotency & Safe Failure
+
+- [x] CHK026 - Is clear_repetition specified as idempotent (succeeds without error when clearing a task that already has no rule)? [Completeness, Spec §US-3 Scenario 2] — spec.md §US-3 Scenario 2: "the operation succeeds without error (idempotent)." quickstart.md: `task.repetitionRule = null` is safe on already-null.
+- [x] CHK027 - Is the behavior specified for setting a repetition rule on a completed task? [Edge Case, Spec §Edge Cases] — spec.md §Edge Cases: "The rule is set but does not trigger until the task is marked incomplete or a new occurrence is created."
+- [x] CHK028 - Is the behavior specified for clearing a rule on a task mid-recurrence (current instance vs. future occurrences)? [Edge Case, Spec §Edge Cases] — spec.md §Edge Cases: "The current instance remains; no future occurrences are generated."
+- [x] CHK029 - Is the "last call wins" behavior documented when set_common_repetition and set_advanced_repetition are called sequentially on the same task? [Clarity, Spec §Edge Cases] — spec.md §Edge Cases: "They both set the same repetitionRule property — the last call wins."
+
+## Assumptions & Dependencies
+
+- [x] CHK030 - Is the assumption that OmniFocus always has a root task for every project explicitly documented and validated? [Assumption, Spec §Assumptions] — spec.md §Assumptions: "OmniFocus always has a root task for every project (consistent with existing tool behavior in the codebase)." §Edge Cases: confirmed.
+- [x] CHK031 - Is the dependency on the `app.userVersion` API documented as a prerequisite for version detection? [Dependency, Research §Version Detection] — spec.md §Assumptions: "Version detection for v4.7+ features uses `app.userVersion.atLeast(new Version('4.7'))`." research.md §Version Detection: full documentation with rationale.
+- [x] CHK032 - Is it documented that ICS rule string validation is OmniFocus's responsibility (opaque pass-through), and that OmniJS constructor errors are the validation mechanism? [Assumption, Spec §FR-002, Spec §Scope Boundaries §Out of Scope] — spec.md §FR-002: "passing it through to OmniFocus without validation." §Scope Boundaries: "Parsing or validating ICS rule strings (pass-through to OmniFocus)." §Assumptions: "OmniFocus is the authority on what is valid."
+- [x] CHK033 - Is the assumption that `task.repetitionRule = null` clears without error documented and validated? [Assumption, Research §Validation Checklist] — research.md §Validation Checklist: "`task.repetitionRule = null` clears the rule — CONFIRMED." quickstart.md: `task.repetitionRule = null; // ✅ Clears the rule`.
+
+## Notes
+
+- Check items off as completed: `[x]`
+- Items marked `[Gap]` indicate error handling requirements that may be missing from the spec/plan
+- Focus: version detection (CHK001-005), degradation vs. gating distinction (CHK006-009), OmniJS silent failures (CHK010-014)
+- All traceability references point to spec.md, data-model.md, quickstart.md, research.md, or plan.md
+- **8 gaps resolved** (CHK004, CHK005, CHK006, CHK014, CHK020, CHK022, CHK024, CHK025) via codebase research grounded in `setPlannedDate.ts` ordering, `review-tools/shared/batch.ts` error codes pattern, and `c-command.com` merge behavior
+- **25 items verified** (CHK001-003, CHK007-013, CHK015-019, CHK021, CHK023, CHK026-033) against spec.md, data-model.md, quickstart.md, research.md, and plan.md artifacts

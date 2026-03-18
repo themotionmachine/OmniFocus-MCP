@@ -1,0 +1,71 @@
+# API Contracts Checklist: Repetition Rule Management
+
+**Purpose**: Validate completeness, clarity, and consistency of API contract requirements for the 5 repetition rule MCP tools, with special attention to version-conditional response schemas (v4.7+ vs older).
+**Created**: 2026-03-17
+**Feature**: [spec.md](../spec.md) | [data-model.md](../data-model.md) | [plan.md](../plan.md)
+
+## Requirement Completeness
+
+- [x] CHK001 - Are input schemas specified for all 5 tools (get_repetition, set_repetition, clear_repetition, set_common_repetition, set_advanced_repetition)? [Completeness, Data Model §Validation Rules] — All 5 input schemas explicitly defined in data-model.md §Validation Rules with Zod types, defaults, and error messages for every field.
+- [x] CHK002 - Are success response schemas specified for all 5 tools with their distinct shapes (hasRule discriminator for get, ruleString echo for set/common/advanced, minimal for clear)? [Completeness, Data Model §API Response Formats] — Three distinct response shapes documented: get (hasRule discriminator + rule object), set/common/advanced (id + name + ruleString), clear (id + name only).
+- [x] CHK003 - Are error response schemas specified for all 5 tools? [Completeness, Data Model §API Response Formats] — All response format sections show `{ success: false, error: string }`. Confirmed by spec.md §Clarifications: "Flat `{ success: false, error: string }` for all 5 tools."
+- [x] CHK004 - Are shared/reusable schema components identified (RepetitionRuleData, ItemIdentifier, PresetName, ScheduleType, AnchorDateKey) with explicit field definitions? [Completeness, Plan §Project Structure] — plan.md §Project Structure lists `shared/repetition-enums.ts` (ScheduleType, AnchorDateKey, PresetName, DayAbbreviation) and `shared/repetition-rule.ts` (RepetitionRuleDataSchema). All entities fully defined in data-model.md.
+- [x] CHK005 - Is the deprecated `method` field included in the get_repetition response schema with its enum values (DueDate, Fixed, DeferUntilDate, None)? [Completeness, Spec §FR-001, Data Model §RepetitionRuleData] — data-model.md §RepetitionRuleData: `method | RepetitionMethod | z.string().nullable() | DEPRECATED`. Enum values in research.md §Enum Values §Task.RepetitionMethod.
+- [x] CHK006 - Are all 8 preset names explicitly listed in the set_common_repetition input schema with their ICS string mappings? [Completeness, Spec §FR-004, Data Model §PresetName] — data-model.md §PresetName: all 8 presets (daily, weekdays, weekly, biweekly, monthly, monthly_last_day, quarterly, yearly) with ICS strings and optional params. Consistent across spec.md §FR-004, quickstart.md, research.md, and plan.md.
+- [x] CHK007 - Is the version error response format documented for set_advanced_repetition when called on pre-v4.7 OmniFocus? [Completeness, Spec §US-5 Scenario 4] — quickstart.md §Version Detection Pattern: exact error message format including `userVersion.versionString`. Matches spec.md §US-5 Scenario 4.
+
+## Requirement Clarity
+
+- [x] CHK008 - Is `ruleString` specified as an opaque pass-through string with no format validation beyond non-empty? [Clarity, Spec §FR-002] — spec.md §FR-002: "passing it through to OmniFocus without validation." §Scope Boundaries: ICS parsing explicitly out of scope. data-model.md: `z.string().min(1)` only.
+- [x] CHK009 - Is it unambiguous that `scheduleType`, `anchorDateKey`, and `catchUpAutomatically` are conditionally present (v4.7+ only) vs. always-null in get_repetition responses? [Clarity, Spec §FR-001, Data Model §RepetitionRuleData] — data-model.md §RepetitionRuleData: all three marked "v4.7+ only — null on older versions." §Field Notes: "Fields are always PRESENT in the response but null on pre-v4.7 OmniFocus."
+- [x] CHK010 - Is the discriminated union pattern (success: true/false) for all responses clearly defined as a Zod discriminated union? [Clarity, Data Model §API Response Formats] — data-model.md §Zod Pattern Conventions: `z.discriminatedUnion('success', [...])` explicitly listed as the pattern for all tool responses.
+- [x] CHK011 - Is the `hasRule: true/false` discriminator in get_repetition response specified unambiguously — when `hasRule` is false, is `rule: null` explicitly required? [Clarity, Data Model §get_repetition Response] — data-model.md §get_repetition Response: `hasRule: false, rule: null` explicitly shown in the response schema.
+- [x] CHK012 - Are the day abbreviation values (MO, TU, WE, TH, FR, SA, SU) explicitly enumerated as a string literal union in the `days` array schema? [Clarity, Data Model §PresetName] — data-model.md §Optional Parameters: all 7 values listed. §set_common_repetition Input: `z.array(z.enum(['MO', ...])).optional()`.
+- [x] CHK013 - Is the `dayOfMonth` range (integer, 1-31) explicitly specified as a Zod refinement or constraint? [Clarity, Data Model §set_common_repetition Input] — data-model.md §set_common_repetition Input: `z.number().int().min(1).max(31).optional()` with error message "Invalid dayOfMonth: must be 1-31".
+- [x] CHK014 - Is the distinction between "not provided" (omitted) and "explicitly null" specified for optional set_advanced_repetition params (ruleString, scheduleType, anchorDateKey, catchUpAutomatically)? [Clarity, ~~Gap~~ Resolved] — `.optional()` used for all; omitted = merge from existing rule. No null semantic. Documented in data-model.md §Validation Rules and spec.md §Clarifications.
+
+## Requirement Consistency
+
+- [x] CHK015 - Do all 5 tool input schemas consistently require `id` as a non-empty string with identical validation? [Consistency] — data-model.md §Validation Rules: all 5 tools use `z.string().min(1)` for `id` with error "id is required."
+- [x] CHK016 - Are success response shapes consistent across set_repetition, set_common_repetition, and set_advanced_repetition (all return `{ success, id, name, ruleString }`)? [Consistency, Data Model §API Response Formats] — data-model.md §set_repetition / set_common_repetition / set_advanced_repetition Response: all three share `{ success: true, id, name, ruleString }`.
+- [x] CHK017 - Is the `id` field in responses consistently described as "resolved task ID (even for project inputs)" across all 5 tools? [Consistency, Data Model §API Response Formats] — data-model.md: get_repetition response annotates `id: string, // resolved task ID (even for project inputs)`. Write tool responses annotate `id: string, // resolved task ID`. All quickstart patterns use `task.id.primaryKey`.
+- [x] CHK018 - Are error response shapes (`{ success: false, error: string }`) identical across all 5 tools? [Consistency] — data-model.md §API Response Formats: all 3 response sections show identical error shape. spec.md §Clarifications: "Flat `{ success: false, error: string }` for all 5 tools."
+
+## Version-Conditional Contract Design
+
+- [x] CHK019 - Is it specified which get_repetition response fields are present on all OmniFocus versions vs. v4.7+ only (ruleString + isRepeating + method always; scheduleType + anchorDateKey + catchUpAutomatically v4.7+ only)? [Completeness, Spec §FR-001] — data-model.md §RepetitionRuleData: ruleString, isRepeating, method have no version note (all versions); scheduleType, anchorDateKey, catchUpAutomatically marked "v4.7+ only."
+- [x] CHK020 - Is the Zod schema design for v4.7+ conditional fields defined — optional properties, discriminated version union, or separate response types? [Clarity, ~~Gap~~ Resolved] — `.nullable()` with version note in `.describe()`, matching established `TaskFullSchema` pattern. No discriminated version union. Documented in data-model.md §RepetitionRuleData and §Zod Pattern Conventions.
+- [x] CHK021 - Are the set_advanced_repetition input schema requirements explicitly tied to the v4.7+ precondition (i.e., the tool itself is v4.7+ only, not just individual fields)? [Clarity, Spec §FR-005] — spec.md §FR-005: "System MUST detect OmniFocus version...returning a clear error when called on unsupported versions." data-model.md: "Requires OmniFocus v4.7+ — returns version error on older versions." The tool is gated, not individual fields.
+- [x] CHK022 - Is it specified whether get_repetition should include a version indicator field so MCP clients know which response fields to expect? [~~Gap~~ Resolved] — No version indicator. Follow established pattern: v4.7+ fields are `.nullable()`, null = unsupported. No existing tool in codebase includes version fields in responses. Documented in spec.md §Clarifications and data-model.md §RepetitionRuleData.
+
+## Enum & Type Specification Quality
+
+- [x] CHK023 - Are ScheduleType enum values (Regularly, FromCompletion, None) specified with exact string representations matching OmniJS enum names? [Clarity, Data Model §ScheduleType] — data-model.md §ScheduleType: `Regularly`, `FromCompletion`, `None` with exact `Task.RepetitionScheduleType.*` OmniJS references. research.md §Enum Values confirms same values.
+- [x] CHK024 - Are AnchorDateKey enum values (DueDate, DeferDate, PlannedDate) specified with exact string representations matching OmniJS enum names? [Clarity, Data Model §AnchorDateKey] — data-model.md §AnchorDateKey: `DueDate`, `DeferDate`, `PlannedDate` with exact `Task.AnchorDateKey.*` OmniJS references. research.md §Enum Values confirms same values.
+- [x] CHK025 - Are PresetName enum values exhaustively listed with their corresponding ICS string outputs and optional parameter applicability? [Completeness, Data Model §PresetName] — data-model.md §PresetName: all 8 presets with ICS strings and optional parameter applicability. Consistent across quickstart.md, research.md, and plan.md.
+- [x] CHK026 - Is the RepetitionMethod deprecated enum type documented for backward compatibility in get_repetition responses? [Completeness, Data Model §RepetitionRuleData] — data-model.md §RepetitionRuleData: `method | z.string().nullable() | DEPRECATED`. research.md §Task.RepetitionMethod: `DueDate`, `Fixed`, `DeferUntilDate`, `None` with migration notes.
+
+## Cross-Field Validation Requirements
+
+- [x] CHK027 - Are cross-field validation rules for set_common_repetition documented — `days` only valid with weekly/biweekly; `dayOfMonth` only valid with monthly/quarterly? [Completeness, Data Model §set_common_repetition Input] — data-model.md §Cross-field Validation: "days is only valid with weekly or biweekly preset; silently ignored for others." "dayOfMonth is only valid with monthly or quarterly preset; silently ignored for others."
+- [x] CHK028 - Is the cross-field validation for set_advanced_repetition (ruleString required when no existing rule) documented as a contract-level constraint or OmniJS-side check? [Completeness, Data Model §set_advanced_repetition Input] — data-model.md §Cross-field Validation: "If task has no existing rule AND ruleString is not provided → error." quickstart.md shows this check in the OmniJS script (OmniJS-side).
+- [x] CHK029 - Is the behavior specified for when `days` is provided with a non-weekly/biweekly preset — silently ignored vs. validation error? [Clarity, Data Model §set_common_repetition Input] — data-model.md: "silently ignored for others (not a validation error — follows the principle of least surprise for callers who may pass extra params)."
+- [x] CHK030 - Is the behavior specified for when `dayOfMonth` is provided with a non-monthly/quarterly preset — silently ignored vs. validation error? [Clarity, Data Model §set_common_repetition Input] — data-model.md: "silently ignored for others" (same principle as CHK029).
+
+## Edge Case & Boundary Requirements
+
+- [x] CHK031 - Is empty string handling specified for `id` and `ruleString` fields (rejected as invalid vs. treated as missing)? [Edge Case, ~~Gap~~ Resolved] — Rejected via `z.string().min(1)`. Empty strings would cause silent OmniJS failures with `Task.byIdentifier('')`. Documented in data-model.md §Validation Rules and spec.md §Clarifications.
+- [x] CHK032 - Is the behavior specified for `dayOfMonth` values that don't exist in all months (e.g., 31 for February)? [Edge Case, ~~Gap~~ Resolved] — Per RFC 5545 §3.3.10, invalid dates are skipped (not adjusted). `BYMONTHDAY=31` skips Feb/Apr/Jun/Sep/Nov. `monthly_last_day` preset (`BYMONTHDAY=-1`) handles "last day" correctly. Documented in data-model.md §set_common_repetition Cross-field Validation and spec.md §Clarifications.
+- [x] CHK033 - Are the error messages for validation failures specified as exact strings or patterns in the contract requirements? [Clarity, Data Model §Validation Rules] — data-model.md §Validation Rules: exact error strings specified for all fields (e.g., "id is required", "Invalid preset. Must be one of: ...", "Invalid dayOfMonth: must be 1-31", "ruleString is required when the task has no existing repetition rule").
+- [x] CHK034 - Is the response behavior specified when set_repetition receives an ICS string that OmniFocus rejects (OmniJS exception → structured error)? [Edge Case, Spec §US-2 Scenario 4] — spec.md §US-2 Scenario 4: "I receive an error from OmniFocus (we do not pre-validate ICS strings)." §Clarifications: "set_repetition — NOT_FOUND, invalid ICS string (OmniJS constructor throws)." quickstart.md try-catch pattern captures and returns the error.
+- [x] CHK035 - Is the response behavior specified for clear_repetition on a task that already has no repetition rule (idempotent success)? [Edge Case, Spec §US-3 Scenario 2] — spec.md §US-3 Scenario 2: "the operation succeeds without error (idempotent)." quickstart.md: `task.repetitionRule = null` is safe on already-null values.
+
+## Notes
+
+- Check items off as completed: `[x]`
+- Items marked `[Gap]` indicate requirements that may be missing from the spec/plan
+- Items marked `[Clarity]` suggest requirements that exist but could be more specific
+- Items marked `[Consistency]` flag potential cross-tool alignment issues
+- All traceability references point to spec.md, data-model.md, or plan.md sections
+- **5 gaps resolved** (CHK014, CHK020, CHK022, CHK031, CHK032) via MCP research grounded in codebase patterns (`src/contracts/task-tools/shared/task.ts`, `src/contracts/review-tools/shared/batch.ts`) and RFC 5545 §3.3.10
+- **30 items verified** (CHK001-013, CHK015-019, CHK021, CHK023-030, CHK033-035) against spec.md, data-model.md, quickstart.md, research.md, and plan.md artifacts

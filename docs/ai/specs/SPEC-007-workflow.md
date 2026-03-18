@@ -10,13 +10,13 @@
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit.specify` | ⏳ Pending | |
-| Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
-| Plan | `/speckit.plan` | ⏳ Pending | |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
-| Analyze | `/speckit.analyze` | ⏳ Pending | |
-| Implement | `/speckit.implement` | ⏳ Pending | |
+| Specify | `/speckit.specify` | ✅ Complete | 8 FRs, 5 stories, 19 acceptance scenarios |
+| Clarify | `/speckit.clarify` | ✅ Complete | 5 questions answered, OmniJS API focus |
+| Plan | `/speckit.plan` | ✅ Complete | research.md, data-model.md, quickstart.md, plan.md generated |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 checklists: api-contracts (35), error-handling (33), type-safety (34) — 102 items, 18 gaps resolved |
+| Tasks | `/speckit.tasks` | ✅ Complete | 58 tasks across 8 phases, organized by user story, TDD Red-Green-Refactor |
+| Analyze | `/speckit.analyze` | ✅ Complete | 11 findings (2 CRITICAL, 2 HIGH, 4 MEDIUM, 3 LOW) — all remediated |
+| Implement | `/speckit.implement` | ✅ Complete | 58/58 tasks, 292 new tests (2216 total), 5 tools registered |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -42,20 +42,20 @@ Each phase requires **human review and approval** before proceeding:
 
 **Before starting any workflow phase**, verify alignment with the project constitution (`.specify/memory/constitution.md` v2.0.0):
 
-| Principle | Requirement | Verification |
-|-----------|-------------|--------------|
-| I. Type-First Development | All functions typed, Zod contracts | `pnpm typecheck` |
-| II. Separation of Concerns | definitions/ + primitives/ split | Code review |
-| III. Script Execution Safety | OmniJS-only, try-catch + JSON | Script Editor test |
-| IV. Structured Data Contracts | Zod schemas for all inputs | Contract tests |
-| V. Defensive Error Handling | Structured errors, no swallowed exceptions | Unit tests |
-| VI. Build Discipline | `pnpm build` after changes | `pnpm build` |
-| VII. KISS | Simple, boring solutions | Code review |
-| VIII. YAGNI | No premature abstractions | Code review |
-| IX. SOLID | Single responsibility | Code review |
-| X. TDD | Red-Green-Refactor cycle | Test-first workflow |
+| Principle | Requirement | Verification | Status |
+|-----------|-------------|--------------|--------|
+| I. Type-First Development | All functions typed, Zod contracts | `pnpm typecheck` | ✅ Pass |
+| II. Separation of Concerns | definitions/ + primitives/ split | Code review | ✅ 34 definitions, 34 primitives |
+| III. Script Execution Safety | OmniJS-only, try-catch + JSON | Script Editor test | ✅ Existing patterns verified |
+| IV. Structured Data Contracts | Zod schemas for all inputs | Contract tests | ✅ 5 contract dirs (folder/project/review/tag/task) |
+| V. Defensive Error Handling | Structured errors, no swallowed exceptions | Unit tests | ✅ 1924 tests pass |
+| VI. Build Discipline | `pnpm build` after changes | `pnpm build` | ✅ Build succeeds |
+| VII. KISS | Simple, boring solutions | Code review | ✅ Verified |
+| VIII. YAGNI | No premature abstractions | Code review | ✅ Verified |
+| IX. SOLID | Single responsibility | Code review | ✅ Verified |
+| X. TDD | Red-Green-Refactor cycle | Test-first workflow | ✅ 90 test files, 1924 tests |
 
-**Constitution Check:** ⏳ (mark before proceeding to G1)
+**Constitution Check:** ✅ Verified 2026-03-17 — Constitution v2.0.0 (RATIFIED), all principles satisfied
 
 ---
 
@@ -66,8 +66,8 @@ Each phase requires **human review and approval** before proceeding:
 | Field | Value |
 |-------|-------|
 | **Spec ID** | SPEC-007 |
-| **Name** | Repetition |
-| **Branch** | `feature/007-repetition` |
+| **Name** | Repetition Rule Management |
+| **Branch** | `worktree-007-repetition` |
 | **Dependencies** | None (Phases 0-5 complete) |
 | **Enables** | None |
 | **Priority** | P2 |
@@ -75,20 +75,21 @@ Each phase requires **human review and approval** before proceeding:
 
 ### Success Criteria Summary
 
-- [ ] `get_repetition` returns ruleString (ICS format), scheduleType, anchorDateKey, catchUpAutomatically
-- [ ] `set_repetition` accepts raw ICS rule string (e.g., `FREQ=WEEKLY;BYDAY=MO,WE,FR`)
-- [ ] `set_common_repetition` provides 8 presets: daily, weekdays, weekly, biweekly, monthly, monthly_last_day, quarterly, yearly
-- [ ] `set_advanced_repetition` uses v4.7+ constructor with RepetitionScheduleType and AnchorDateKey
-- [ ] `clear_repetition` sets repetitionRule = null
-- [ ] Version detection for v4.7+ features with graceful fallback
-- [ ] Full TDD with contract tests + unit tests per tool
-- [ ] All 5 tools registered in server.ts
+- [x] `get_repetition` returns ruleString (ICS format), scheduleType, anchorDateKey, catchUpAutomatically
+- [x] `set_repetition` accepts raw ICS rule string (e.g., `FREQ=WEEKLY;BYDAY=MO,WE,FR`)
+- [x] `set_common_repetition` provides 8 presets: daily, weekdays, weekly, biweekly, monthly, monthly_last_day, quarterly, yearly
+- [x] `set_advanced_repetition` uses v4.7+ constructor with RepetitionScheduleType and AnchorDateKey
+- [x] `clear_repetition` sets repetitionRule = null
+- [x] Version detection for v4.7+ features with graceful fallback
+- [x] Full TDD with contract tests + unit tests per tool
+- [x] All 5 tools registered in server.ts
 
 ---
 
 ## Phase 1: Specify
 
-**When to run:** At the start of a new feature specification. Focus on **WHAT** and **WHY**, not implementation details. Output: `specs/007-repetition/spec.md`
+**Status:** ✅ Complete (2026-03-17)
+**Output:** `specs/007-repetition-rules/spec.md`
 
 ### Specify Prompt
 
@@ -135,13 +136,16 @@ OmniFocus users need programmatic control over task and project repetition rules
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | <!-- e.g., FR-001 through FR-020 --> |
-| User Stories | 5 |
-| Acceptance Criteria | <!-- Count --> |
+| Functional Requirements | FR-001 through FR-008 |
+| User Stories | 5 (2x P1, 2x P2, 1x P3) |
+| Acceptance Criteria | 19 acceptance scenarios |
+| Edge Cases | 5 documented |
+| NEEDS CLARIFICATION | 0 (none needed) |
 
 ### Files Generated
 
-- [ ] `specs/007-repetition/spec.md`
+- [x] `specs/007-repetition-rules/spec.md`
+- [x] `specs/007-repetition-rules/checklists/requirements.md` (all items pass)
 
 ---
 
@@ -167,8 +171,8 @@ OmniFocus users need programmatic control over task and project repetition rules
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | OmniJS API | | |
-| 2 | ICS Format | | |
+| 1 | OmniJS API | 5 asked, 5 answered | Version detection: `app.userVersion.atLeast`; 8 presets; legacy 2-param constructor for basic tools; all v4.7+ params optional; read-then-merge pattern for `set_advanced_repetition` |
+| 2 | ICS Format | — | Absorbed into Session 1 (ICS questions folded into preset/constructor clarifications) |
 
 ---
 
@@ -205,13 +209,15 @@ OmniFocus users need programmatic control over task and project repetition rules
 
 ### Plan Results
 
+**Status:** ✅ Complete (2026-03-17)
+
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | OmniJS RepetitionRule API research |
-| `data-model.md` | ⏳ | RepetitionRule types and ICS format |
-| `contracts/` | ⏳ | 5 tool contracts + shared schemas |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | Technical context, constitution checks, project structure, implementation strategy |
+| `research.md` | ✅ | OmniJS RepetitionRule API: constructors, enums, version detection, read-then-merge |
+| `data-model.md` | ✅ | 5 entities (RepetitionRuleData, ItemIdentifier, PresetName, ScheduleType, AnchorDateKey) |
+| `contracts/` | ✅ (designed) | 6 contract files + 3 shared schemas (structure in plan.md, code in Phase 5) |
+| `quickstart.md` | ✅ | 5 tool OmniJS patterns + preset→ICS TypeScript mapping |
 
 ---
 
@@ -278,10 +284,10 @@ Focus on SPEC-007 Repetition requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | | | |
-| error-handling | | | |
-| type-safety | | | |
-| **Total** | | | |
+| api-contracts | 35 | 0 (5 resolved via MCP research) | Spec §FR-001–008, Data Model §Validation Rules, §API Response Formats |
+| error-handling | 33 | 0 (8 resolved via codebase research) | Spec §FR-005/007, Constitution §III, Quickstart §Version Detection |
+| type-safety | 34 | 0 (5 resolved via codebase research) | Spec §FR-002/004/008, Data Model §ScheduleType/AnchorDateKey/PresetName |
+| **Total** | **102** | **0 (18 resolved)** | |
 
 ---
 
@@ -319,10 +325,12 @@ Focus on SPEC-007 Repetition requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 58 |
+| **Phases** | 8 (Setup, Foundation, US1-get, US2-set, US3-clear, US4-common, US5-advanced, Polish) |
+| **Parallel Opportunities** | 15+ (within-phase parallel test pairs, cross-story parallelism for US2/US3/US4) |
+| **User Stories Covered** | 5/5 (US1-P1, US2-P1, US3-P2, US4-P2, US5-P3) |
+| **MVP Scope** | Phase 1-3 (US1: get_repetition) — 16 tasks |
+| **TDD Compliance** | All stories follow RED→GREEN→REFACTOR cycle |
 
 ---
 
@@ -355,7 +363,21 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| C1 | CRITICAL | tasks.md references `generateOmniScript` + `writeSecureTempFile` + `executeOmniFocusScript` — none exist; actual pattern is local `generateXxxScript()` + `executeOmniJS(script)` | Fixed T011, T020, T029, T038, T047 with correct function names |
+| C2 | CRITICAL | plan.md `shared/preset.ts` doesn't match tasks.md `shared/repetition-enums.ts` | Fixed plan.md to use `repetition-enums.ts` |
+| D1 | HIGH | Phase 1 creates schemas before Phase 2 tests — violates strict TDD | Added TDD note: infrastructure exception; strict RED-first applies to Phases 3–7 |
+| D2 | HIGH | T010/T019/T028/T037/T046 marked [P] but have sequential import deps | Removed [P], updated parallel opportunities section |
+| E1 | HIGH | 4 of 6 spec edge cases had zero task coverage | Added edge cases to T009, T018, T027, T036, T045 descriptions |
+| E2 | MEDIUM | T008 missing dual-discriminator (`success` + `hasRule`) test note | Added explicit dual-discriminator validation to T008 |
+| F1 | MEDIUM | T036 says "each of 8 presets" but lists 10 cases | Clarified: "8 presets with 2 modifier combinations (10 test cases)" |
+| G1 | MEDIUM | T047 missing OmniJS enum constant write pattern | Added note: reference `Task.RepetitionScheduleType.Regularly` directly, not strings |
+| G2 | LOW | Per-primitive naming convention not explicit | Added `generateXxxScript()` naming to all primitive tasks |
+| H1 | LOW | No barrel export verification task | Added verification note to T057 build task |
+| H2 | LOW | 6 redundant lint tasks across phases | Fixed: merged lint into each phase's build+test step; standalone lint tasks converted to refactor reviews; removed T056 duplicate |
+
+| M2 | LOW | kebab-case vs camelCase file naming could confuse implementers | Fixed: added File Naming Convention table to tasks.md header documenting per-directory conventions |
+
+**Metrics**: 8/8 FRs covered (100%), 19/19 scenarios covered (100%), 6/6 edge cases now covered (100%), 0 issues remaining
 
 ---
 
@@ -395,20 +417,24 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | |
-| 2 - Read (get_repetition) | | | |
-| 3 - Write (set/clear/common/advanced) | | | |
-| 4 - Integration | | | |
+| 1 - Setup | T001-T005 | 5/5 | Shared schemas, directory structure, barrel exports |
+| 2 - Foundation Tests | T006-T007 | 2/2 | 23 shared schema contract tests |
+| 3 - US1 get_repetition | T008-T016 | 9/9 | 53 tests (43 contract + 10 unit), MVP complete |
+| 4 - US2 set_repetition | T017-T025 | 9/9 | 48 tests (34 contract + 14 unit) |
+| 5 - US3 clear_repetition | T026-T034 | 9/9 | 39 tests (29 contract + 10 unit) |
+| 6 - US4 set_common_repetition | T035-T043 | 9/9 | 66 tests (45 contract + 21 unit) |
+| 7 - US5 set_advanced_repetition | T044-T052 | 9/9 | 63 tests (contract + unit), version gating + read-then-merge |
+| 8 - Polish | T053-T058 | 6/6 | Full suite, typecheck, lint, build, CLAUDE.md update |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] Linting passes: `pnpm lint`
-- [ ] Type checking passes: `pnpm typecheck`
-- [ ] Tests pass: `pnpm test`
-- [ ] Build succeeds: `pnpm build`
+- [x] All tasks marked complete in tasks.md (58/58)
+- [x] Linting passes: `pnpm lint` (291 files, no issues)
+- [x] Type checking passes: `pnpm typecheck` (no errors)
+- [x] Tests pass: `pnpm test` (2216 tests, 101 files)
+- [x] Build succeeds: `pnpm build` (ESM + CJS + DTS)
 - [ ] Manual verification in OmniFocus Script Editor
 - [ ] PR created and reviewed
 - [ ] Merged to main branch
@@ -419,21 +445,28 @@ Before starting any task:
 
 ### What Worked Well
 
--
+- Parallel agent orchestration: RED tests for 4 tools written simultaneously, GREEN implementations for 3 tools in parallel — ~3x wall-clock speedup
+- Comprehensive spec artifacts (data-model.md, quickstart.md) provided exact patterns for agents to follow
+- TDD caught the `executeOmniJS` mock pattern issue early (returns objects, not JSON strings)
 
 ### Challenges Encountered
 
--
+- Zod 4.x `z.discriminatedUnion()` requires unique discriminator values — `get_repetition` has two `success: true` variants, required `z.union()` instead
+- `executeOmniJS()` returns parsed objects, not strings — unit test mocks initially used `JSON.stringify()` causing 7 test failures
+- Coverage tool (`@vitest/coverage-v8`) has a version mismatch with Vitest 4.x — pre-existing, not blocking
 
 ### Patterns to Reuse
 
--
+- Parallel RED phase: write contract + unit tests simultaneously (different files, no deps)
+- Parallel GREEN phase: implement multiple tools simultaneously when they don't share imports
+- `z.union()` for dual-discriminator responses in Zod 4.x
+- Local `escapeForJS()` + `generateXxxScript()` per primitive pattern
 
 ---
 
 ## Project Structure Reference
 
-```
+```text
 omnifocus-mcp/
 ├── src/
 │   ├── server.ts                          # MCP server entry point

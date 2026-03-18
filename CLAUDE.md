@@ -207,6 +207,22 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - You've tested OmniJS scripts independently
 
 ## Recent Changes
+- 007-repetition-rules: TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
+
+- **Phase 7 Repetition Rules (Implementation Complete)**: Repetition Rule Management fully implemented (2026-03-17)
+  - 5 new tools: `get_repetition`, `set_repetition`, `clear_repetition`, `set_common_repetition`, `set_advanced_repetition`
+  - `get_repetition`: Read ICS rule string, schedule type (v4.7+), anchor date (v4.7+), catch-up (v4.7+), deprecated method
+  - `set_repetition`: Set repetition via raw ICS string using legacy 2-param constructor (all versions)
+  - `clear_repetition`: Remove repetition rule (idempotent — succeeds on already-cleared tasks)
+  - `set_common_repetition`: Set from 8 named presets (daily, weekdays, weekly, biweekly, monthly, monthly_last_day, quarterly, yearly) with optional day/dayOfMonth modifiers; ICS generated server-side in TypeScript
+  - `set_advanced_repetition`: Configure v4.7+ params (scheduleType, anchorDateKey, catchUpAutomatically) with read-then-merge pattern; version-gated via `app.userVersion.atLeast(new Version('4.7'))`
+  - All tools accept task OR project IDs — projects resolve to root task
+  - Dual-discriminator response for get_repetition: `success: true/false` + `hasRule: true/false`
+  - Zod 4.x: `z.union()` for get_repetition response (dual success variants share `success: true`); `z.discriminatedUnion('success', [...])` for other 4 tools
+  - Full TDD implementation with 292 new tests (contract + unit)
+  - Total: 2216 tests across 101 test files (was 1924 across 90)
+  - Contracts in `src/contracts/repetition-tools/` with shared schemas (enums, RepetitionRuleData)
+
 - 005-review-system: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
 
 - **Phase 5 Review System (Implementation Complete)**: Review System fully implemented (2026-03-16)

@@ -28,6 +28,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration:file": "vitest run --config vitest.integration.config.ts --reporter=verbose",
     "test:integration:watch": "vitest --config vitest.integration.config.ts",
     "prepare": "husky"
   },
