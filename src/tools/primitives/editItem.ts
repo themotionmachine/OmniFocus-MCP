@@ -4,6 +4,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { generateDateAssignmentV2 } from '../../utils/dateFormatting.js';
+import { generateFolderLookupScript, generateProjectLookupScript } from '../../utils/appleScriptHelpers.js';
 const execAsync = promisify(exec);
 
 // Status options for tasks and projects
@@ -30,6 +31,7 @@ export interface EditItemParams {
   addTags?: string[];           // Tags to add to the task
   removeTags?: string[];        // Tags to remove from the task
   replaceTags?: string[];       // Tags to replace all existing tags with
+  newProjectName?: string;      // Move task to this project; empty string or 'inbox' = move to inbox
   
   // Project-specific fields
   newSequential?: boolean;      // Whether the project should be sequential
@@ -40,10 +42,10 @@ export interface EditItemParams {
 /**
  * Generate pure AppleScript for item editing with dates constructed outside tell blocks
  */
-function generateAppleScript(params: EditItemParams): string {
+export function generateAppleScript(params: EditItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/["\\]/g, '\\$&') || ''; // Escape quotes and backslashes
-  const name = params.name?.replace(/["\\]/g, '\\$&') || '';
+  const id = params.id?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || ''; // Escape quotes and backslashes
+  const name = params.name?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
   const itemType = params.itemType;
   
   // Verify we have at least one identifier
@@ -102,33 +104,17 @@ function generateAppleScript(params: EditItemParams): string {
   if (id) {
     if (itemType === 'task') {
       script += `
-      -- Try to find task by ID
-      repeat with aTask in (flattened tasks)
-        if (id of aTask as string) = "${id}" then
-          set foundItem to aTask
-          exit repeat
-        end if
-      end repeat
-      
-      -- If not found in projects, search in inbox
-      if foundItem is missing value then
-        repeat with aTask in (inbox tasks)
-          if (id of aTask as string) = "${id}" then
-            set foundItem to aTask
-            exit repeat
-          end if
-        end repeat
-      end if
+      -- Find task by ID (flattened tasks includes inbox tasks and returns direct references)
+      try
+        set foundItem to first flattened task whose id is "${id}"
+      end try
 `;
     } else {
       script += `
-      -- Try to find project by ID
-      repeat with aProject in (flattened projects)
-        if (id of aProject as string) = "${id}" then
-          set foundItem to aProject
-          exit repeat
-        end if
-      end repeat
+      -- Find project by ID
+      try
+        set foundItem to first flattened project whose id is "${id}"
+      end try
 `;
     }
   }
@@ -137,33 +123,17 @@ function generateAppleScript(params: EditItemParams): string {
   if (!id && name) {
     if (itemType === 'task') {
       script += `
-      -- Find task by name (search in projects first, then inbox)
-      repeat with aTask in (flattened tasks)
-        if (name of aTask) = "${name}" then
-          set foundItem to aTask
-          exit repeat
-        end if
-      end repeat
-      
-      -- If not found in projects, search in inbox
-      if foundItem is missing value then
-        repeat with aTask in (inbox tasks)
-          if (name of aTask) = "${name}" then
-            set foundItem to aTask
-            exit repeat
-          end if
-        end repeat
-      end if
+      -- Find task by name (flattened tasks includes inbox tasks)
+      try
+        set foundItem to first flattened task whose name is "${name}"
+      end try
 `;
     } else {
       script += `
       -- Find project by name
-      repeat with aProject in (flattened projects)
-        if (name of aProject) = "${name}" then
-          set foundItem to aProject
-          exit repeat
-        end if
-      end repeat
+      try
+        set foundItem to first flattened project whose name is "${name}"
+      end try
 `;
     }
   } else if (id && name) {
@@ -171,34 +141,18 @@ function generateAppleScript(params: EditItemParams): string {
       script += `
       -- If ID search failed, try to find by name as fallback
       if foundItem is missing value then
-        repeat with aTask in (flattened tasks)
-          if (name of aTask) = "${name}" then
-            set foundItem to aTask
-            exit repeat
-          end if
-        end repeat
-      end if
-      
-      -- If still not found, search in inbox
-      if foundItem is missing value then
-        repeat with aTask in (inbox tasks)
-          if (name of aTask) = "${name}" then
-            set foundItem to aTask
-            exit repeat
-          end if
-        end repeat
+        try
+          set foundItem to first flattened task whose name is "${name}"
+        end try
       end if
 `;
     } else {
       script += `
       -- If ID search failed, try to find project by name as fallback
       if foundItem is missing value then
-        repeat with aProject in (flattened projects)
-          if (name of aProject) = "${name}" then
-            set foundItem to aProject
-            exit repeat
-          end if
-        end repeat
+        try
+          set foundItem to first flattened project whose name is "${name}"
+        end try
       end if
 `;
     }
@@ -217,7 +171,7 @@ function generateAppleScript(params: EditItemParams): string {
   if (params.newName !== undefined) {
     script += `
         -- Update name
-        set name of foundItem to "${params.newName.replace(/["\\]/g, '\\$&')}"
+        set name of foundItem to "${params.newName.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"
         set end of changedProperties to "name"
 `;
   }
@@ -225,7 +179,7 @@ function generateAppleScript(params: EditItemParams): string {
   if (params.newNote !== undefined) {
     script += `
         -- Update note
-        set note of foundItem to "${params.newNote.replace(/["\\]/g, '\\$&')}"
+        set note of foundItem to "${params.newNote.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"
         set end of changedProperties to "note"
 `;
   }
@@ -284,14 +238,13 @@ function generateAppleScript(params: EditItemParams): string {
       } else if (params.newStatus === 'dropped') {
         script += `
         -- Mark task as dropped
-        set dropped of foundItem to true
+        mark dropped foundItem
         set end of changedProperties to "status (dropped)"
 `;
       } else if (params.newStatus === 'incomplete') {
         script += `
         -- Mark task as incomplete
-        set completed of foundItem to false
-        set dropped of foundItem to false
+        mark incomplete foundItem
         set end of changedProperties to "status (incomplete)"
 `;
       }
@@ -299,7 +252,7 @@ function generateAppleScript(params: EditItemParams): string {
     
     // Handle tag operations
     if (params.replaceTags && params.replaceTags.length > 0) {
-      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&')}"`).join(", ");
+      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
       script += `
         -- Replace all tags
         set tagNames to {${tagsList}}
@@ -328,7 +281,7 @@ function generateAppleScript(params: EditItemParams): string {
     } else {
       // Add tags if specified
       if (params.addTags && params.addTags.length > 0) {
-        const tagsList = params.addTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&')}"`).join(", ");
+        const tagsList = params.addTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
         script += `
         -- Add tags
         set tagNames to {${tagsList}}
@@ -350,7 +303,7 @@ function generateAppleScript(params: EditItemParams): string {
       
       // Remove tags if specified
       if (params.removeTags && params.removeTags.length > 0) {
-        const tagsList = params.removeTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&')}"`).join(", ");
+        const tagsList = params.removeTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
         script += `
         -- Remove tags
         set tagNames to {${tagsList}}
@@ -364,8 +317,30 @@ function generateAppleScript(params: EditItemParams): string {
 `;
       }
     }
+
+    // Move task to a different project
+    if (params.newProjectName !== undefined) {
+      if (params.newProjectName === '' || params.newProjectName.toLowerCase() === 'inbox') {
+        script += `
+        -- Move task to inbox by clearing its assigned container
+        set assigned container of foundItem to missing value
+        set end of changedProperties to "project (moved to inbox)"
+`;
+      } else {
+        const escapedProjectPath = params.newProjectName.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ');
+        const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${escapedProjectPath}\\\"}`;
+        const projectLookup = generateProjectLookupScript(params.newProjectName, 'destProject', errorJson);
+        script += `
+        -- Find the destination project (supports folder paths like "Work/My Project")
+        ${projectLookup}
+
+        move foundItem to end of tasks of destProject
+        set end of changedProperties to "project (moved to ${escapedProjectPath})"
+`;
+      }
+    }
   }
-  
+
   // Project-specific updates
   if (itemType === 'project') {
     // Update sequential status
@@ -390,23 +365,17 @@ function generateAppleScript(params: EditItemParams): string {
 `;
     }
     
-    // Move to a new folder
-    if (params.newFolderName !== undefined) {
-      const folderName = params.newFolderName.replace(/["\\]/g, '\\$&');
+    // Move to a new folder (supports nested paths like "Work/Engineering")
+    if (params.newFolderName !== undefined && params.newFolderName !== '') {
+      const escapedFolderName = params.newFolderName.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ');
+      const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${escapedFolderName}\\\"}`;
+      const folderLookup = generateFolderLookupScript(params.newFolderName, 'destFolder', errorJson);
       script += `
-        -- Move to new folder
-        set destFolder to missing value
-        try
-          set destFolder to first flattened folder where name = "${folderName}"
-        end try
-        
-        if destFolder is missing value then
-          -- Create the folder if it doesn't exist
-          set destFolder to make new folder with properties {name:"${folderName}"}
-        end if
-        
+        -- Find the destination folder
+        ${folderLookup}
+
         -- Move project to the folder
-        move foundItem to destFolder
+        move {foundItem} to end of projects of destFolder
         set end of changedProperties to "folder"
 `;
     }
@@ -466,7 +435,7 @@ export async function editItem(params: EditItemParams): Promise<{
     writeFileSync(tempFile, script);
     
     // Execute AppleScript from file
-    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
+    const { stdout, stderr } = await execAsync(`osascript "${tempFile}"`);
     
     // Clean up temp file
     try {

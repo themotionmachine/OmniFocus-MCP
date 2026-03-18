@@ -21,7 +21,8 @@ export const schema = z.object({
   addTags: z.array(z.string()).optional().describe("Tags to add to the task"),
   removeTags: z.array(z.string()).optional().describe("Tags to remove from the task"),
   replaceTags: z.array(z.string()).optional().describe("Tags to replace all existing tags with"),
-  
+  newProjectName: z.string().optional().describe("Move this task to a different project by name or folder path (e.g. 'My Project' or 'Work/My Project' to disambiguate). Pass an empty string or 'inbox' to move the task to the inbox. (tasks only)"),
+
   // Project-specific fields
   newSequential: z.boolean().optional().describe("Whether the project should be sequential"),
   newFolderName: z.string().optional().describe("New folder to move the project to"),
