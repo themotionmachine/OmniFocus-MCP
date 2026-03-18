@@ -34,7 +34,7 @@ implementation phases.
 | 4     | **Projects**                   | 6     | Complete |
 | 5     | **Review System**              | 3     | Complete |
 | 6     | Notifications                  | 5     | Pending  |
-| 7     | Repetition                     | 5     | Pending  |
+| 7     | **Repetition**                 | 5     | Complete |
 | 8     | **Perspectives**               | 5     | Pending  |
 | 9     | **Search & Database**          | 10    | Pending  |
 | 10    | **Bulk Operations**            | 6     | Pending  |
@@ -776,6 +776,71 @@ When disabling (null), the project will no longer appear in review queries.
 
 Returns: Per-item results with previousInterval and newInterval, plus summary
 with total/succeeded/failed counts.
+
+### `get_repetition` ⭐ NEW
+
+Get the repetition rule for a task or project, including the ICS rule string,
+schedule type (v4.7+), anchor date (v4.7+), and catch-up setting (v4.7+).
+
+Parameters:
+
+- `id`: Task or project OmniFocus ID
+
+Returns: `hasRule: true` with full rule data (ruleString, isRepeating,
+scheduleType, anchorDateKey, catchUpAutomatically, method) or `hasRule: false`
+with `rule: null`. Projects resolve to their root task. v4.7+ fields return
+null on older OmniFocus versions.
+
+### `set_repetition` ⭐ NEW
+
+Set a repetition rule on a task or project using a raw ICS recurrence string.
+Uses the legacy 2-param constructor for universal compatibility across all
+OmniFocus versions.
+
+Parameters:
+
+- `id`: Task or project OmniFocus ID
+- `ruleString`: ICS RRULE format (e.g., `FREQ=WEEKLY;BYDAY=MO,WE,FR`)
+
+### `clear_repetition` ⭐ NEW
+
+Remove the repetition rule from a task or project, making it non-recurring.
+Idempotent — succeeds even if no rule exists.
+
+Parameters:
+
+- `id`: Task or project OmniFocus ID
+
+### `set_common_repetition` ⭐ NEW
+
+Set a repetition rule using named presets without knowing ICS syntax. The ICS
+string is generated server-side from the preset name.
+
+Parameters:
+
+- `id`: Task or project OmniFocus ID
+- `preset`: One of `daily`, `weekdays`, `weekly`, `biweekly`, `monthly`,
+  `monthly_last_day`, `quarterly`, `yearly`
+- `days`: (Optional) Day selection for weekly/biweekly — array of `MO`, `TU`,
+  `WE`, `TH`, `FR`, `SA`, `SU`
+- `dayOfMonth`: (Optional) Day of month for monthly/quarterly (1-31)
+
+### `set_advanced_repetition` ⭐ NEW
+
+Configure advanced v4.7+ repetition parameters (schedule type, anchor date,
+catch-up behavior) using the 5-param constructor with read-then-merge
+semantics. Version-gated — returns an error on pre-v4.7 OmniFocus.
+
+Parameters:
+
+- `id`: Task or project OmniFocus ID
+- `ruleString`: (Optional) ICS rule string — reads from existing rule if omitted
+- `scheduleType`: (Optional) `Regularly`, `FromCompletion`, or `None`
+- `anchorDateKey`: (Optional) `DueDate`, `DeferDate`, or `PlannedDate`
+- `catchUpAutomatically`: (Optional) Boolean — auto-skip past occurrences
+
+Note: All optional params use read-then-merge — omitted values are preserved
+from the existing rule. Requires a `ruleString` when no existing rule exists.
 
 ## Development
 

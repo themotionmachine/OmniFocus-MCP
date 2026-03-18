@@ -93,9 +93,9 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 
 | Spec | Name | Tools | Status | Spec Dir | Next Phase |
 |------|------|-------|--------|----------|------------|
-| SPEC-006 | Notifications | 5 | ⏳ Pending | `specs/006-notifications/` | Specify |
-| SPEC-007 | Repetition | 5 | ⏳ Pending | `specs/007-repetition/` | Specify |
-| SPEC-013 | Task Status & Completion | 6 | ⏳ Pending | `specs/013-task-status/` | Specify |
+| SPEC-006 | Notifications | 5 | 🔄 In Progress | `specs/006-notifications/` | Tasks |
+| SPEC-007 | Repetition | 5 | ✅ Complete | `specs/007-repetition-rules/` | Merged ([PR #38](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/38)) |
+| SPEC-013 | Task Status & Completion | 6 | 🔄 In Progress | `specs/013-task-status/` | Specify |
 | SPEC-008 | Perspectives | 5 | ⏳ Pending | `specs/008-perspectives/` | Specify |
 | SPEC-009 | Search & Database | 10 | ⏳ Pending | `specs/009-search-database/` | Specify |
 | SPEC-011 | Attachments & Linked Files | 5 | ⏳ Pending | `specs/011-attachments/` | Specify |
@@ -151,41 +151,37 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 
 ---
 
-### SPEC-007: Repetition
+### SPEC-007: Repetition ✅ COMPLETE
 
 **Priority:** P2 | **Depends On:** None (Phases 0-5 complete) | **Enables:** None
+**Completed:** 2026-03-17 | **PR:** [#38](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/38) | **Branch:** `worktree-007-repetition`
 
 **Goal:** Provide full repetition rule management using ICS (iCalendar) format rules with OmniFocus v4.7+ enhanced schedule types.
 
-**Scope:**
+**Delivered:**
 
 - 5 MCP tools: `get_repetition`, `set_repetition`, `clear_repetition`, `set_common_repetition`, `set_advanced_repetition`
-- Zod contracts in `src/contracts/repetition-tools/` for all 5 tools
-- OmniJS primitives working with `task.repetitionRule` (RW) and `Task.RepetitionRule` constructor
-- `get_repetition` returns `ruleString` (ICS format), `scheduleType`, `anchorDateKey`, `catchUpAutomatically`
-- `set_repetition` takes raw ICS rule string (e.g., `FREQ=WEEKLY;BYDAY=MO,WE,FR`)
-- `set_common_repetition` provides presets: `daily`, `weekdays`, `weekly`, `biweekly`, `monthly`, `monthly_last_day`, `quarterly`, `yearly`
-- `set_advanced_repetition` uses v4.7+ constructor with `RepetitionScheduleType` (FromCompletion, Regularly, None) and `AnchorDateKey` (DeferDate, DueDate, PlannedDate)
-- `clear_repetition` sets `repetitionRule = null`
-- Version detection: `set_advanced_repetition` must check for v4.7+ features; graceful fallback if unavailable
-- Full TDD with contract tests + unit tests per tool
+- 16 new source files (5 contracts + 3 shared schemas + 5 primitives + 5 definitions)
+- 292 new tests (contract + unit) + 12 integration tests
+- Total: 2216 tests across 101 test files (was 1924 across 90)
+- Full TDD red-green-refactor across 8 phases (58 tasks)
 
-**Out of Scope:**
+**Key Implementation Details:**
 
-- Custom ICS rule validation/parsing (pass-through to OmniFocus)
-- RepetitionRule serialization/deserialization beyond what OmniJS provides
-
-**Key Decisions:**
-
-- ICS rules are stored as opaque strings. We do not parse or validate them — OmniFocus is the authority.
-- `set_common_repetition` is a convenience wrapper that generates the correct ICS rule internally.
+- ICS rules are opaque pass-through strings — OmniFocus is the validation authority
+- Legacy 2-param `Task.RepetitionRule` constructor for basic tools (all versions)
+- 5-param constructor for `set_advanced_repetition` (v4.7+ only, version-gated)
+- Read-then-merge pattern for advanced tool (c-command.com proven pattern)
+- `set_common_repetition` generates ICS strings server-side in TypeScript (8 presets)
+- OmniJS enums parsed via `enumName()` helper (`.name` undefined for repetition enums; `String()` returns `"EnumType: Value]"`)
+- `z.union()` for get_repetition response (Zod 4.x dual-discriminator workaround)
 
 **Key Files:**
 
 - `src/contracts/repetition-tools/` — Zod contracts (5 files + shared schemas)
 - `src/tools/primitives/getRepetition.ts`, `setRepetition.ts`, `clearRepetition.ts`, `setCommonRepetition.ts`, `setAdvancedRepetition.ts`
 - `src/tools/definitions/` — matching definition files
-- `tests/unit/repetition-tools/`, `tests/contracts/repetition-tools/`
+- `tests/unit/repetition-tools/`, `tests/contract/repetition-tools/`, `tests/integration/repetition-tools/`
 
 ---
 
