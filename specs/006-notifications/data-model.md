@@ -54,16 +54,18 @@ Maps 1:1 with `Task.Notification.Kind.*` constants in OmniJS.
 | `"DeferRelative"` | `Task.Notification.Kind.DeferRelative` ⚠️ | Fires relative to defer date |
 | `"Unknown"` | `Task.Notification.Kind.Unknown` | Invalid state |
 
-> **⚠️ DeferRelative Enum Status**: The official `Task.Notification.Kind` enum
-> only documents 3 values: Absolute, DueRelative, Unknown. DeferRelative is NOT
-> listed in the official API docs (OF-API.html, task-notifications.html).
-> However, `relativeFireOffset` and `initialFireDate` docs reference
-> "deferRelative" as a valid kind. The official Task-to-Project script only
-> handles Absolute and DueRelative (skips DeferRelative). DeferRelative likely
-> exists at runtime but is undocumented. **Verify
-> `Task.Notification.Kind.DeferRelative` in Script Editor.** If it does not
-> exist, DeferRelative notifications may report as "Unknown" kind, and the
-> implementation must map accordingly.
+> **DeferRelative Enum Status**: The official `Task.Notification.Kind` enum
+> listing shows only 3 values: Absolute, DueRelative, Unknown. DeferRelative is
+> NOT in the enum listing, but IS referenced in property documentation on the
+> same page — `relativeFireOffset` says it "throws if kind is not DueRelative
+> **or DeferRelative**" and `initialFireDate` references "due or defer-relative
+> notifications". This documentation inconsistency strongly indicates
+> DeferRelative exists at runtime but was omitted from the enum listing.
+> **Verification**: run `Task.Notification.Kind.all` in Script Editor to
+> enumerate all runtime values. **Defensive implementation**: check
+> `Task.Notification.Kind.DeferRelative` existence at runtime; if absent, map
+> to "Unknown". See research.md §Decision 8 for full analysis and verification
+> script.
 
 ### Preset Enum
 
@@ -99,6 +101,7 @@ adding relative notifications. `effectiveDueDate` includes inherited due dates
 from containing projects/action groups. `dueDate` is task-local only.
 
 Pre-check in OmniJS scripts MUST use:
+
 ```javascript
 if (!task.effectiveDueDate) {
   // error: no effective due date
@@ -108,6 +111,7 @@ if (!task.effectiveDueDate) {
 ### relativeFireOffset Base Date
 
 The `relativeFireOffset` value is relative to different dates depending on kind:
+
 - **DueRelative**: offset from `task.effectiveDueDate`
 - **DeferRelative**: offset from `task.effectiveDeferDate`
 

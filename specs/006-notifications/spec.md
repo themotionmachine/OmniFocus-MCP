@@ -279,10 +279,19 @@ ID, notification index, and target datetime, then verifying the notification's
 - **DeferRelative notifications**: These are created by OmniFocus when a task has
   a defer date. `list_notifications` reports them with `kind: "DeferRelative"`,
   but `add_notification` does not support creating them (OmniFocus manages these
-  internally). **⚠️ `DeferRelative` is NOT in the official `Task.Notification.Kind`
-  enum (only Absolute, DueRelative, Unknown are listed). Verify
-  `Task.Notification.Kind.DeferRelative` exists in Script Editor. If it does not
-  exist, DeferRelative notifications may report as "Unknown" kind.**
+  internally). **`DeferRelative` is NOT in the official `Task.Notification.Kind`
+  enum listing (only Absolute, DueRelative, Unknown are listed), but IS
+  referenced in property documentation** — `relativeFireOffset` docs explicitly
+  state it "throws an error if this notification's kind is not either DueRelative
+  or DeferRelative", and `initialFireDate` docs reference "due or defer-relative
+  notifications". This documentation inconsistency (enum section omits it,
+  property section references it) strongly indicates DeferRelative exists at
+  runtime but was omitted from the enum docs. **Verification script**: run
+  `Task.Notification.Kind.all` in Script Editor — this returns an array of all
+  enum values. **Defensive implementation**: check for DeferRelative at runtime
+  with `Task.Notification.Kind.DeferRelative && notif.kind ===
+  Task.Notification.Kind.DeferRelative`; if the constant doesn't exist, map to
+  "Unknown" kind.
 
 - **Index out of bounds for remove/snooze**: JavaScript `task.notifications[index]`
   returns `undefined` for out-of-bounds indices. Passing `undefined` to
@@ -311,6 +320,20 @@ ID, notification index, and target datetime, then verifying the notification's
 - **`relativeFireOffset` base date**: For DueRelative notifications, the offset
   is relative to the task's due date. For DeferRelative, relative to the defer
   date. The `kind` field in the response disambiguates which base date applies.
+
+- **Invalid Date values for `absoluteFireDate`**: The OmniJS bridge validates
+  JavaScript type (`instanceof Date`) but NOT Date validity. `new Date("invalid")`
+  passes the type check (it IS a Date instance) but produces undefined behavior
+  at the JavaScriptCore→NSDate bridge — NaN timestamp has no NSDate equivalent.
+  Possible outcomes: JSC-to-NSDate conversion throws, silent corruption (wrong
+  fire date), null assignment, or application crash. All code paths that set
+  `absoluteFireDate` MUST validate with `isNaN(date.getTime())` before assignment.
+  Validate at both layers: TypeScript (before script generation, following the
+  established `dateFormatting.ts` pattern) and OmniJS (inside the script as a
+  defense-in-depth guard). Non-Date values (Number, String, null) are rejected
+  by the bridge with a clear type error: "Property requires a Date, but was
+  passed value of type X". Evidence: OmniGroup forum thread confirming bridge
+  type validation for `deferDate` property (same bridge mechanism).
 
 - **String escaping in OmniJS**: All user-provided strings (task names, datetime
   strings) interpolated into OmniJS scripts MUST be escaped via `escapeForJS()`
@@ -402,10 +425,10 @@ ID, notification index, and target datetime, then verifying the notification's
   - `repeatInterval`: Seconds between repeats (null if non-repeating, read-only)
 
 - **Preset**: A named configuration that maps to one or more relative notification offsets (in seconds)
-  - `day_before`: -86400 seconds (24 * 60 * 60)
-  - `hour_before`: -3600 seconds (60 * 60)
-  - `15_minutes`: -900 seconds (15 * 60)
-  - `week_before`: -604800 seconds (7 * 24 * 60 * 60)
+  - `day_before`: -86400 seconds (`24 * 60 * 60`)
+  - `hour_before`: -3600 seconds (`60 * 60`)
+  - `15_minutes`: -900 seconds (`15 * 60`)
+  - `week_before`: -604800 seconds (`7 * 24 * 60 * 60`)
   - `standard`: combination of day_before + hour_before
 
 ### Error Messages
@@ -532,24 +555,24 @@ notif.absoluteFireDate = new Date("2026-04-01T14:00:00");
 
 | Preset | Offset (seconds) | Equivalent |
 |--------|------------------|------------|
-| `day_before` | -86400 | 24 hours before due (24 * 60 * 60) |
-| `hour_before` | -3600 | 1 hour before due (60 * 60) |
-| `15_minutes` | -900 | 15 minutes before due (15 * 60) |
-| `week_before` | -604800 | 7 days before due (7 * 24 * 60 * 60) |
+| `day_before` | -86400 | 24 hours before due (`24 * 60 * 60`) |
+| `hour_before` | -3600 | 1 hour before due (`60 * 60`) |
+| `15_minutes` | -900 | 15 minutes before due (`15 * 60`) |
+| `week_before` | -604800 | 7 days before due (`7 * 24 * 60 * 60`) |
 | `standard` | -86400, -3600 | Day before + hour before |
 
 ### Important Constraints
 
 1. **`removeNotification()` takes an object, not an index** — must retrieve `task.notifications[index]` first and pass the notification object to `task.removeNotification()`. Out-of-bounds index returns `undefined`; passing `undefined` throws OmniJS error.
 2. **`addNotification(Number)` uses SECONDS** — per official code examples (-300 = 5min, -3600 = 1hr, -86400 = 1day). ⚠️ Verify in Script Editor during plan phase. The OF-API.html `relativeFireOffset` docs say "minutes" — this is a documentation error (confirmed: -300 = "5-minutes Before Due" only works in seconds). **Contingency if verification reveals minutes**: divide all preset offsets by 60, rename `offsetSeconds`→`offsetMinutes`.
-3. **`absoluteFireDate` ONLY works on Absolute kind** — getting or setting throws on DueRelative/DeferRelative. Use `initialFireDate` for universal fire date access. Behavior with invalid Date (e.g., NaN from unparseable string) is undocumented — ⚠️ verify in Script Editor.
+3. **`absoluteFireDate` ONLY works on Absolute kind** — getting or setting throws on DueRelative/DeferRelative. Use `initialFireDate` for universal fire date access. **Invalid Date defense required**: The OmniJS bridge validates JavaScript type (`instanceof Date`) but NOT Date validity — `new Date("invalid")` passes the type check since it IS a Date instance, but produces undefined behavior at the JavaScriptCore→NSDate bridge (NaN timestamp has no NSDate equivalent). All code paths that set `absoluteFireDate` MUST validate with `isNaN(date.getTime())` before assignment. Validate at both layers: TypeScript (before script generation) and OmniJS (inside the script). This follows the established pattern in `dateFormatting.ts`.
 4. **`relativeFireOffset` ONLY works on relative kinds** — getting or setting throws on Absolute. Access conditionally based on `kind`. For DueRelative, offset is from due date. For DeferRelative, offset is from defer date.
 5. **Negative offsets = before due date** — this is the OmniFocus convention. -3600 means "1 hour before due".
 6. **`absoluteFireDate` is writable (Absolute only)** — this is the mechanism for snoozing. Setting it changes when the notification fires.
 7. **`isSnoozed` is read-only** — becomes true automatically when `absoluteFireDate` is changed on an Absolute notification. This is spec-level behavior, not just an implementation detail.
 8. **`repeatInterval` is in seconds** — read-only; editing repeat intervals is out of scope.
 9. **Notification indices shift after removal** — removing notification at index 1 causes the former index 2 to become index 1. Users should re-list after removal.
-10. **DeferRelative notifications** — created by OmniFocus when defer dates exist. `list_notifications` reports them but `add_notification` does not create them. **⚠️ `DeferRelative` is NOT in the official `Task.Notification.Kind` enum (only Absolute, DueRelative, Unknown listed). Verify `Task.Notification.Kind.DeferRelative` exists in Script Editor. If absent, DeferRelative notifications may report as "Unknown".**
+10. **DeferRelative notifications** — created by OmniFocus when defer dates exist. `list_notifications` reports them but `add_notification` does not create them. `DeferRelative` is NOT in the official `Task.Notification.Kind` enum listing (only Absolute, DueRelative, Unknown listed), but IS referenced in `relativeFireOffset` and `initialFireDate` property docs. Use `Task.Notification.Kind.all` in Script Editor to enumerate all runtime enum values. **Defensive implementation**: check `Task.Notification.Kind.DeferRelative` existence at runtime; if absent, map to "Unknown".
 11. **`initialFireDate` is the universal fire date** — read-only, works for all kinds. For relative notifications, dynamically adjusts when due/defer dates change.
 12. **`effectiveDueDate` is the pre-condition for relative notifications** — the API checks `effectiveDueDate` (includes inherited dates from containers), not `dueDate` (task-local). OmniJS scripts MUST use `task.effectiveDueDate` for the guard check.
 13. **String escaping is mandatory** — all user-provided strings interpolated into OmniJS scripts MUST use `escapeForJS()` to prevent injection and syntax errors.

@@ -33,7 +33,7 @@ implementation phases.
 | 3     | **Tasks (Enhanced)**           | 4     | Complete |
 | 4     | **Projects**                   | 6     | Complete |
 | 5     | **Review System**              | 3     | Complete |
-| 6     | Notifications                  | 5     | Pending  |
+| 6     | **Notifications**              | 5     | Complete |
 | 7     | **Repetition**                 | 5     | Complete |
 | 8     | **Perspectives**               | 5     | Pending  |
 | 9     | **Search & Database**          | 10    | Pending  |

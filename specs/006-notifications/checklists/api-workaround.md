@@ -2,7 +2,7 @@
 
 **Purpose**: Validate that OmniJS API constraints, workarounds, and edge cases are fully and clearly specified
 **Created**: 2026-03-17
-**Updated**: 2026-03-17 (all gaps remediated via official OmniAutomation docs research)
+**Updated**: 2026-03-17 (all 30 items resolved via official OmniAutomation docs + OmniGroup forum research)
 **Feature**: [spec.md](../spec.md) | [research.md](../research.md) | [data-model.md](../data-model.md)
 **Focus**: Index-to-object translation, seconds convention, absoluteFireDate manipulation, no-due-date handling, DeferRelative vs DueRelative
 **Depth**: Standard | **Audience**: Implementation reviewer
@@ -29,7 +29,7 @@
 - [x] CHK010 - Is the kind-conditional access constraint (absoluteFireDate throws on non-Absolute kinds) specified as a hard requirement with explicit kind-checking before access? [Completeness, Spec §FR-037a + §API Reference §3] — ✅ FR-037a and API Reference §3 both specify this.
 - [x] CHK011 - Does the spec define the exact error message format when snooze is attempted on DueRelative vs DeferRelative vs Unknown, including the notification's actual kind in the message? [Clarity, Spec §Error Messages + §FR-037a] — ✅ Error Messages table includes: "Cannot snooze notification at index {index}: only Absolute notifications can be snoozed (this notification is {kind})".
 - [x] CHK012 - Are the writability semantics of `absoluteFireDate` (writable) vs `initialFireDate` (read-only) clearly distinguished in the data model? [Clarity, Spec §Key Entities + data-model.md §Absolute-Only Fields] — ✅ Key Entities and data-model.md clearly mark r/o vs writable.
-- [ ] CHK013 - Does the spec define what happens when `absoluteFireDate` is set to an invalid Date value (e.g., NaN, unparseable string)? [Edge Case, Gap] — ⚠️ NOT RESOLVABLE from docs. OmniJS behavior with invalid Date is undocumented. Added Script Editor verification note to API Reference §3. **Requires manual verification.**
+- [x] CHK013 - Does the spec define what happens when `absoluteFireDate` is set to an invalid Date value (e.g., NaN, unparseable string)? [Edge Case, Gap] — ✅ RESOLVED: Research confirmed OmniJS bridge validates JS type (`instanceof Date`) but NOT Date validity. Invalid Date (`new Date("invalid")`) passes type check but produces undefined behavior at JSC→NSDate bridge. Spec now requires `isNaN(date.getTime())` validation at both TypeScript and OmniJS layers. Added to Edge Cases, API Reference §3, and research.md §Decision 11. Evidence: OmniGroup forum thread confirming bridge type validation pattern (deferDate property).
 - [x] CHK014 - Is the relationship between setting `absoluteFireDate` and `isSnoozed` becoming true defined as a spec-level requirement, or only as an implementation note? [Completeness, Spec §API Reference §7] — ✅ RESOLVED: Updated API Reference §7 to explicitly state this is spec-level behavior.
 
 ## Tasks Without Due Dates (relative notifications)
@@ -51,7 +51,7 @@
 
 ## DeferRelative Enum Discovery (NEW — found during research)
 
-- [ ] CHK029 - `DeferRelative` is NOT listed in the official `Task.Notification.Kind` enum (only Absolute, DueRelative, Unknown are documented). Does the spec flag this for Script Editor verification? [Completeness, research.md §Decision 8] — ✅ RESOLVED: Flagged in FR-007, Edge Cases, API Reference §10, data-model.md, and research.md §Decision 8. Includes fallback: if `Task.Notification.Kind.DeferRelative` doesn't exist, map to "Unknown".
+- [x] CHK029 - `DeferRelative` is NOT listed in the official `Task.Notification.Kind` enum (only Absolute, DueRelative, Unknown are documented). Does the spec flag this for Script Editor verification? [Completeness, research.md §Decision 8] — ✅ RESOLVED: Research confirmed DeferRelative is referenced in `relativeFireOffset` and `initialFireDate` property docs on the same page (documentation inconsistency: enum section omits it, property section references it). Strongly indicates runtime existence. Spec updated with defensive runtime detection pattern, verification script (`Task.Notification.Kind.all`), and fallback to "Unknown". Documented in FR-007, Edge Cases, API Reference §10, data-model.md, and research.md §Decision 8 (with full analysis and code examples).
 - [x] CHK030 - Does the implementation plan account for DeferRelative potentially not existing as an enum constant, requiring string comparison instead? [Completeness, Gap] — ✅ RESOLVED: plan.md Phase 2 now includes "DeferRelative Enum Handling" section with dual detection strategy (enum constant comparison + string/toString fallback). Also in plan.md Open Items and risk register (upgraded to MEDIUM).
 
 ## Cross-Cutting API Constraint Coverage
@@ -66,11 +66,11 @@
 
 | Status | Count | Items |
 |--------|-------|-------|
-| ✅ Resolved | 29 | CHK001-012, CHK014-030 |
-| ⚠️ Requires Script Editor | 1 | CHK013 (invalid Date behavior — undocumented in OmniJS API) |
-| **Total** | **30** | **30 items** |
+| ✅ Resolved | 30 | CHK001-030 |
+| **Total** | **30** | **30 items — all resolved** |
 
 **Key remediations applied**:
+
 1. `effectiveDueDate` specified as the correct pre-condition property (FR-013, FR-030, data-model.md, research.md)
 2. Seconds/minutes contingency plan documented (API Reference §2, research.md §Decision 10)
 3. DeferRelative enum status flagged with verification requirement (FR-007, data-model.md, research.md §Decision 8)

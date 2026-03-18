@@ -10,6 +10,7 @@ pnpm install && pnpm build && pnpm test  # Verify baseline
 ```
 
 ⚠️ **MANDATORY**: Run this in OmniFocus Script Editor to verify offset unit:
+
 ```javascript
 // Pick any task with a due date
 var task = flattenedTasks.filter(function(t) { return t.dueDate !== null; })[0];
@@ -26,7 +27,7 @@ task.removeNotification(notif);  // Clean up
 For each tool, follow this exact sequence:
 
 1. **Contract** → `src/contracts/notification-tools/{tool}.ts`
-2. **Contract test** → `tests/contracts/notification-tools/{tool}.test.ts` (write, verify FAILS)
+2. **Contract test** → `tests/contract/notification-tools/{tool}.test.ts` (write, verify FAILS)
 3. **Primitive** → `src/tools/primitives/{tool}.ts`
 4. **Unit test** → `tests/unit/notification-tools/{tool}.test.ts` (write, verify FAILS)
 5. **Implement** → Fill primitive body (tests go GREEN)
@@ -114,6 +115,7 @@ export async function handler(params: z.infer<typeof schema>) {
 ## Verification Checklist
 
 After each phase:
+
 ```bash
 pnpm typecheck  # No type errors
 pnpm lint       # No lint issues

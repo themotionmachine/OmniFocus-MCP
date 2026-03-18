@@ -85,6 +85,7 @@ This grouping is intentional and simplifies the discriminated union from 4 to 3 
 ### ISO 8601 Convention
 
 Following established codebase convention (task-tools, project-tools, review-tools):
+
 - **Input**: Accept any string parseable by JavaScript `new Date()` — no profile restriction.
   Schema uses `z.string()` with "ISO 8601" description.
 - **Output**: Always full datetime from OmniJS `.toISOString()` (e.g., "2025-01-15T09:00:00.000Z").

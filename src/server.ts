@@ -3,8 +3,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import * as addFolderTool from './tools/definitions/addFolder.js';
+import * as addNotificationTool from './tools/definitions/addNotification.js';
 import * as addOmniFocusTaskTool from './tools/definitions/addOmniFocusTask.js';
 import * as addProjectTool from './tools/definitions/addProject.js';
+import * as addStandardNotificationsTool from './tools/definitions/addStandardNotifications.js';
 import * as appendNoteTool from './tools/definitions/appendNote.js';
 import * as assignTagsTool from './tools/definitions/assignTags.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
@@ -28,6 +30,7 @@ import * as getProjectsForReviewTool from './tools/definitions/getProjectsForRev
 import * as getRepetitionTool from './tools/definitions/getRepetition.js';
 import * as getTaskTool from './tools/definitions/getTask.js';
 import * as listFoldersTool from './tools/definitions/listFolders.js';
+import * as listNotificationsTool from './tools/definitions/listNotifications.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
 import * as listProjectsTool from './tools/definitions/listProjects.js';
 import * as listTagsTool from './tools/definitions/listTags.js';
@@ -40,6 +43,7 @@ import * as moveProjectTool from './tools/definitions/moveProject.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
+import * as removeNotificationTool from './tools/definitions/removeNotification.js';
 import * as removeTagsTool from './tools/definitions/removeTags.js';
 import * as setAdvancedRepetitionTool from './tools/definitions/setAdvancedRepetition.js';
 import * as setCommonRepetitionTool from './tools/definitions/setCommonRepetition.js';
@@ -48,6 +52,7 @@ import * as setPlannedDateTool from './tools/definitions/setPlannedDate.js';
 import * as setProjectTypeTool from './tools/definitions/setProjectType.js';
 import * as setRepetitionTool from './tools/definitions/setRepetition.js';
 import * as setReviewIntervalTool from './tools/definitions/setReviewInterval.js';
+import * as snoozeNotificationTool from './tools/definitions/snoozeNotification.js';
 import { logger } from './utils/logger.js';
 
 // Create an MCP server
@@ -374,6 +379,42 @@ server.tool(
   'Enable or disable floating timezone for a task or project. When enabled, dates follow the device timezone when traveling instead of being fixed to a specific timezone.',
   setFloatingTimezoneTool.schema.shape,
   setFloatingTimezoneTool.handler
+);
+
+// Notification tools
+server.tool(
+  'list_notifications',
+  'List all notifications (reminders) on an OmniFocus task with kind-conditional fields (absoluteFireDate for Absolute, relativeFireOffset for DueRelative/DeferRelative)',
+  listNotificationsTool.schema.shape,
+  listNotificationsTool.handler
+);
+
+server.tool(
+  'add_notification',
+  'Add a notification to an OmniFocus task. Supports absolute (specific datetime) and relative (seconds offset from due date) types',
+  addNotificationTool.schema.shape,
+  addNotificationTool.handler
+);
+
+server.tool(
+  'remove_notification',
+  'Remove a notification from an OmniFocus task by its 0-based index. Call list_notifications first to get current indices',
+  removeNotificationTool.schema.shape,
+  removeNotificationTool.handler
+);
+
+server.tool(
+  'add_standard_notifications',
+  'Add preset notification patterns to an OmniFocus task (day_before, hour_before, 15_minutes, week_before, standard). Requires task to have an effective due date',
+  addStandardNotificationsTool.schema.shape,
+  addStandardNotificationsTool.handler
+);
+
+server.tool(
+  'snooze_notification',
+  'Postpone an Absolute notification on an OmniFocus task by setting a new fire datetime. Only works on Absolute kind notifications',
+  snoozeNotificationTool.schema.shape,
+  snoozeNotificationTool.handler
 );
 
 // Start the MCP server

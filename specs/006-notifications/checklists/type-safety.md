@@ -46,14 +46,14 @@
 
 - [x] CHK023 - Are all 5 preset values explicitly enumerated in the requirements (day_before, hour_before, 15_minutes, week_before, standard)? [Completeness, Spec §FR-027] — ✅ All 5 listed in FR-027.
 - [x] CHK024 - Is the error message for invalid preset names specified with the rejected value and the list of valid options? [Clarity, Spec §Error Messages] — ✅ "Invalid preset: '{preset}'. Must be one of: day_before, hour_before, 15_minutes, week_before, standard".
-- [x] CHK025 - Are preset offset values specified with explicit second values AND human-readable equivalents for cross-checking? [Clarity, Spec §FR-028 + §Preset Offset Definitions table] — ✅ Table includes offset, equivalent (e.g., "24 hours before due (24 * 60 * 60)"), and preset name.
+- [x] CHK025 - Are preset offset values specified with explicit second values AND human-readable equivalents for cross-checking? [Clarity, Spec §FR-028 + §Preset Offset Definitions table] — ✅ Table includes offset, equivalent (e.g., "24 hours before due (`24 * 60 * 60`)"), and preset name.
 - [x] CHK026 - Is the "standard" preset's composite behavior (adds TWO notifications) specified with both offset values? [Completeness, Spec §FR-029] — ✅ FR-029: "Preset standard MUST add two notifications: -86400 sec AND -3600 sec".
 
 ## Seconds vs Minutes Unit Clarity
 
 - [x] CHK027 - Is the parameter named `offsetSeconds` (not `offsetMinutes` or `offset`) to prevent unit ambiguity? [Clarity, Spec §FR-012 + contracts/schemas.md] — ✅ FR-012 uses `offsetSeconds` and contracts show `offsetSeconds: number`.
 - [x] CHK028 - Is the `relativeFireOffset` output field documented as "in seconds" in the data model and schema descriptions? [Clarity, contracts/schemas.md §RelativeNotificationSchema + data-model.md] — ✅ Schema: "Offset in seconds from due/defer date". Data model: "Offset in seconds".
-- [x] CHK029 - Are preset offset values (FR-028) expressed in seconds with parenthetical derivation (e.g., "-86400 sec (24 * 60 * 60)") for cross-checking? [Measurability, Spec §FR-028 + §Preset Offset Definitions] — ✅ Both FR-028 and the Preset table include derivation.
+- [x] CHK029 - Are preset offset values (FR-028) expressed in seconds with parenthetical derivation (e.g., "-86400 sec (`24 * 60 * 60`)") for cross-checking? [Measurability, Spec §FR-028 + §Preset Offset Definitions] — ✅ Both FR-028 and the Preset table include derivation.
 - [x] CHK030 - Is the seconds/minutes documentation error in the official API docs flagged with a verification gate in the requirements? [Completeness, Spec §API Reference §2 + §Clarifications] — ✅ Flagged in Clarifications Q3, API Reference §2, and research.md §Decision 2/10 with Script Editor verification requirement.
 - [x] CHK031 - Is the contingency plan (if unit is actually minutes) documented with specific FRs and values that would change? [Completeness, Spec §Clarifications Session 2 Q7 + research.md §Decision 10] — ✅ Contingency documents: divide presets by 60, rename offsetSeconds→offsetMinutes, update FR-012/028.
 
@@ -83,6 +83,7 @@
 | **Total** | **40** | **40 items** |
 
 **All gaps remediated** (2026-03-17):
+
 1. **CHK004** ✅ — Documented Zod discriminated union inherent requiredness in contracts/schemas.md
 2. **CHK012** ✅ — Documented RelativeNotificationSchema grouping rationale in contracts/schemas.md
 3. **CHK015** ✅ — Updated FR-015/039 with `new Date()` parsing convention; documented in contracts/schemas.md

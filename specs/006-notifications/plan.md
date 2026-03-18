@@ -94,7 +94,7 @@ tests/
 │   ├── remove-notification.test.ts
 │   ├── add-standard-notifications.test.ts
 │   ├── snooze-notification.test.ts
-│   └── shared.test.ts
+│   └── shared-schemas.test.ts
 │
 ├── unit/notification-tools/         # NEW: Unit tests (5 files)
 │   ├── listNotifications.test.ts
@@ -118,13 +118,15 @@ modification of existing source files except `server.ts` (tool registration).
 **Goal**: All Zod schemas compiled and contract-tested before any business logic.
 
 **Files**:
+
 - `src/contracts/notification-tools/shared/task-identifier.ts` — Reusable TaskIdentifier schema
 - `src/contracts/notification-tools/shared/notification.ts` — NotificationOutput, NotificationKind
 - `src/contracts/notification-tools/shared/index.ts` — Barrel export
 - `src/contracts/notification-tools/index.ts` — Barrel export
-- `tests/contracts/notification-tools/shared.test.ts` — Shared schema tests
+- `tests/contract/notification-tools/shared-schemas.test.ts` — Shared schema tests
 
 **Key Design**:
+
 - `TaskIdentifierSchema`: `z.object({ id?, name? }).refine(atLeastOne)` — reuses pattern from task-tools
 - `NotificationKindSchema`: `z.enum(["Absolute", "DueRelative", "DeferRelative", "Unknown"])`
 - `NotificationBaseSchema`: `{ index, kind, initialFireDate, nextFireDate, isSnoozed, repeatInterval }`
@@ -137,13 +139,15 @@ modification of existing source files except `server.ts` (tool registration).
 **Goal**: Read-only tool; foundational for testing all other tools.
 
 **Files**:
+
 - `src/contracts/notification-tools/list-notifications.ts` — Input/Success/Error/Response schemas
-- `tests/contracts/notification-tools/list-notifications.test.ts` — Contract tests
+- `tests/contract/notification-tools/list-notifications.test.ts` — Contract tests
 - `src/tools/primitives/listNotifications.ts` — OmniJS script generation
 - `tests/unit/notification-tools/listNotifications.test.ts` — Unit tests
 - `src/tools/definitions/listNotifications.ts` — MCP handler
 
 **OmniJS Script Pattern**:
+
 ```javascript
 (function() {
   try {
@@ -161,8 +165,10 @@ modification of existing source files except `server.ts` (tool registration).
 
 **DeferRelative Enum Handling**: `DeferRelative` is NOT in the official `Task.Notification.Kind`
 enum (only Absolute, DueRelative, Unknown listed). Kind detection must handle both:
+
 1. Enum constant comparison: `notif.kind === Task.Notification.Kind.DeferRelative` (if it exists)
 2. String/toString fallback: compare kind string representation if enum constant is absent
+
 Verify in Script Editor before implementation. If absent, DeferRelative notifications report
 as "Unknown" and `relativeFireOffset` access must be guarded accordingly.
 
@@ -171,13 +177,15 @@ as "Unknown" and `relativeFireOffset` access must be guarded accordingly.
 **Goal**: Core write operation supporting both absolute dates and relative offsets.
 
 **Files**:
+
 - `src/contracts/notification-tools/add-notification.ts`
-- `tests/contracts/notification-tools/add-notification.test.ts`
+- `tests/contract/notification-tools/add-notification.test.ts`
 - `src/tools/primitives/addNotification.ts`
 - `tests/unit/notification-tools/addNotification.test.ts`
 - `src/tools/definitions/addNotification.ts`
 
 **Key Implementation**:
+
 - Input discriminated by `type: "absolute" | "relative"`
 - Absolute: `task.addNotification(new Date(dateTime))`
 - Relative: Pre-check `task.effectiveDueDate` (NOT `task.dueDate` — includes inherited dates); then `task.addNotification(offsetSeconds)`
@@ -189,18 +197,21 @@ as "Unknown" and `relativeFireOffset` access must be guarded accordingly.
 **Goal**: Remove by index with proper object reference translation.
 
 **Files**:
+
 - `src/contracts/notification-tools/remove-notification.ts`
-- `tests/contracts/notification-tools/remove-notification.test.ts`
+- `tests/contract/notification-tools/remove-notification.test.ts`
 - `src/tools/primitives/removeNotification.ts`
 - `tests/unit/notification-tools/removeNotification.test.ts`
 - `src/tools/definitions/removeNotification.ts`
 
 **Key Implementation**:
+
 ```javascript
 // OmniJS: removeNotification takes OBJECT, not index
 var notif = task.notifications[index];
 task.removeNotification(notif);
 ```
+
 - Validate index >= 0 and < task.notifications.length
 - Return remaining count after removal
 
@@ -209,13 +220,15 @@ task.removeNotification(notif);
 **Goal**: Preset-based notification addition (depends on Phase 3 pattern).
 
 **Files**:
+
 - `src/contracts/notification-tools/add-standard-notifications.ts`
-- `tests/contracts/notification-tools/add-standard-notifications.test.ts`
+- `tests/contract/notification-tools/add-standard-notifications.test.ts`
 - `src/tools/primitives/addStandardNotifications.ts`
 - `tests/unit/notification-tools/addStandardNotifications.test.ts`
 - `src/tools/definitions/addStandardNotifications.ts`
 
 **Key Implementation**:
+
 - Map preset name → offset array (e.g., `"standard"` → `[-86400, -3600]`)
 - Pre-check `task.effectiveDueDate` (NOT `task.dueDate`; all presets are due-relative)
 - Call `task.addNotification(offset)` for each offset in the array
@@ -227,13 +240,15 @@ task.removeNotification(notif);
 **Goal**: Postpone Absolute notifications by setting `absoluteFireDate`.
 
 **Files**:
+
 - `src/contracts/notification-tools/snooze-notification.ts`
-- `tests/contracts/notification-tools/snooze-notification.test.ts`
+- `tests/contract/notification-tools/snooze-notification.test.ts`
 - `src/tools/primitives/snoozeNotification.ts`
 - `tests/unit/notification-tools/snoozeNotification.test.ts`
 - `src/tools/definitions/snoozeNotification.ts`
 
 **Key Implementation**:
+
 - Validate notification at index has `kind === Task.Notification.Kind.Absolute`
 - Error if relative: "Cannot snooze: only Absolute notifications can be snoozed"
 - Set `notification.absoluteFireDate = new Date(snoozeUntil)`
@@ -244,10 +259,12 @@ task.removeNotification(notif);
 **Goal**: Wire all 5 tools into the MCP server and verify end-to-end.
 
 **Files**:
+
 - `src/server.ts` — Add 5 `server.tool()` registrations
 - `tests/integration/notification-tools/notification-round-trip.test.ts` — Integration scaffold
 
 **Registration Pattern** (per tool):
+
 ```typescript
 server.tool(
   'list_notifications',

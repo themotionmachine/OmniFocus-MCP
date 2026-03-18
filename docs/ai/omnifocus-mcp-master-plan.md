@@ -93,7 +93,7 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 
 | Spec | Name | Tools | Status | Spec Dir | Next Phase |
 |------|------|-------|--------|----------|------------|
-| SPEC-006 | Notifications | 5 | 🔄 In Progress | `specs/006-notifications/` | Tasks |
+| SPEC-006 | Notifications | 5 | ✅ Complete | `specs/006-notifications/` | Merged ([PR #40](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/40)) |
 | SPEC-007 | Repetition | 5 | ✅ Complete | `specs/007-repetition-rules/` | Merged ([PR #38](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/38)) |
 | SPEC-013 | Task Status & Completion | 6 | ✅ Complete | `specs/013-task-status/` | Merged ([PR #39](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/39)) |
 | SPEC-008 | Perspectives | 5 | ⏳ Pending | `specs/008-perspectives/` | Specify |
@@ -114,7 +114,7 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 
 ## Specification Sections
 
-### SPEC-006: Notifications
+### SPEC-006: Notifications ✅ COMPLETE
 
 **Priority:** P2 | **Depends On:** None (Phases 0-5 complete) | **Enables:** None
 
@@ -123,31 +123,35 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 **Scope:**
 
 - 5 MCP tools: `list_notifications`, `add_notification`, `remove_notification`, `add_standard_notifications`, `snooze_notification`
-- Zod contracts in `src/contracts/notification-tools/` for all 5 tools with input/output schemas
+- Zod contracts in `src/contracts/notification-tools/` for all 5 tools with shared schemas (TaskIdentifier, NotificationOutput discriminated union)
 - OmniJS primitives accessing `task.notifications`, `task.addNotification(dateOrOffset)`, `task.removeNotification(notificationObject)`
-- `add_notification` supports both absolute dates (ISO 8601) and relative offsets (minutes before due). **Note:** `relativeFireOffset` is in **minutes**, not seconds. `addNotification(Number)` also takes minutes.
-- `add_standard_notifications` provides presets: `day_before` (-1440 min), `hour_before` (-60 min), `15_minutes` (-15 min), `week_before` (-10080 min), `standard` (day + hour)
-- `snooze_notification` sets `absoluteFireDate` on an existing notification to postpone it
-- `list_notifications` returns `NotificationKind` (Absolute, DueRelative, DeferRelative, Unknown), fire dates, snooze status, repeat interval
-- Full TDD with contract tests + unit tests per tool; manual OmniFocus verification
+- `add_notification` supports both absolute dates (ISO 8601) and relative offsets (seconds before due). **Note:** `relativeFireOffset` and `addNotification(Number)` both use **seconds** (confirmed via e2e integration tests against live OmniFocus).
+- `add_standard_notifications` provides presets: `day_before` (-86400s), `hour_before` (-3600s), `15_minutes` (-900s), `week_before` (-604800s), `standard` (day + hour)
+- `snooze_notification` sets `absoluteFireDate` on Absolute notifications only; pre-validates dates at TypeScript and OmniJS layers
+- `list_notifications` returns `NotificationKind` (Absolute, DueRelative, DeferRelative, Unknown) with kind-conditional fields, fire dates, snooze status, repeat interval
+- Full TDD: 240 contract + unit tests, 21 e2e integration tests against live OmniFocus
 
 **Out of Scope:**
 
 - Notification repeat interval editing (complex; defer to future enhancement)
 - Push notification integration (platform limitation — OmniJS controls in-app alerts only)
+- Creating DeferRelative notifications (OmniFocus manages these internally)
 
 **Key Decisions:**
 
 - `remove_notification` takes an index in the MCP contract, but internally must retrieve the notification object via `task.notifications[index]` and pass it to `task.removeNotification(notificationObject)`. The OmniJS API does NOT accept an index directly.
-- Relative notifications use negative **minutes** offset from due date (OmniFocus convention). The `relativeFireOffset` property and `addNotification(Number)` both use minutes.
-- `Task.Notification.Kind` has 4 values: `Absolute`, `DueRelative`, `DeferRelative`, `Unknown`. DeferRelative fires relative to the defer date.
+- Relative notifications use negative **seconds** offset from due date (OmniFocus convention). Confirmed via e2e tests: `-3600` = 1 hour before due.
+- `Task.Notification.Kind` has 4 values: `Absolute`, `DueRelative`, `DeferRelative`, `Unknown`. DeferRelative exists at runtime but is NOT in official enum listing — defensive runtime detection used.
+- Invalid Date pre-validation at both TypeScript (`Number.isNaN(date.getTime())`) and OmniJS layers, since the JSC→NSDate bridge doesn't validate Date validity.
 
 **Key Files:**
 
 - `src/contracts/notification-tools/` — Zod contracts (5 files + shared schemas)
-- `src/tools/primitives/listNotifications.ts`, `addNotification.ts`, `removeNotification.ts`, `addStandardNotifications.ts`, `snoozeNotification.ts`
-- `src/tools/definitions/listNotifications.ts`, `addNotification.ts`, `removeNotification.ts`, `addStandardNotifications.ts`, `snoozeNotification.ts`
-- `tests/unit/notification-tools/`, `tests/contracts/notification-tools/`
+- `src/tools/primitives/` — 5 primitives with OmniJS script generation
+- `src/tools/definitions/` — 5 MCP tool handlers
+- `tests/contract/notification-tools/` — 6 contract test files
+- `tests/unit/notification-tools/` — 5 unit test files
+- `tests/integration/notification-tools/notification-workflow.integration.test.ts` — 21 e2e tests
 
 ---
 
