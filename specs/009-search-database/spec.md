@@ -179,11 +179,11 @@ A GTD practitioner wants to undo or redo the most recent operation performed thr
 - **FR-009**: System MUST provide a database cleanup operation that triggers OmniFocus's built-in clean up behavior
 - **FR-010**: System MUST provide an undo operation that reverses the most recent database change, with a pre-check for undo availability before attempting execution
 - **FR-011**: System MUST provide a redo operation that reapplies the most recently undone change, with a pre-check for redo availability before attempting execution
-- **FR-012**: Undo and redo operations MUST return a clear, non-error message when nothing is available to undo or redo, rather than throwing an exception
+- **FR-012**: Undo and redo operations MUST return a `performed: false` indicator with `canUndo`/`canRedo` state when nothing is available to undo or redo, rather than throwing an exception. When the operation succeeds, return `performed: true` with post-operation `canUndo`/`canRedo` state
 - **FR-013**: System MUST provide a save operation that persists database changes and triggers synchronization if enabled
-- **FR-014**: System MUST provide database statistics including task counts by status (available, blocked, completed, dropped), project counts by status, folder count, tag count, and inbox item count
+- **FR-014**: System MUST provide database statistics including task counts by status (available, blocked, completed, dropped) with a total, project counts by status with a total, folder count, tag count, and inbox item count
 - **FR-015**: System MUST provide a lightweight inbox count operation that returns only the number of inbox items
-- **FR-016**: Search queries MUST require a non-empty string (minimum 1 character) and return a validation error for empty queries
+- **FR-016**: Search queries MUST require a non-empty string (minimum 1 character, maximum 1000 characters after whitespace trimming) and return a validation error for empty or over-length queries
 
 ### Key Entities
 
@@ -219,6 +219,9 @@ A GTD practitioner wants to undo or redo the most recent operation performed thr
 - The `inbox` collection provides `.length` for counting inbox items without iterating
 - Task status values for filtering align with OmniFocus `Task.Status` enum values (Available, Blocked, Completed, Dropped, etc.)
 - Database statistics are computed by iterating flattened collections with status-based filtering — this is acceptable performance for typical OmniFocus databases (under 10,000 items)
+- `flattenedTasks` includes project root tasks (synthetic tasks representing projects) — search and stats must filter these out to avoid double-counting
+- Search query strings are trimmed of leading/trailing whitespace before validation and matching
+- All tool responses use the project-wide discriminated union pattern (`success: true/false`) per CLAUDE.md conventions — error responses include `{ success: false, error: string }`
 - No sort parameter is provided for search results — `*Matching()` methods return relevance-ordered results (Quick Open semantics) and `flattenedTasks.filter()` returns database order; both are acceptable without user-configurable sorting
 
 ## Clarifications

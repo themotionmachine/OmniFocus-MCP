@@ -12,7 +12,7 @@
 | Specify | `/speckit.specify` | ✅ Complete | 16 FRs, 9 stories, 28 scenarios |
 | Clarify | `/speckit.clarify` | ✅ Complete | 10 questions resolved (5 search + 5 database) |
 | Plan | `/speckit.plan` | ✅ Complete | 10 tools, 30 source files, 21 test files planned |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 128 items, 18 gaps remediated |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
@@ -318,10 +318,10 @@ Focus on SPEC-009 Search & Database requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | | | |
-| type-safety | | | |
-| api-workaround | | | |
-| **Total** | | | |
+| api-contracts | 41 | 10 | FR-005, FR-006, FR-012, FR-014, FR-016 |
+| type-safety | 39 | 7 | FR-001–FR-016, CLAUDE.md conventions |
+| api-workaround | 48 | 1 | FR-001, FR-009–FR-015 |
+| **Total** | **128** | **18** | Remediated: query max length, whitespace trim, performed field, total field, root task filter |
 
 ---
 
