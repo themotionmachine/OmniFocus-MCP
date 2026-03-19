@@ -22,6 +22,10 @@ export type SwitchPerspectiveInput = z.infer<typeof SwitchPerspectiveInputSchema
 export const SwitchPerspectiveSuccessSchema = z.object({
   success: z.literal(true),
   perspectiveName: z.string().describe('Name of the perspective that was switched to'),
+  previousPerspective: z
+    .string()
+    .nullable()
+    .describe('Name of the previously active perspective, or null if unavailable'),
   message: z.string().describe('Confirmation message')
 });
 

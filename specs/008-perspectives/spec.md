@@ -57,6 +57,12 @@ The migration follows a clean-break approach with no backward compatibility shim
   - Delete `src/tools/primitives/listPerspectives.ts` (legacy primitive)
   - Delete `src/tools/primitives/getPerspectiveView.ts` (legacy primitive)
   - Remove `OmnifocusPerspective` interface from `src/types.ts`
+- **Retired tool name handling**: After migration, the `get_perspective_view` tool name no
+  longer exists. MCP clients that reference it will receive a standard "tool not found" error
+  from the MCP server. This is correct behavior -- no compatibility shim or redirect is provided.
+- **Migration order**: To avoid build breakage during migration: (1) create new contract,
+  definition, and primitive files first, (2) delete legacy files, (3) update server.ts
+  registrations. This ensures the build never references deleted files.
 - **Rationale**: MCP tools are consumed by AI assistants, not versioned APIs with external
   consumers. The legacy tools have no tests, no contracts, and no documented response shapes.
   No deprecation period is needed.
@@ -113,6 +119,17 @@ Delivers immediate value by surfacing all available views.
    **When** I call `list_perspectives`,
    **Then** I receive only built-in perspectives with an empty custom perspectives list.
 
+6. **Given** multiple custom perspectives exist with various names,
+   **When** I call `list_perspectives`,
+   **Then** perspectives are sorted alphabetically by name within each type group
+   (built-in first, then custom), and `totalCount` equals the length of the
+   returned `perspectives` array.
+
+7. **Given** OmniFocus version is below 4.2,
+   **When** I call `list_perspectives`,
+   **Then** custom perspectives are returned with `filterAggregation` as `null`
+   (graceful degradation, not an error).
+
 ---
 
 ### User Story 2 - Get Perspective Details (Priority: P1)
@@ -151,6 +168,16 @@ name or identifier and verifying it returns complete configuration details.
 5. **Given** multiple custom perspectives with similar names,
    **When** I call `get_perspective` with a name that matches exactly one,
    **Then** I receive that specific perspective's details.
+
+6. **Given** multiple custom perspectives share the same name,
+   **When** I call `get_perspective` with that name,
+   **Then** I receive a disambiguation error with `code: "DISAMBIGUATION_REQUIRED"`
+   and a `candidates` array listing all matches with their names and identifiers.
+
+7. **Given** OmniFocus version is below 4.2,
+   **When** I call `get_perspective` for a custom perspective,
+   **Then** the response includes `filterRules: null` and `filterAggregation: null`
+   (graceful degradation, not an error).
 
 ---
 
@@ -293,6 +320,35 @@ perspective with a color value and verifying the color changes in OmniFocus.
 - **Concurrent perspective switches**: If multiple `switch_perspective` calls arrive
   rapidly, only the last one should win (natural behavior of setting a window property).
 
+- **iconColor round-trip fidelity**: After setting `iconColor` via `Color.RGB()`, reading
+  it back may return slightly different float values due to color space conversion. The
+  tool returns the CSS hex value that was *requested*, not the value read back from
+  OmniFocus. Exact round-trip fidelity is not guaranteed.
+
+- **Setting iconColor on a perspective with a custom icon image**: When `iconColor` is set
+  on a perspective that has a custom icon image, OmniFocus applies the color as a tint. The
+  `iconColor` property and custom icon image are independent properties -- setting one does
+  not clear the other. The behavior is controlled by OmniFocus internally.
+
+- **Color overwrite is idempotent**: Setting `iconColor` on a perspective that already has
+  an icon color simply overwrites the previous value. This is correct idempotent behavior,
+  not an error.
+
+- **Multi-window scenarios**: `switch_perspective` always targets `document.windows[0]`,
+  which is the frontmost OmniFocus window. Multi-window and tabbed-window scenarios are
+  out of scope -- the tool always operates on the primary window.
+
+- **Custom perspective with same name as built-in**: Custom perspectives and built-in
+  perspectives are searched separately. When looking up by name, built-in names are matched
+  first against the well-known list, then custom perspectives are searched via
+  `Perspective.Custom.byName()`. There is no namespace collision because they are different
+  types with different lookup paths.
+
+- **OmniFocus Pro requirement**: Custom perspectives require an OmniFocus Pro license. Users
+  on the Standard license will have no custom perspectives. `list_perspectives` returns an
+  empty custom list (not an error). Tools that target custom perspectives by name/ID will
+  return `NOT_FOUND` if the user has no Pro license and no custom perspectives exist.
+
 ---
 
 ## Requirements *(mandatory)*
@@ -348,6 +404,7 @@ perspective with a color value and verifying the color changes in OmniFocus.
   the switch
 - **FR-020**: Tool MUST return an error if no windows are available
 - **FR-021**: Tool MUST return confirmation including the perspective name that was switched to
+  and the name of the previously active perspective (so the AI assistant can report what changed)
 - **FR-022**: Tool description MUST clearly warn AI assistants that this action changes
   what the user sees on screen (UI-affecting operation)
 - **FR-023**: Tool MUST succeed without error if the requested perspective is already active
@@ -437,8 +494,10 @@ Fixed set of perspectives available in every OmniFocus installation:
 | Flagged   | Tasks marked as flagged                    |
 | Review    | Projects due for review                    |
 
-Note: "Nearby" (iOS-only) and "Search" are excluded as they are not available
-or meaningful on macOS.
+Note: "Nearby" is iOS-only and not available on macOS. "Completed" and "Changed"
+are available in OmniFocus but are not user-facing sidebar perspectives -- they are
+internal views accessible only via menu navigation. "Search" is a UI affordance, not
+a perspective. All three are excluded from `BUILT_IN_PERSPECTIVE_NAMES`.
 
 ### Export Configuration
 
@@ -486,6 +545,16 @@ or meaningful on macOS.
   in OmniFocus v4.2+; version-gated at runtime
 - `Perspective.Custom.byName()` and `Perspective.Custom.byIdentifier()` are available
   as direct lookup methods (confirmed in OmniFocus API)
+- Custom perspectives require OmniFocus Pro license. Standard license users will see
+  no custom perspectives, which is handled gracefully (empty arrays, NOT_FOUND errors)
+- `Perspective.Custom.byName()` case sensitivity follows OmniFocus internal behavior.
+  This should be verified in Script Editor during implementation -- assumed to be
+  case-sensitive for custom perspective names (consistent with other OmniJS `byName()`
+  methods like `flattenedProjects.byName()`)
+- Perspective identifiers are opaque strings generated by OmniFocus (similar to UUIDs).
+  The MCP server treats them as opaque -- no format validation beyond `.min(1)`
+- `document.windows[0]` is the frontmost OmniFocus window. Multi-window scenarios are
+  not addressed; the tool always operates on the primary window
 
 ---
 

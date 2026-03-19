@@ -134,6 +134,10 @@ notification-tools (SPEC-006) and review-tools (SPEC-005).
 Legacy tools have no tests, no contracts, and no external consumers. Delete legacy files,
 replace registrations in-place, and create new implementations following modern architecture.
 
+**Migration order**: (1) Create new contract, definition, and primitive files first,
+(2) delete legacy files, (3) update server.ts registrations. This ensures the build
+never references deleted files.
+
 ### AD-002: Shared PerspectiveIdentifier Schema
 
 All 5 tools (except `list_perspectives`) share the same lookup pattern: accept `name` or

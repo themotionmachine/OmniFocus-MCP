@@ -12,7 +12,7 @@
 | Specify | `/speckit.specify` | ✅ Complete | 43 FRs, 5 user stories, 25 scenarios, 0 clarifications |
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; byName() confirmed, iconColor confirmed v4.5.2+, clean-break migration |
 | Plan | `/speckit.plan` | ✅ Complete | 7 ADs, 8 research tasks, 9 contract files, 10/10 constitution pass |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (135 items), 22 gaps remediated |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
@@ -328,10 +328,19 @@ Focus on Perspectives requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-workaround | | | |
-| type-safety | | | |
-| requirements | | | |
-| **Total** | | | |
+| api-workaround | 42 | 9 (all remediated) | FR-006, FR-012a, FR-015, FR-021, FR-035, FR-039 |
+| type-safety | 44 | 5 (all remediated) | FR-003, FR-010, FR-012, FR-025, FR-036 |
+| functional-requirements | 49 | 8 (all remediated) | FR-006, FR-007, FR-012a, FR-014, FR-015, FR-021, FR-035 |
+| **Total** | **135** | **22 (all remediated)** | |
+
+**Key Remediations:**
+
+- 4 acceptance scenarios added (US1-AS6/7, US2-AS6/7)
+- 7 edge cases added (iconColor round-trip, custom icon, multi-window, Pro license)
+- FR-021 updated: switch_perspective now returns previous perspective
+- Disambiguation pattern documented (candidates vs matchingIds justified)
+- Migration order specified: create new → delete old → update server.ts
+- 5 assumptions added (Pro license, byName case sensitivity, identifier opacity)
 
 ---
 
