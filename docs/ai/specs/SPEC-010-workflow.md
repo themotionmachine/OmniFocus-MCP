@@ -11,7 +11,7 @@
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 17 FRs, 6 stories, 35 scenarios |
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; return types, position types, batch_update_tasks design clarified |
-| Plan | `/speckit.plan` | ⏳ Pending | |
+| Plan | `/speckit.plan` | ✅ Complete | 8 ADs, 8 RTs, 8 contract files, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
@@ -254,11 +254,11 @@ OmniFocus databases at scale.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | |
-| `research.md` | ⏳ | |
-| `data-model.md` | ⏳ | |
-| `contracts/` | ⏳ | |
-| `quickstart.md` | ⏳ | |
+| `plan.md` | ✅ | 8 architecture decisions, constitution gates 10/10 PASS |
+| `research.md` | ✅ | 8 research tasks resolved (RT-01 through RT-08) |
+| `data-model.md` | ✅ | 6 shared schemas, 9 error codes |
+| `contracts/` | ✅ | 8 files (shared + 6 tools + index) |
+| `quickstart.md` | ✅ | OmniJS patterns for all 6 tools |
 
 ---
 
