@@ -15,7 +15,7 @@
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (135 items), 22 gaps remediated |
 | Tasks | `/speckit.tasks` | ✅ Complete | 57 tasks, 9 phases, 35 parallel, 5/5 US covered |
 | Analyze | `/speckit.analyze` | ✅ Complete | 8 findings (1 CRITICAL, 2 MEDIUM, 5 LOW), all remediated |
-| Implement | `/speckit.implement` | ⏳ Pending | |
+| Implement | `/speckit.implement` | ✅ Complete | 57/57 tasks, 55 new tests (2878 total), 5 tools registered |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -459,29 +459,32 @@ For each task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | |
-| 2 - List Perspectives | | | |
-| 3 - Get Perspective | | | |
-| 4 - Switch Perspective | | | |
-| 5 - Export Perspective | | | |
-| 6 - Set Perspective Icon | | | |
-| 7 - Legacy Cleanup | | | |
-| 8 - Integration | | | |
+| 1 - Setup | T001 | 1/1 | Directory structure |
+| 2 - Foundation | T002-T011 | 10/10 | Contracts, shared schemas, barrel exports |
+| 3 - List Perspectives (US1) | T012-T017 | 6/6 | Type filter, sorted, totalCount, v4.2+ filterAggregation |
+| 4 - Get Perspective (US2) | T018-T023 | 6/6 | Filter rules, disambiguation, version gating |
+| 5 - Switch Perspective (US3) | T024-T029 | 6/6 | UI-affecting, previousPerspective, NO_WINDOW error |
+| 6 - Export Perspective (US4) | T030-T035 | 6/6 | Metadata or file save, z.union() for dual-success |
+| 7 - Set Perspective Icon (US5) | T036-T041 | 6/6 | CSS hex → Color.RGB(), v4.5.2+ version gate |
+| 8 - Legacy Cleanup | T042-T048 | 7/7 | Deleted legacy files, removed old registrations |
+| 9 - Polish | T049-T057 | 9/9 | Server registration, full suite verification |
+
+**Total: 57/57 tasks complete. 55 new tests. 2878 total tests across 130 files.**
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] `pnpm lint` passes
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm test` passes
-- [ ] `pnpm build` succeeds
-- [ ] OmniJS scripts verified in Script Editor
-- [ ] Legacy tools removed (list_perspectives, get_perspective_view)
-- [ ] Manual OmniFocus verification
+- [x] All tasks marked complete in tasks.md (57/57)
+- [x] `pnpm lint` passes (380 files, 0 errors)
+- [x] `pnpm typecheck` passes (clean)
+- [x] `pnpm test` passes (2878 tests, 130 files)
+- [x] `pnpm build` succeeds (ESM + CJS)
+- [ ] OmniJS scripts verified in Script Editor (deferred — manual step)
+- [x] Legacy tools removed (getPerspectiveView definition/primitive, OmnifocusPerspective interface)
+- [ ] Manual OmniFocus verification (deferred — manual step)
 - [ ] PR created targeting `main`
-- [ ] CLAUDE.md updated with Phase 8 perspectives summary
+- [x] CLAUDE.md updated with 008-perspectives tech stack
 
 ---
 
