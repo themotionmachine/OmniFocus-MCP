@@ -105,7 +105,7 @@ The remaining work is decomposed into **15 specifications** across **5 dependenc
 | SPEC-010 | Bulk Operations | 6 | ✅ Complete | `specs/010-bulk-operations/` | Merged ([PR #44](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/44)) |
 | SPEC-012 | TaskPaper Import/Export | 3 | ⏳ Pending | `specs/012-taskpaper/` | Specify |
 | SPEC-014 | Window & UI Control | 8 | ✅ Complete | `specs/014-window-ui/` | Merged ([PR #45](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/45)) |
-| SPEC-015 | Forecast | 3 | ⏳ Pending | `specs/015-forecast/` | Specify |
+| SPEC-015 | Forecast | 3 | ✅ Complete | `specs/015-forecast/` | Merged (PR #46 pending merge) |
 | SPEC-016-017 | Settings & Deep Links | 5 | ⏳ Pending | `specs/016-settings-deeplinks/` | Specify |
 | SPEC-018-019 | Pasteboard & Document/Sync | 7 | ⏳ Pending | `specs/018-pasteboard-sync/` | Specify |
 | SPEC-020 | Server Optimization | 3 | ⏳ Pending | `specs/020-server-optimization/` | Blocked by all |
@@ -471,14 +471,14 @@ Alternatives considered: Feature detection with graceful degradation was rejecte
 
 **Scope:**
 
-- 3 MCP tools: `get_forecast`, `get_forecast_day`, `select_forecast_days`
+- 3 MCP tools: `get_forecast_range`, `get_forecast_day`, `select_forecast_days`
 - Zod contracts in `src/contracts/forecast-tools/`
-- `get_forecast` takes a date range and returns `ForecastDay[]` — each with date, name, kind (Day/Today/Past/FutureMonth/DistantFuture), badgeCount, deferredCount. **Note:** `badgeKind()` is a **function call** (not a property) returning `ForecastDay.Status` (Available/DueSoon/NoneAvailable/Overdue)
+- `get_forecast_range` takes a date range and returns `ForecastDay[]` — each with date, name, kind (Day/Today/Past/FutureMonth/DistantFuture), badgeCount, deferredCount. **Note:** `badgeKind()` is a **function call** (not a property) returning `ForecastDay.Status` (Available/DueSoon/NoneAvailable/Overdue)
 - `get_forecast_day` returns detailed `ForecastDay` properties for a single date
 - `select_forecast_days` calls `window.selectForecastDays(dates)` — navigates the Forecast perspective to show specific days (UI side-effect warning required)
 - Date parameters use ISO 8601 format
-- `get_forecast` supports configurable range (default: today + 7 days)
-- Requires Forecast perspective to be accessible (works in any perspective but data reflects global forecast)
+- `get_forecast_range` supports configurable range (default: today + 7 days)
+- **Requires Forecast perspective to be ACTIVE** — `forecastDayForDate()` and `selectForecastDays()` both throw unless Forecast is active; all OmniJS scripts auto-switch to Forecast before querying
 
 **Out of Scope:**
 
@@ -488,9 +488,9 @@ Alternatives considered: Feature detection with graceful degradation was rejecte
 **Key Files:**
 
 - `src/contracts/forecast-tools/` — Zod contracts (3 files)
-- `src/tools/primitives/getForecast.ts`, `getForecastDay.ts`, `selectForecastDays.ts`
+- `src/tools/primitives/getForecastRange.ts`, `getForecastDay.ts`, `selectForecastDays.ts`
 - `src/tools/definitions/` — matching definition files
-- `tests/unit/forecast-tools/`, `tests/contracts/forecast-tools/`
+- `tests/unit/forecast-tools/`, `tests/contract/forecast-tools/`
 
 ---
 
