@@ -11,7 +11,7 @@
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 43 FRs, 5 user stories, 25 scenarios, 0 clarifications |
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; byName() confirmed, iconColor confirmed v4.5.2+, clean-break migration |
-| Plan | `/speckit.plan` | ⏳ Pending | |
+| Plan | `/speckit.plan` | ✅ Complete | 7 ADs, 8 research tasks, 9 contract files, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
@@ -252,11 +252,21 @@ for context-based task views.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | |
-| `research.md` | ⏳ | |
-| `data-model.md` | ⏳ | |
-| `contracts/` | ⏳ | |
-| `quickstart.md` | ⏳ | |
+| `plan.md` | ✅ | 7 architecture decisions, constitution gates 10/10 PASS |
+| `research.md` | ✅ | 8 research tasks resolved (RT-001 through RT-008) |
+| `data-model.md` | ✅ | 5 tool entities, version gates, color conversion |
+| `contracts/` | ✅ | 9 files (5 tool contracts + 3 shared + 1 index) |
+| `quickstart.md` | ✅ | OmniJS patterns for all 5 tools |
+
+### Key Architecture Decisions
+
+- AD-001: Direct API methods (`byName()`, `byIdentifier()`) over manual filtering
+- AD-002: Clean-break migration — delete 4 legacy files + 1 interface
+- AD-003: CSS hex color input → `Color.RGB()` conversion in OmniJS
+- AD-004: `archivedFilterRules` as opaque JSON (v4.2+)
+- AD-005: `iconColor` version-gated to v4.5.2+
+- AD-006: `fileWrapper()` metadata serialization (not binary)
+- AD-007: `document.windows[0].perspective` accepts Perspective objects
 
 ---
 
