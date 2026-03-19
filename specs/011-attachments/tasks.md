@@ -27,7 +27,7 @@
 
 **Purpose**: Project initialization -- create shared contracts directory and schemas
 
-- [ ] T001 Create shared schemas directory and file at `src/contracts/attachment-tools/shared/index.ts` with `FileWrapperTypeSchema`, `AttachmentInfoSchema`, and `LinkedFileInfoSchema` (copy from `specs/011-attachments/contracts/shared.ts`, adjust imports for project paths)
+- [ ] T001 Create shared schemas directory and file at `src/contracts/attachment-tools/shared/index.ts` with `FileWrapperTypeSchema`, `AttachmentInfoSchema`, and `LinkedFileInfoSchema` (copy from `specs/011-attachments/contracts/shared.ts`; adjust imports: spec uses flat sibling `'./shared.js'` but source uses subdirectory `'./shared/index.js'` -- update barrel re-exports in `index.ts` accordingly)
 - [ ] T002 Create barrel export file at `src/contracts/attachment-tools/index.ts` that re-exports shared schemas (initially only shared; tool contracts added as each story is implemented)
 
 ---
@@ -40,7 +40,7 @@
 
 - [ ] T003 [P] Write contract tests for shared schemas in `tests/contract/attachment-tools/shared-schemas.contract.test.ts` -- test `AttachmentInfoSchema` (valid/invalid index, filename, type enum, size), `LinkedFileInfoSchema` (valid/invalid url, filename, extension), `FileWrapperTypeSchema` (all 3 enum values, invalid value) -- verify FAILS
 - [ ] T004 [P] Write standalone base64 validation unit tests in `tests/unit/attachment-tools/base64-validation.test.ts` -- test valid base64 strings, strings with whitespace/newlines, invalid characters, empty strings, padding edge cases, size threshold calculations (>10 MB warning, >50 MB rejection) -- verify FAILS
-- [ ] T005 Implement base64 validation helper (inline in `addAttachment.ts` primitive or as a local function) -- regex validation (`/^[A-Za-z0-9+/]*={0,2}$/`), size calculation via `Buffer.from(data, 'base64').length`, warning threshold (10 MB), rejection threshold (50 MB with `SIZE_EXCEEDED` code) -- base64 tests turn GREEN
+- [ ] T005 Implement server-side TypeScript base64 validation helper (inline in `addAttachment.ts` primitive as a local function) -- this is distinct from the Zod schema-level validation (NFR-001 whitespace stripping + max length) which lives in the contract: regex validation (`/^[A-Za-z0-9+/]*={0,2}$/` on already-stripped string), size calculation via `Buffer.from(data, 'base64').length`, warning threshold (10 MB), rejection threshold (50 MB with `SIZE_EXCEEDED` code) -- base64 tests turn GREEN
 
 **Checkpoint**: Foundation ready -- shared schemas exist, base64 validation is tested, user story implementation can now begin
 
@@ -57,7 +57,7 @@
 > **TDD RULE: Write these tests FIRST. Verify they FAIL before any implementation.**
 
 - [ ] T006 [P] [US1] Write contract tests for `list_attachments` schemas in `tests/contract/attachment-tools/list-attachments.contract.test.ts` -- test `ListAttachmentsInputSchema` (valid id, empty id rejection), `ListAttachmentsSuccessSchema` (with attachments array, empty array), `ListAttachmentsErrorSchema` (error string), `ListAttachmentsResponseSchema` discriminated union -- copy schema from `specs/011-attachments/contracts/list-attachments.ts` into `src/contracts/attachment-tools/list-attachments.ts` first, then verify tests FAIL (no primitive yet)
-- [ ] T007 [P] [US1] Write unit tests for `listAttachments` primitive in `tests/unit/attachment-tools/listAttachments.test.ts` -- mock `executeOmniFocusScript` -- test: task with multiple attachments returns correct metadata, task with no attachments returns empty array, task with duplicate filenames returns distinct indices, project ID resolves to root task, ID not found returns error, empty OmniJS output returns error -- verify FAILS
+- [ ] T007 [P] [US1] Write unit tests for `listAttachments` primitive in `tests/unit/attachment-tools/listAttachments.test.ts` -- mock `executeOmniFocusScript` -- test: task with multiple attachments returns correct metadata, task with no attachments returns empty array, task with duplicate filenames returns distinct indices, project ID resolves to root task, ID not found returns error, empty OmniJS output returns error, **edge case: completed/dropped task returns attachments normally (spec Edge Cases)** -- verify FAILS
 
 ### GREEN Phase - Implementation
 
@@ -89,15 +89,15 @@
 
 > **TDD RULE: Write these tests FIRST. Verify they FAIL before any implementation.**
 
-- [ ] T014 [P] [US2] Write contract tests for `add_attachment` schemas in `tests/contract/attachment-tools/add-attachment.contract.test.ts` -- test `AddAttachmentInputSchema` (valid input, empty id, empty filename, filename >255 chars, filename with path separators `/` `\` `..`, empty data, data with whitespace stripping, data exceeding max length), `AddAttachmentSuccessSchema` (with/without warning field), `AddAttachmentErrorSchema` (with code enum: INVALID_BASE64, SIZE_EXCEEDED, NOT_FOUND), response discriminated union -- copy schema from `specs/011-attachments/contracts/add-attachment.ts` into `src/contracts/attachment-tools/add-attachment.ts` first, then verify tests FAIL
-- [ ] T015 [P] [US2] Write unit tests for `addAttachment` primitive in `tests/unit/attachment-tools/addAttachment.test.ts` -- mock `executeOmniFocusScript` -- test: valid base64 adds attachment and returns count, invalid base64 returns INVALID_BASE64 code, size >10 MB returns success with warning (FR-012 template), size >50 MB returns SIZE_EXCEEDED code, project ID resolves to root task, ID not found returns NOT_FOUND code, OmniJS silent failure (read-back verification fails) returns error, whitespace-containing base64 is accepted, filename with `/` rejected, filename with `..` rejected -- verify FAILS
+- [ ] T014 [P] [US2] Write contract tests for `add_attachment` schemas in `tests/contract/attachment-tools/add-attachment.contract.test.ts` -- test `AddAttachmentInputSchema` (valid input, empty id, empty filename, filename >255 chars, filename with path separators `/` `\` `..`, empty data, data with whitespace stripping, data exceeding max length, **NFR-001 Zod pipeline: verify `.transform()` strips whitespace before `.refine()` checks max length -- Pattern B**), `AddAttachmentSuccessSchema` (with/without warning field), `AddAttachmentErrorSchema` (with code enum: INVALID_BASE64, SIZE_EXCEEDED, NOT_FOUND), response discriminated union -- copy schema from `specs/011-attachments/contracts/add-attachment.ts` into `src/contracts/attachment-tools/add-attachment.ts` first, then verify tests FAIL
+- [ ] T015 [P] [US2] Write unit tests for `addAttachment` primitive in `tests/unit/attachment-tools/addAttachment.test.ts` -- mock `executeOmniFocusScript` -- test: valid base64 adds attachment and returns count, invalid base64 returns INVALID_BASE64 code, size >10 MB returns success with warning (FR-012 template, **NFR-002 latency note covered by warning presence**), size >50 MB returns SIZE_EXCEEDED code, project ID resolves to root task, ID not found returns NOT_FOUND code, OmniJS silent failure (read-back verification fails) returns error, whitespace-containing base64 is accepted, filename with `/` rejected, filename with `..` rejected -- verify FAILS
 
 ### GREEN Phase - Implementation
 
 > **TDD RULE: Write MINIMUM code to make tests pass. No extras.**
 
 - [ ] T016 [US2] Copy `AddAttachmentInputSchema`, `AddAttachmentSuccessSchema`, `AddAttachmentErrorSchema`, `AddAttachmentResponseSchema` from `specs/011-attachments/contracts/add-attachment.ts` into `src/contracts/attachment-tools/add-attachment.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
-- [ ] T017 [US2] Implement `addAttachment` primitive in `src/tools/primitives/addAttachment.ts` -- server-side: strip whitespace from data, validate base64 regex, calculate decoded size via `Buffer.from(data, 'base64').length`, check >50 MB rejection (SIZE_EXCEEDED), check >10 MB warning (FR-012 template); OmniJS script: task/project resolution (AD-002), `Data.fromBase64()` with null check (AD-007), `FileWrapper.withContents(filename, data)`, `task.addAttachment(wrapper)`, read-back verification (AD-007 pattern from addNotification.ts) -- unit tests turn GREEN
+- [ ] T017 [US2] Implement `addAttachment` primitive in `src/tools/primitives/addAttachment.ts` -- server-side: strip whitespace from data, validate base64 regex, calculate decoded size via `Buffer.from(data, 'base64').length`, check >50 MB rejection (SIZE_EXCEEDED), check >10 MB warning (FR-012 template); OmniJS script: use `escapeForJS()` for embedding base64 string and filename as string literals in the script template (base64 contains `+`, `/`, `=` characters), task/project resolution (AD-002), `Data.fromBase64()` with null check (AD-007), `FileWrapper.withContents(filename, data)`, `task.addAttachment(wrapper)`, read-back verification (AD-007 pattern from addNotification.ts) -- unit tests turn GREEN
 - [ ] T018 [US2] Implement `addAttachment` definition in `src/tools/definitions/addAttachment.ts` -- Zod schema for MCP tool registration, call `addAttachment` primitive, format MCP response -- mirror `addNotification.ts` pattern
 - [ ] T019 [US2] Register `add_attachment` tool in `src/server.ts`
 
@@ -345,6 +345,8 @@ With multiple developers after Phase 2 is complete:
 | FR-010 (index range in error) | T023, T025 | US3 |
 | FR-011 (error codes) | T014, T015, T017 | US2 |
 | FR-012 (warning template) | T004, T015, T017 | US2 |
+| NFR-001 (Zod pipeline max length) | T014 (Pattern B pipeline test) | US2 |
+| NFR-002 (latency warning 10-50 MB) | T015, T017 (covered by FR-007/FR-012) | US2 |
 
 ## Notes
 

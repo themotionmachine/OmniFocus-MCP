@@ -40,7 +40,7 @@
 
 ## Project Structure
 
-### Documentation (this feature)
+### Spec Artifacts (this feature -- design-time reference, not deployed)
 
 ```text
 specs/011-attachments/
@@ -48,9 +48,9 @@ specs/011-attachments/
 ├── research.md          # Phase 0 output (complete)
 ├── data-model.md        # Phase 1 output (complete)
 ├── quickstart.md        # Phase 1 output (complete)
-├── contracts/           # Phase 1 output (complete)
-│   ├── index.ts
-│   ├── shared.ts
+├── contracts/           # Phase 1 output -- spec-level schemas (flat layout)
+│   ├── index.ts         # Note: uses flat sibling imports (e.g., './shared.js')
+│   ├── shared.ts        # Source code uses shared/index.ts subdirectory instead
 │   ├── list-attachments.ts
 │   ├── add-attachment.ts
 │   ├── remove-attachment.ts
@@ -93,7 +93,7 @@ tests/contract/attachment-tools/
 ├── list-linked-files.contract.test.ts
 └── add-linked-file.contract.test.ts
 
-tests/unit/primitives/
+tests/unit/attachment-tools/
 ├── listAttachments.test.ts
 ├── addAttachment.test.ts
 ├── removeAttachment.test.ts
