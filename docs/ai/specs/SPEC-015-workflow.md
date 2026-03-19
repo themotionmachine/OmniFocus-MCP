@@ -13,7 +13,7 @@
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 12 findings; forecastDayForDate is window method, Forecast perspective required for ALL calls, Past/DistantFuture are aggregates |
 | Plan | `/speckit.plan` | ✅ Complete | 3 tools, 12 source files, 7 test files, 10 research decisions, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (124 items), 18 gaps remediated; Timer.once incompatibility found, synchronous IIFE required |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
+| Tasks | `/speckit.tasks` | ✅ Complete | 39 tasks, 6 phases, 8 parallel, 3/3 US covered |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
@@ -382,10 +382,11 @@ Focus on Forecast requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 39 (T001-T039) |
+| **Phases** | 6 (Setup, Foundation, US1-US3, Polish) |
+| **Parallel Opportunities** | 8 tasks [P]; US1+US2+US3 parallel after Foundation |
+| **User Stories Covered** | 3/3 (US1: P1, US2: P2, US3: P3) |
+| **FR Coverage** | FR-001 through FR-012 (all 12) |
 
 ---
 
