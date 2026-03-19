@@ -1,11 +1,11 @@
 import type { z } from 'zod';
-import { ListPerspectivesInputSchema } from '../../contracts/perspective-tools/list-perspectives.js';
-import { listPerspectives } from '../primitives/listPerspectives.js';
+import { SwitchPerspectiveInputSchema } from '../../contracts/perspective-tools/switch-perspective.js';
+import { switchPerspective } from '../primitives/switchPerspective.js';
 
-export const schema = ListPerspectivesInputSchema;
+export const schema = SwitchPerspectiveInputSchema;
 
 export async function handler(params: z.infer<typeof schema>) {
-  const result = await listPerspectives(params);
+  const result = await switchPerspective(params);
 
   if (!result.success) {
     return {

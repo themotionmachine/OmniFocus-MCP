@@ -1,11 +1,11 @@
 import type { z } from 'zod';
-import { ListPerspectivesInputSchema } from '../../contracts/perspective-tools/list-perspectives.js';
-import { listPerspectives } from '../primitives/listPerspectives.js';
+import { SetPerspectiveIconInputSchema } from '../../contracts/perspective-tools/set-perspective-icon.js';
+import { setPerspectiveIcon } from '../primitives/setPerspectiveIcon.js';
 
-export const schema = ListPerspectivesInputSchema;
+export const schema = SetPerspectiveIconInputSchema;
 
 export async function handler(params: z.infer<typeof schema>) {
-  const result = await listPerspectives(params);
+  const result = await setPerspectiveIcon(params);
 
   if (!result.success) {
     return {

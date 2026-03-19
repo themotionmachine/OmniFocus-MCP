@@ -23,8 +23,9 @@ import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as editProjectTool from './tools/definitions/editProject.js';
 import * as editTagTool from './tools/definitions/editTag.js';
+import * as exportPerspectiveTool from './tools/definitions/exportPerspective.js';
 import * as getNextTaskTool from './tools/definitions/getNextTask.js';
-import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
+import * as getPerspectiveTool from './tools/definitions/getPerspective.js';
 import * as getProjectTool from './tools/definitions/getProject.js';
 import * as getProjectsForReviewTool from './tools/definitions/getProjectsForReview.js';
 import * as getRepetitionTool from './tools/definitions/getRepetition.js';
@@ -48,11 +49,13 @@ import * as removeTagsTool from './tools/definitions/removeTags.js';
 import * as setAdvancedRepetitionTool from './tools/definitions/setAdvancedRepetition.js';
 import * as setCommonRepetitionTool from './tools/definitions/setCommonRepetition.js';
 import * as setFloatingTimezoneTool from './tools/definitions/setFloatingTimezone.js';
+import * as setPerspectiveIconTool from './tools/definitions/setPerspectiveIcon.js';
 import * as setPlannedDateTool from './tools/definitions/setPlannedDate.js';
 import * as setProjectTypeTool from './tools/definitions/setProjectType.js';
 import * as setRepetitionTool from './tools/definitions/setRepetition.js';
 import * as setReviewIntervalTool from './tools/definitions/setReviewInterval.js';
 import * as snoozeNotificationTool from './tools/definitions/snoozeNotification.js';
+import * as switchPerspectiveTool from './tools/definitions/switchPerspective.js';
 import { logger } from './utils/logger.js';
 
 // Create an MCP server
@@ -120,16 +123,37 @@ server.tool(
 
 server.tool(
   'list_perspectives',
-  'List all available perspectives in OmniFocus, including built-in perspectives (Inbox, Projects, Tags, etc.) and custom perspectives (Pro feature)',
+  'List all available perspectives in OmniFocus. Supports filtering by type (all/builtin/custom). Returns sorted perspective list with identifiers and filter aggregation metadata for custom perspectives.',
   listPerspectivesTool.schema.shape,
   listPerspectivesTool.handler
 );
 
 server.tool(
-  'get_perspective_view',
-  'Get the items visible in a specific OmniFocus perspective. Shows what tasks and projects are displayed when viewing that perspective',
-  getPerspectiveViewTool.schema.shape,
-  getPerspectiveViewTool.handler
+  'get_perspective',
+  'Get detailed information about a single OmniFocus perspective by name or identifier. Returns full configuration including filter rules (custom) or name and type (built-in). Supports disambiguation when multiple custom perspectives share a name.',
+  getPerspectiveTool.schema.shape,
+  getPerspectiveTool.handler
+);
+
+server.tool(
+  'switch_perspective',
+  'WARNING: UI-affecting operation. Switch the frontmost OmniFocus window to display the specified perspective immediately. Supports both built-in and custom perspectives by name or identifier. Returns previous perspective name for context.',
+  switchPerspectiveTool.schema.shape,
+  switchPerspectiveTool.handler
+);
+
+server.tool(
+  'export_perspective',
+  'Export a custom perspective configuration. When saveTo directory is provided, writes a .ofocus-perspective file. When omitted, returns export metadata (filename, fileType). Only custom perspectives can be exported.',
+  exportPerspectiveTool.schema.shape,
+  exportPerspectiveTool.handler
+);
+
+server.tool(
+  'set_perspective_icon',
+  'Set the icon color of a custom perspective using a CSS hex color string (#RGB, #RGBA, #RRGGBB, #RRGGBBAA). Requires OmniFocus v4.5.2+. Built-in perspectives cannot be modified.',
+  setPerspectiveIconTool.schema.shape,
+  setPerspectiveIconTool.handler
 );
 
 server.tool(

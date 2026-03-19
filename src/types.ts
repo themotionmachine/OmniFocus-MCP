@@ -89,23 +89,6 @@ export interface OmnifocusTag {
   tasks: string[]; // Task IDs
 }
 
-export interface OmnifocusPerspective {
-  id: string;
-  name: string;
-  type: 'builtin' | 'custom';
-  isBuiltIn: boolean;
-  canModify: boolean; // false for built-in perspectives
-  // Filter rules for custom perspectives (if applicable)
-  filterRules?: {
-    availability?: string[];
-    tags?: string[];
-    projects?: string[];
-    flagged?: boolean;
-    dueWithin?: number;
-    // Additional filter properties as needed
-  };
-}
-
 // Query result types for formatting functions
 export interface QueryTaskResult {
   id?: string;
