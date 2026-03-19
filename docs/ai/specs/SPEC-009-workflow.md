@@ -14,7 +14,7 @@
 | Plan | `/speckit.plan` | ✅ Complete | 10 tools, 30 source files, 21 test files planned |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 128 items, 18 gaps remediated |
 | Tasks | `/speckit.tasks` | ✅ Complete | 83 tasks, 11 phases, 48% parallel |
-| Analyze | `/speckit.analyze` | ⏳ Pending | |
+| Analyze | `/speckit.analyze` | ✅ Complete | 0 CRITICAL, 0 HIGH, 3 MEDIUM remediated |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -385,7 +385,12 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| C1 | MEDIUM | Query schema missing `.trim().max(1000)` | Will be addressed during contract implementation (T003/T008/etc.) |
+| C2 | MEDIUM | No task for `.trim()` on query input | Covered by contract tasks — Zod transform handles it |
+| I1 | MEDIUM | FR-014 "available" grouping unclear | Fixed — added parenthetical listing grouped statuses |
+| I2 | LOW | SC-008 said "8 tools" instead of "10" | Fixed — updated to "10 tools" |
+| C3 | LOW | data-model.md missing max 1000 | Deferred — implementation will be authoritative |
+| C4 | LOW | plan.md "deletes empty items" not in spec | Informational — OmniJS behavior, not our responsibility |
 
 ---
 

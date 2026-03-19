@@ -181,7 +181,7 @@ A GTD practitioner wants to undo or redo the most recent operation performed thr
 - **FR-011**: System MUST provide a redo operation that reapplies the most recently undone change, with a pre-check for redo availability before attempting execution
 - **FR-012**: Undo and redo operations MUST return a `performed: false` indicator with `canUndo`/`canRedo` state when nothing is available to undo or redo, rather than throwing an exception. When the operation succeeds, return `performed: true` with post-operation `canUndo`/`canRedo` state
 - **FR-013**: System MUST provide a save operation that persists database changes and triggers synchronization if enabled
-- **FR-014**: System MUST provide database statistics including task counts by status (available, blocked, completed, dropped) with a total, project counts by status with a total, folder count, tag count, and inbox item count
+- **FR-014**: System MUST provide database statistics including task counts by status (available — grouping Available, DueSoon, Next, Overdue statuses — blocked, completed, dropped) with a total, project counts by status with a total, folder count, tag count, and inbox item count
 - **FR-015**: System MUST provide a lightweight inbox count operation that returns only the number of inbox items
 - **FR-016**: Search queries MUST require a non-empty string (minimum 1 character, maximum 1000 characters after whitespace trimming) and return a validation error for empty or over-length queries
 
@@ -203,7 +203,7 @@ A GTD practitioner wants to undo or redo the most recent operation performed thr
 - **SC-005**: Inbox count returns in a single lightweight operation, enabling AI assistants to check inbox status without retrieving full statistics
 - **SC-006**: Undo and redo operations safely handle empty stacks without raising errors, providing a reliable safety net for AI-assisted changes
 - **SC-007**: Save and cleanup operations complete idempotently, with no adverse effects when triggered on an already-saved or already-clean database
-- **SC-008**: All 8 tools pass contract validation and unit tests with the same coverage standards as existing tools
+- **SC-008**: All 10 tools pass contract validation and unit tests with the same coverage standards as existing tools
 
 ## Assumptions
 
