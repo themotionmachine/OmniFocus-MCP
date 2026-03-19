@@ -13,7 +13,7 @@
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; return types, position types, batch_update_tasks design clarified |
 | Plan | `/speckit.plan` | ✅ Complete | 8 ADs, 8 RTs, 8 contract files, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (150 items), 14 gaps remediated |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
+| Tasks | `/speckit.tasks` | ✅ Complete | 63 tasks, 8 phases, 21 parallel, 6/6 US covered |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
@@ -370,10 +370,10 @@ Focus on Bulk Operations requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 63 |
+| **Phases** | 8 (1 Foundation, 6 User Stories, 1 Polish) |
+| **Parallel Opportunities** | 21 tasks (33%) marked [P] |
+| **User Stories Covered** | 6/6 (all FR-001 through FR-017 traced) |
 
 ---
 
