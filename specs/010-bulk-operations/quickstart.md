@@ -103,7 +103,8 @@ tests/
 export async function moveTasks(params: MoveTasksInput): Promise<MoveTasksResponse> {
   const script = generateMoveTasksScript(params);
   const result = await executeOmniJS(script);
-  return result as MoveTasksResponse;
+  // Use Zod .parse() to narrow unknown -> typed response (NEVER use `as Type`)
+  return MoveTasksResponseSchema.parse(result);
 }
 
 export function generateMoveTasksScript(params: MoveTasksInput): string {

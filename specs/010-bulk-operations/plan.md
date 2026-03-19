@@ -166,6 +166,27 @@ Uses the native OmniJS `convertTasksToProjects()` function rather than manually 
 ### AD-08: Error code taxonomy
 9 error codes covering all failure modes: NOT_FOUND, DISAMBIGUATION_REQUIRED, TARGET_NOT_FOUND, OPERATION_FAILED, TAG_NOT_FOUND, RELATIVE_TARGET_NOT_FOUND, ALREADY_A_PROJECT, VERSION_NOT_SUPPORTED, VALIDATION_ERROR.
 
+### AD-09: Zod parse for OmniJS result type narrowing
+All 6 primitives MUST use `XxxResponseSchema.parse(result)` to narrow the `unknown` return type of `executeOmniJS()` into the typed response. Type assertions (`as Type`) are prohibited per CLAUDE.md and Constitution I (Type-First Development). The Zod response schema already exists in the contracts; the primitive imports it and calls `.parse()` at the boundary. If the OmniJS script returns malformed JSON, `ZodError` propagates to the definition handler's `try/catch` block and surfaces as a structured error. This establishes the correct pattern for all future tools.
+
+### AD-10: Discriminated union narrowing in definitions
+Definition handlers MUST use the `success` discriminator field for type narrowing after receiving the parsed response from the primitive (e.g., `if (result.success) { /* TypeScript narrows to SuccessSchema */ }`). This works because all 6 response schemas use `z.discriminatedUnion('success', [...])`, and Zod `.parse()` returns the correctly narrowed TypeScript type. No additional type assertions or Zod re-parsing are needed in the definition layer.
+
+### AD-11: Position resolution via explicit ChildInsertionLocation
+All OmniJS scripts MUST resolve position parameters to explicit `ChildInsertionLocation` objects via bracket or dot notation (e.g., `project['ending']`, `folder.beginning`, `inbox.ending`, `siblingTask.before`). Bare `Project`, `Task`, or `Folder` objects MUST NOT be passed as position arguments to `moveTasks()`, `duplicateTasks()`, `moveSections()`, or `duplicateSections()`. This follows the established pattern in `moveProject.ts` (uses `folder[position]`) and `addOmniFocusTask.ts` (uses `targetProject.ending`). While OmniJS constructors (`new Task`, `new Project`) accept bare container objects, the bulk movement/duplication APIs require explicit insertion locations for deterministic placement.
+
+### AD-12: Post-move verification via property re-read
+Since `moveTasks()` and `moveSections()` return void, the OmniJS script verifies success by re-reading the task/section properties after the call completes (e.g., `task.containingProject.id.primaryKey` for tasks, `project.parentFolder.id.primaryKey` for projects). No exception thrown during the call equals success. This matches the established pattern in `moveProject.ts` which reads `project.parentFolder` after `moveSections()`. No pre-move vs post-move delta check is needed; the operation is treated as a no-op success if the task is already at the target location (per spec edge cases).
+
+### AD-13: Inactive target warning via status check
+For `move_tasks` and `duplicate_tasks`, the OmniJS script checks the target container's status after resolving it (e.g., `targetProject.status` against `Project.Status.Active`). If the target is completed, dropped, or on-hold, the operation proceeds (OmniFocus permits it) but the per-item `BulkBatchItemResult` includes a `warning` string (e.g., "Target project is completed"). The check reads the status property (`Project.Status.Done`, `Project.Status.Dropped`, `Project.Status.OnHold`) and populates the warning field only for non-active targets. This is a pre-loop check since the target is shared across all items.
+
+### AD-14: Section identifier resolution (Folder-then-Project probe)
+The `move_sections` and `duplicate_sections` OmniJS scripts resolve item identifiers by probing `Folder.byIdentifier(id)` first, then `Project.byIdentifier(id)` if the folder lookup returns null. For name-based lookups, the script searches both `flattenedFolders` and `flattenedProjects`, collecting all matches across both types for disambiguation. The `itemType` field in `BulkBatchItemResult` is set to `'folder'` or `'project'` based on which probe succeeded. This mirrors the Task-then-Project probe pattern in `dropItems.ts`, adapted for the Folder-or-Project domain.
+
+### AD-15: Single-IIFE execution model for all bulk tools
+All 6 bulk tools use a single OmniJS IIFE per batch (one `executeOmniJS()` call). The `relativeTo` sibling for `before`/`after` placements is resolved once at the beginning of the script, before the item loop. This eliminates race conditions where a `relativeTo` target could be deleted between item processing steps. If `relativeTo` resolution fails, the entire script returns an outer `success: false` with RELATIVE_TARGET_NOT_FOUND. Within the single IIFE, all items share the same resolved target and position objects, ensuring consistency across the batch.
+
 ## Generated Artifacts
 
 | Artifact | Path | Status |

@@ -12,7 +12,7 @@
 | Specify | `/speckit.specify` | ✅ Complete | 17 FRs, 6 stories, 35 scenarios |
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; return types, position types, batch_update_tasks design clarified |
 | Plan | `/speckit.plan` | ✅ Complete | 8 ADs, 8 RTs, 8 contract files, 10/10 constitution pass |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (150 items), 14 gaps remediated |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
@@ -324,10 +324,10 @@ Focus on Bulk Operations requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | | | |
-| type-safety | | | |
-| api-workaround | | | |
-| **Total** | | | |
+| api-contracts | 57 | 0 | FR-001–FR-017 |
+| type-safety | 38 | 5 (all remediated) | AD-09, AD-10 added; quickstart.md fixed |
+| api-workaround | 55 | 9 (all remediated) | AD-11–AD-15 added; 4 edge cases added |
+| **Total** | **150** | **14 (all remediated)** | |
 
 ---
 

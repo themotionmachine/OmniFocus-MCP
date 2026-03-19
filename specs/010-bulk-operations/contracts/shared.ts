@@ -75,7 +75,13 @@ export const BulkBatchItemResultSchema = z.object({
     .optional()
     .describe('Matching items when disambiguation required'),
   newId: z.string().optional().describe('New item ID (duplicate/convert operations only)'),
-  newName: z.string().optional().describe('New item name (duplicate/convert operations only)')
+  newName: z.string().optional().describe('New item name (duplicate/convert operations only)'),
+  warning: z
+    .string()
+    .optional()
+    .describe(
+      'Non-fatal warning message (e.g., target project is completed/dropped). Present only when success=true but a concern exists.'
+    )
 });
 
 export type BulkBatchItemResult = z.infer<typeof BulkBatchItemResultSchema>;
@@ -143,7 +149,7 @@ export const TaskPositionSchema = z
   })
   .refine(
     (data) => {
-      // Exactly one target must be specified
+      // At least one target must be specified
       const targets = [
         data.projectId !== undefined,
         data.projectName !== undefined,
@@ -155,7 +161,24 @@ export const TaskPositionSchema = z
     },
     {
       message:
-        'At least one target must be specified: projectId, projectName, taskId, taskName, or inbox'
+        'Exactly one target must be specified: projectId, projectName, taskId, taskName, or inbox'
+    }
+  )
+  .refine(
+    (data) => {
+      // No more than one target type must be specified
+      const targets = [
+        data.projectId !== undefined,
+        data.projectName !== undefined,
+        data.taskId !== undefined,
+        data.taskName !== undefined,
+        data.inbox === true
+      ].filter(Boolean).length;
+      return targets <= 1;
+    },
+    {
+      message:
+        'Only one target may be specified: projectId, projectName, taskId, taskName, or inbox (not multiple)'
     }
   )
   .refine(
@@ -255,18 +278,35 @@ export const PropertyUpdateSetSchema = z
       .describe('Clear planned date (requires OmniFocus v4.7+)'),
     addTags: z
       .array(z.string())
+      .min(1, 'addTags array cannot be empty when provided')
       .optional()
       .describe('Tag names or IDs to add (processed after removals)'),
     removeTags: z
       .array(z.string())
+      .min(1, 'removeTags array cannot be empty when provided')
       .optional()
       .describe('Tag names or IDs to remove (processed before additions)'),
     note: z.string().optional().describe('Text to append to existing note')
   })
   .refine(
     (data) => {
-      // At least one property must be specified (FR-013)
-      return Object.values(data).some((v) => v !== undefined);
+      // At least one substantive property must be specified (FR-013).
+      // clearX: false is a no-op and does not count as specified.
+      // Empty arrays (addTags: [], removeTags: []) are rejected by .min(1) above.
+      const hasSubstantive =
+        data.flagged !== undefined ||
+        data.dueDate !== undefined ||
+        data.deferDate !== undefined ||
+        data.estimatedMinutes !== undefined ||
+        data.plannedDate !== undefined ||
+        data.note !== undefined ||
+        (data.addTags !== undefined && data.addTags.length > 0) ||
+        (data.removeTags !== undefined && data.removeTags.length > 0) ||
+        data.clearDueDate === true ||
+        data.clearDeferDate === true ||
+        data.clearEstimatedMinutes === true ||
+        data.clearPlannedDate === true;
+      return hasSubstantive;
     },
     { message: 'At least one property must be specified' }
   )

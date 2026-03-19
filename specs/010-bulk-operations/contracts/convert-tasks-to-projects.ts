@@ -18,8 +18,10 @@ import { BulkBatchItemResultSchema, ItemIdentifierSchema, SummarySchema } from '
  * Converts tasks to projects. Each task is converted independently.
  *
  * Target Folder:
- * - targetFolderId / targetFolderName: Place new projects in this folder
+ * - targetFolderId: Place new projects in this folder (takes precedence over targetFolderName)
+ * - targetFolderName: Place new projects in this folder (used if no targetFolderId)
  * - Neither specified: Place at library root (default per FR-003)
+ * - Both specified: targetFolderId takes precedence (consistent with create_project, move_project)
  *
  * Conversion Rules:
  * - Task name becomes project name

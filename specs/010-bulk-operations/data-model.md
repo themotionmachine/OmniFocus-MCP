@@ -19,20 +19,19 @@ Identifies a task or project by ID (preferred) or name (fallback with disambigua
 
 ### TaskPosition
 
-Specifies where to place tasks. Supports project, parent task, and inbox targets.
+Specifies where to place tasks. Supports project, parent task, and inbox targets. All fields are flat (no nesting), consistent with all existing position schemas in the codebase (e.g., `PositionSchema` in folder-tools).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| target | object | yes | Target location (one of: project, task, inbox) |
-| target.projectId | string | conditional | Target project ID |
-| target.projectName | string | conditional | Target project name |
-| target.taskId | string | conditional | Target parent task ID (for subtask placement) |
-| target.taskName | string | conditional | Target parent task name |
-| target.inbox | boolean | conditional | `true` to target inbox |
-| placement | enum | no | `beginning`, `ending` (default: `ending`) |
-| relativeTo | string | optional | Sibling task ID for `before`/`after` placement |
+| projectId | string | conditional | Target project ID |
+| projectName | string | conditional | Target project name |
+| taskId | string | conditional | Target parent task ID (for subtask placement) |
+| taskName | string | conditional | Target parent task name |
+| inbox | literal `true` | conditional | Target the inbox |
+| placement | enum | no | `beginning`, `ending`, `before`, `after` (default: `ending`) |
+| relativeTo | string | conditional | Sibling task ID. Required when placement is `before` or `after` |
 
-**Target Resolution**: Exactly one target type must be specified. Project targets use `project.ending`/`project.beginning`. Task targets create subtasks. Inbox uses `inbox.ending`/`inbox.beginning`.
+**Target Resolution**: Exactly one target type must be specified (projectId, projectName, taskId, taskName, or inbox). Specifying multiple targets returns a validation error. Project targets use `project.ending`/`project.beginning`. Task targets create subtasks. Inbox uses `inbox.ending`/`inbox.beginning`.
 
 **Placement Options**:
 | Placement | relativeTo | OmniJS Expression |
@@ -64,7 +63,7 @@ Properties to apply uniformly to all tasks in a `batch_update_tasks` operation.
 | clearDueDate | boolean | no | Clear due date (mutually exclusive with dueDate) |
 | deferDate | string (ISO 8601) | no | Set defer date |
 | clearDeferDate | boolean | no | Clear defer date (mutually exclusive with deferDate) |
-| estimatedMinutes | number | no | Set estimated minutes |
+| estimatedMinutes | number (min 0) | no | Set estimated minutes (non-negative) |
 | clearEstimatedMinutes | boolean | no | Clear estimated minutes |
 | plannedDate | string (ISO 8601) | no | Set planned date (v4.7+) |
 | clearPlannedDate | boolean | no | Clear planned date (v4.7+) |
@@ -84,6 +83,10 @@ Properties to apply uniformly to all tasks in a `batch_update_tasks` operation.
 
 **Version Gating**: `plannedDate` and `clearPlannedDate` require OmniFocus v4.7+. If specified on older versions, per-item results return `VERSION_NOT_SUPPORTED`.
 
+**Date Format Validation**: Date string fields (`dueDate`, `deferDate`, `plannedDate`) use `z.string()` without Zod-level format enforcement (no `.datetime()` or regex). This is consistent with all existing tool contracts in the codebase. ISO 8601 format is documented in `.describe()` strings; actual format validation is delegated to the OmniJS/OmniFocus application layer.
+
+**Numeric Constraints**: `estimatedMinutes` is constrained to non-negative values (`min(0)`) at the schema level.
+
 ### BulkBatchItemResult
 
 Per-item result for bulk operations. Extends the status-tools pattern with fields for new item IDs (from duplicate/convert operations).
@@ -99,6 +102,9 @@ Per-item result for bulk operations. Extends the status-tools pattern with field
 | candidates | array | no | Disambiguation candidates (id + name + type) |
 | newId | string | no | New item ID (for duplicate/convert results) |
 | newName | string | no | New item name (for duplicate/convert results) |
+| warning | string | no | Non-fatal warning (e.g., target is inactive). Present only when success=true |
+
+**Type Narrowing**: `BulkBatchItemResult` is a flat object (not a discriminated union itself). The `success` field is `z.boolean()`, not `z.literal(true)` / `z.literal(false)`. This means TypeScript does NOT narrow optional fields (`error`, `code`, `newId`, `newName`, `warning`) based on `if (result.success)`. Implementations that iterate over `results[]` must use explicit `undefined` checks for optional fields after checking `success`. This is a deliberate design choice matching the status-tools `StatusBatchItemResultSchema` pattern, where per-item results are flat objects and the discriminated union exists only at the top-level response (success/error).
 
 ### Summary
 
@@ -145,7 +151,7 @@ All 6 tools follow the same discriminated union pattern:
 ### duplicate_tasks (FR-002)
 - **Input**: `items` (1-100 ItemIdentifier[]), `position` (TaskPosition)
 - **Output**: Per-item results with `newId` and `newName` for each duplicate.
-- **OmniJS**: Calls `duplicateTasks([task], position)` per item. Returns `TaskArray` with the new copy. Script resets completion status via `markIncomplete()`.
+- **OmniJS**: Calls `duplicateTasks([task], position)` per item. Returns a single-element `TaskArray` (standard JS array). The script accesses the new copy via index `[0]` (e.g., `var newCopy = duplicateTasks([task], resolvedPosition)[0];`) and reads `newCopy.id.primaryKey` for `newId` and `newCopy.name` for `newName`. Script resets completion status via `newCopy.markIncomplete()` if the original was completed or dropped.
 
 ### batch_update_tasks (FR-006)
 - **Input**: `items` (1-100 ItemIdentifier[]), `properties` (PropertyUpdateSet)
@@ -160,12 +166,14 @@ All 6 tools follow the same discriminated union pattern:
 ### move_sections (FR-004)
 - **Input**: `items` (1-100 ItemIdentifier[]), `position` (SectionPosition)
 - **Output**: Per-item results. No `newId`.
-- **OmniJS**: Calls `moveSections([section], position)` per item in loop.
+- **OmniJS**: Calls `moveSections([section], position)` per item in loop. Returns void; post-move verification reads `section.parentFolder` (for projects) or `section.parent` (for folders).
+- **Item Resolution**: Each identifier is resolved by probing `Folder.byIdentifier(id)` first, then `Project.byIdentifier(id)`. For name-based lookups, both `flattenedFolders` and `flattenedProjects` are searched; all matches across both types are collected for disambiguation. The `itemType` field is set to `'folder'` or `'project'` based on which probe succeeded.
 
 ### duplicate_sections (FR-005)
 - **Input**: `items` (1-100 ItemIdentifier[]), `position` (SectionPosition)
 - **Output**: Per-item results with `newId` and `newName` for each duplicate.
-- **OmniJS**: Calls `duplicateSections([section], position)` per item. Returns `SectionArray` with the new copy.
+- **OmniJS**: Calls `duplicateSections([section], position)` per item. Returns a single-element `SectionArray`. The script accesses the new copy via index `[0]` and reads `newCopy.id.primaryKey` for `newId` and `newCopy.name` for `newName`.
+- **Item Resolution**: Same Folder-then-Project probe pattern as `move_sections`.
 
 ## Error Codes
 
@@ -176,7 +184,7 @@ All 6 tools follow the same discriminated union pattern:
 | `TARGET_NOT_FOUND` | Top-level | Target location (project/folder/inbox) not found |
 | `OPERATION_FAILED` | Per-item | OmniJS threw an exception during the operation |
 | `TAG_NOT_FOUND` | Per-item | Tag in addTags/removeTags not found (batch_update_tasks) |
-| `RELATIVE_TARGET_NOT_FOUND` | Per-item | relativeTo sibling not found |
+| `RELATIVE_TARGET_NOT_FOUND` | Top-level | relativeTo sibling not found (resolved once before item loop per AD-15) |
 | `ALREADY_A_PROJECT` | Per-item | Task is already a project root (convert_tasks_to_projects) |
 | `VERSION_NOT_SUPPORTED` | Per-item | OmniFocus version too old (plannedDate in batch_update_tasks) |
 | `VALIDATION_ERROR` | Top-level | Request validation failure (empty items, >100, empty properties) |

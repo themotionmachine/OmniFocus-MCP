@@ -82,7 +82,7 @@
 - `TARGET_NOT_FOUND` - Target location does not exist (top-level error, not per-item)
 - `OPERATION_FAILED` - OmniJS threw an exception during the operation
 - `TAG_NOT_FOUND` - Tag referenced in addTags/removeTags does not exist (batch_update_tasks only)
-- `RELATIVE_TARGET_NOT_FOUND` - The relativeTo sibling in position does not exist
+- `RELATIVE_TARGET_NOT_FOUND` - The relativeTo sibling in position does not exist (top-level error; position is shared across all items, resolved once before item loop)
 - `ALREADY_A_PROJECT` - Task is already a project's root task (convert_tasks_to_projects only)
 - `VERSION_NOT_SUPPORTED` - OmniFocus version too old for requested feature (batch_update_tasks with plannedDate)
 - `VALIDATION_ERROR` - Request-level validation failure (empty items, exceeds 100, empty properties)
