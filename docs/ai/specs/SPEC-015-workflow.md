@@ -11,7 +11,7 @@
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 12 FRs, 3 user stories, 16 scenarios, 0 clarifications |
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 12 findings; forecastDayForDate is window method, Forecast perspective required for ALL calls, Past/DistantFuture are aggregates |
-| Plan | `/speckit.plan` | ⏳ Pending | |
+| Plan | `/speckit.plan` | ✅ Complete | 3 tools, 12 source files, 7 test files, 10 research decisions, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
@@ -269,11 +269,11 @@ and navigate the OmniFocus Forecast perspective.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | |
-| `research.md` | ⏳ | |
-| `data-model.md` | ⏳ | |
-| `contracts/` | ⏳ | |
-| `quickstart.md` | ⏳ | |
+| `plan.md` | ✅ | 3 tools, constitution gates 10/10 PASS |
+| `research.md` | ✅ | 10 research decisions documented |
+| `data-model.md` | ✅ | ForecastDayOutput, ForecastKind, ForecastStatus schemas |
+| `contracts/` | ✅ | 3 tool contracts + shared schemas |
+| `quickstart.md` | ✅ | OmniJS patterns for all 3 tools with Timer.once pattern |
 
 ---
 

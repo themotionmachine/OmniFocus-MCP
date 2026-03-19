@@ -207,6 +207,7 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - You've tested OmniJS scripts independently
 
 ## Recent Changes
+- 015-forecast: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+
 - 007-repetition-rules: TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
 
 - **Phase 7 Repetition Rules (Implementation Complete)**: Repetition Rule Management fully implemented (2026-03-17)
@@ -223,9 +224,7 @@ Domain-specific rules in `.claude/rules/` load automatically:
   - Total: 2216 tests across 101 test files (was 1924 across 90)
   - Contracts in `src/contracts/repetition-tools/` with shared schemas (enums, RepetitionRuleData)
 
-- 005-review-system: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
 
-- **Phase 13 Task Status & Completion (Implementation Complete)**: 6 status tools implemented (2026-03-17)
   - 6 new tools: `mark_complete`, `mark_incomplete`, `drop_items`, `set_project_type`, `get_next_task`, `set_floating_timezone`
   - `mark_complete`: Batch complete tasks/projects (1-100) with optional backdating
   - `mark_incomplete`: Batch reopen completed/dropped items with auto-state detection
@@ -240,7 +239,6 @@ Domain-specific rules in `.claude/rules/` load automatically:
   - Contracts in `src/contracts/status-tools/` with shared schemas (ItemIdentifier, StatusBatchItemResult, Summary, Disambiguation)
   - Integration test scaffold for OmniFocus round-trip verification
 
-- **Phase 5 Review System (Implementation Complete)**: Review System fully implemented (2026-03-16)
   - 3 new tools: `get_projects_for_review`, `mark_reviewed`, `set_review_interval`
   - `get_projects_for_review`: Query overdue/upcoming reviews with 6 filter params, pagination, sort
   - `mark_reviewed`: Batch mark projects reviewed, advancing nextReviewDate via Calendar API
@@ -253,7 +251,6 @@ Domain-specific rules in `.claude/rules/` load automatically:
   - Contracts in `src/contracts/review-tools/` with shared schemas
   - Integration test scaffold for OmniFocus round-trip verification
 
-- **Test Coverage (2025-12-12)**: Test coverage gaps filled with 10 new test files
   - Total: 1708 tests across 83 test files
   - Added 9 missing unit tests (moveProject, editProject, createProject, getProject, deleteProject, listProjects, appendNote, getTask, listTasks)
   - Added 1 integration test (deleteProject cascade deletion verification)
@@ -329,6 +326,7 @@ See [MCP logging spec](https://modelcontextprotocol.io/specification/2025-06-18/
 ## Active Technologies
 - TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+ (005-review-system)
 - N/A (OmniFocus internal database via OmniJS) (005-review-system)
+- TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+ (015-forecast)
 
 - TypeScript 5.9+ with strict mode (`ES2024` target) (003-tasks)
 - N/A (interfaces with OmniFocus via OmniJS execution) (003-tasks)
