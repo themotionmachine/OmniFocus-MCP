@@ -13,7 +13,7 @@
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; byName() confirmed, iconColor confirmed v4.5.2+, clean-break migration |
 | Plan | `/speckit.plan` | ✅ Complete | 7 ADs, 8 research tasks, 9 contract files, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (135 items), 22 gaps remediated |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
+| Tasks | `/speckit.tasks` | ✅ Complete | 57 tasks, 9 phases, 35 parallel, 5/5 US covered |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
@@ -382,10 +382,12 @@ Focus on Perspectives requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 57 (T001-T057) |
+| **Phases** | 9 (Setup, Foundation, US1-US5, Legacy Cleanup, Polish) |
+| **Parallel Opportunities** | 35 tasks marked [P]; all 5 US phases parallel after Foundation |
+| **User Stories Covered** | 5/5 (US1: 10 tasks, US2-US5: 6 tasks each) |
+| **FR Coverage** | FR-001 through FR-043 (all 43 FRs referenced) |
+| **TDD Compliance** | All stories follow RED→GREEN→REFACTOR cycle |
 
 ---
 
