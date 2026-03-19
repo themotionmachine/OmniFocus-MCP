@@ -131,7 +131,8 @@ A GTD practitioner wants to create a copy of a project or folder structure to us
 - What happens when the `relativeTo` task/section in a position parameter does not exist? The item returns a RELATIVE_TARGET_NOT_FOUND error for that specific item
 - What happens when batch size exceeds 100? The system returns a validation error before processing any items
 - What happens when `batch_update_tasks` specifies a tag name for `addTags` that does not exist? The system returns a per-item TAG_NOT_FOUND error for tasks referencing that tag, without creating the tag
-- What happens when moving a section would create a circular hierarchy (folder inside itself)? OmniFocus prevents this internally; the system should surface the error as a per-item INVALID_HIERARCHY result
+- What happens when moving a section would create a circular hierarchy (folder inside itself)? OmniFocus prevents this internally and throws an exception; the server catches it and returns OPERATION_FAILED with the native error message (no pre-validation needed)
+- What happens when `moveTasks()` or `duplicateTasks()` is called with an invalid position (e.g., moving a task into itself as a subtask)? OmniFocus throws an exception; the server catches it per-item and returns OPERATION_FAILED with the native error message
 
 ## Requirements *(mandatory)*
 
@@ -142,7 +143,7 @@ A GTD practitioner wants to create a copy of a project or folder structure to us
 - **FR-003**: System MUST allow converting 1 to 100 tasks to projects, placing the new projects in an optionally specified folder (defaulting to the library root), preserving subtasks as project tasks
 - **FR-004**: System MUST allow moving 1 to 100 sections (folders and/or projects) to a target location with optional position control
 - **FR-005**: System MUST allow duplicating 1 to 100 sections (folders and/or projects) to a target location, creating copies that preserve all contents (child projects, tasks, settings)
-- **FR-006**: System MUST allow batch-updating properties on 1 to 100 tasks in a single operation, supporting any combination of: flagged, dueDate, deferDate, addTags, removeTags, note (append), clearDueDate, clearDeferDate, estimatedMinutes, and plannedDate
+- **FR-006**: System MUST allow batch-updating properties on 1 to 100 tasks in a single operation, supporting any combination of: flagged, dueDate, deferDate, addTags, removeTags, note (append), clearDueDate, clearDeferDate, estimatedMinutes, clearEstimatedMinutes, plannedDate, and clearPlannedDate. All specified properties are applied uniformly to all tasks in the batch. Property updates are atomic per-task (all-or-nothing within a single try-catch); no rollback on partial property failure within a task. `plannedDate` and `clearPlannedDate` require OmniFocus v4.7+ (version-gated)
 - **FR-007**: All 6 tools MUST return per-item success/failure results, allowing partial failures without failing the entire batch
 - **FR-008**: All 6 tools MUST support item identification by either unique ID (preferred) or display name, with disambiguation when multiple items share a name
 - **FR-009**: All batch operations MUST reject requests exceeding 100 items with a validation error before processing begins
@@ -159,10 +160,10 @@ A GTD practitioner wants to create a copy of a project or folder structure to us
 
 - **Task**: A work item that can be moved, duplicated, converted to a project, or batch-updated with new property values
 - **Section**: A folder or project in the OmniFocus hierarchy that can be moved or duplicated with all its contents
-- **Position**: A placement specification consisting of a placement type (beginning, ending, before, after) and an optional relative-to identifier for before/after placements
-- **Target Location**: The destination for move/duplicate operations — a project (by ID or name), the inbox, a folder (by ID or name), or the library root
+- **Position**: A placement specification consisting of a placement type (beginning, ending, before, after) and an optional relative-to identifier for before/after placements. Task operations accept positions targeting projects, tasks (as subtask), or the inbox. Section operations accept positions targeting folders or the library root only (not inbox or tasks).
+- **Target Location**: The destination for move/duplicate operations — for tasks: a project (by ID or name), the inbox, or a parent task (by ID or name); for sections: a folder (by ID or name) or the library root
 - **Batch Result**: A per-item outcome containing success/failure status, the item's ID, any error code and message, and disambiguation candidates when applicable
-- **Property Update Set**: The collection of property changes to apply in a batch-update operation, where each property is optional and only specified properties are modified
+- **Property Update Set**: The collection of property changes to apply uniformly to all tasks in a batch-update operation. Each property is optional; only specified properties are modified. Supported properties: `flagged` (boolean), `dueDate` (ISO 8601 string), `deferDate` (ISO 8601 string), `addTags` (array of tag names/IDs), `removeTags` (array of tag names/IDs), `note` (string, appended), `estimatedMinutes` (number), `plannedDate` (ISO 8601 string, v4.7+). Clear flags: `clearDueDate`, `clearDeferDate`, `clearEstimatedMinutes`, `clearPlannedDate` (all boolean). Tag removals are processed before additions (FR-014)
 
 ## Success Criteria *(mandatory)*
 
@@ -177,12 +178,28 @@ A GTD practitioner wants to create a copy of a project or folder structure to us
 - **SC-007**: All 6 tools pass contract validation and unit tests with the same coverage standards as existing tools (Phase 5/13 pattern)
 - **SC-008**: Batch operations on the maximum allowed size (100 items) complete within a reasonable time consistent with existing batch tools
 
+## Clarifications
+
+### Session 2026-03-18
+
+- Q: What are the exact return types of the OmniJS bulk API functions? → A: Per the official OmniFocus API (OF-API.html): `moveTasks()` returns void; `duplicateTasks()` returns `TaskArray` (new copies in library order); `convertTasksToProjects()` returns `Array of Project`; `moveSections()` returns void; `duplicateSections()` returns `SectionArray` (new copies in library order). Move functions have no return value; duplicate/convert functions return the newly created objects.
+- Q: How do position parameter types differ between task operations and section operations? → A: Per the OmniFocus API: task operations (`moveTasks`, `duplicateTasks`) accept `Project, Task, or Task.ChildInsertionLocation` as position (projects, tasks, inbox); section operations (`moveSections`, `duplicateSections`) accept only `Folder or Folder.ChildInsertionLocation` as position (folder hierarchy only, no inbox or task targets). The MCP tool schemas must reflect this distinction.
+- Q: How should the server handle OmniJS exceptions from invalid move/duplicate operations? → A: Catch OmniJS exceptions per-item and return the native error message with a generic OPERATION_FAILED error code. No pre-validation of circular moves or invalid targets; rely on OmniJS internal validation and surface its exceptions. Consistent with constitution Section III (Script Execution Safety) and existing patterns in moveFolder.ts/moveProject.ts.
+- Q: How should duplicate/convert tools correlate input items with output items given OmniJS returns copies in library order (not input order)? → A: Call `duplicateTasks()`/`duplicateSections()`/`convertTasksToProjects()` one item at a time within the OmniJS script loop, not as a single batch call. This maintains 1:1 input-output correlation for per-item results (FR-007). Consistent with existing batch patterns (assignTags.ts, removeTags.ts) that iterate items individually within a single OmniJS execution.
+- Q: Does `moveTasks()` preserve input array order when placing tasks at the target? → A: Yes. The API docs show sort-then-move patterns (Alpha-Sort Project Tasks plugin) that only work if `moveTasks()` preserves array order. Since the server processes items one at a time for per-item error handling, order is naturally preserved regardless.
+- Q: Should `batch_update_tasks` support tag operations (addTags, removeTags, clearTags), or only simple property assignments? → A: Include `addTags` and `removeTags` only (no `clearTags`). FR-006 already commits to these in acceptance scenarios 2-4. Adding `clearTags` would create ambiguity with `replaceTags: []` and exceed the YAGNI principle (Constitution VIII) since users can achieve the same result with `removeTags` listing specific tags. Dedicated `assign_tags`/`remove_tags` tools cover complex tag workflows.
+- Q: What properties should `batch_update_tasks` support? → A: The property set in FR-006 is correct and complete: `flagged`, `dueDate`, `deferDate`, `addTags`, `removeTags`, `note` (append), `clearDueDate`, `clearDeferDate`, `estimatedMinutes`, and `plannedDate`. Additionally, `clearEstimatedMinutes` and `clearPlannedDate` are added for consistency (see Q5). Properties excluded: `newName` (renaming all tasks to the same value is rarely useful in batch), status changes (dedicated `mark_complete`/`mark_incomplete`/`drop_items` tools exist), `replaceTags` (see Q1). `plannedDate` requires v4.7+ version gating consistent with the existing `set_planned_date` tool.
+- Q: Should `batch_update_tasks` apply ALL properties to ALL tasks (uniform), or support per-task property overrides? → A: Uniform properties applied to all tasks in the batch. Consistent with every existing batch tool in the codebase (`markComplete`, `assignTags`, `removeTags`, etc.), aligns with Constitution VII (KISS) and VIII (YAGNI). Per-task overrides would effectively duplicate `editItem` functionality. Users needing different properties per task can make multiple `batch_update_tasks` calls (each with a different property set and task list) or use `editItem` individually.
+- Q: How should partial failures work when multiple properties are updated on a single task and one property fails? → A: Atomic per-task: all property updates for a single task are applied within one try-catch block. If any property update throws (e.g., addTag fails after dueDate succeeded), the task is reported as `success: false` with the error message. No rollback is attempted (OmniJS has no transaction support), so earlier properties may have been applied. The per-item result includes the error details. This matches the existing `editItem` pattern and Constitution III (Script Execution Safety). The response documentation will note that partial property application may occur on failed items.
+- Q: Should `batch_update_tasks` support clearing properties (setting to null) in addition to setting values? → A: Yes, using explicit `clearX` boolean flags. FR-006 already specifies `clearDueDate` and `clearDeferDate`. Add `clearEstimatedMinutes` and `clearPlannedDate` for consistency. `flagged: false` handles unflagging (no separate clear needed). `note` is append-only (no clear — that would be destructive). This explicit-flag pattern avoids ambiguity between "not specified" (do not touch the property) and "set to null" (clear the property value).
+
 ## Assumptions
 
 - OmniFocus is running on the same machine and accessible via Omni Automation
 - The OmniJS `moveTasks()`, `duplicateTasks()`, `convertTasksToProjects()`, `moveSections()`, and `duplicateSections()` functions are available in all supported OmniFocus versions (no version gating required)
-- `moveTasks()` and `duplicateTasks()` accept arrays of Task objects and a Position object, processing them atomically per OmniJS behavior
-- `convertTasksToProjects()` accepts an array of Task objects and an optional Folder, returning an array of newly created Project objects
+- `moveTasks()` and `moveSections()` return void; the server re-reads task/section properties from the original objects after the move completes
+- `duplicateTasks()` returns a `TaskArray` of the new copies in library order of the originals; `duplicateSections()` returns a `SectionArray` of the new copies in library order. However, the server calls these functions one item at a time (not as a batch) to maintain per-item correlation for FR-007 results
+- `convertTasksToProjects()` returns an `Array of Project` containing the newly created projects; example: `const newProjects = convertTasksToProjects(inbox, library.ending)`
 - `moveSections()` and `duplicateSections()` accept arrays of Section objects (folders and/or projects) and a Position object
 - Position objects are constructed from container properties: `project.ending`, `folder.beginning`, `inbox.ending`, `task.before`, etc.
 - Duplicated items are distinct objects with new IDs; changes to duplicates do not affect originals
@@ -200,4 +217,7 @@ A GTD practitioner wants to create a copy of a project or folder structure to us
 - **Batch operations exceeding 100 items** — performance safeguard; larger batches should be split by the caller
 - **Creating new tags during batch-update** — `addTags` references existing tags only; tag creation uses the dedicated `create_tag` tool
 - **Batch-update on projects** — `batch_update_tasks` operates on tasks only; project property changes use the existing `edit_project` tool
-- **Ordering control within a moved batch** — items within a batch are moved in array order; custom reordering within the batch is not supported
+- **Ordering control within a moved batch** — items within a batch are processed in array order (one at a time per item for per-item error handling); custom reordering within the batch is not supported
+- **clearTags in batch-update** — users can achieve tag clearing via `removeTags` with specific tag names; `clearTags` is excluded per YAGNI (Constitution VIII)
+- **Per-task property overrides in batch-update** — all properties are applied uniformly to all tasks; per-task overrides would duplicate `editItem` functionality; users should call `editItem` individually or make multiple `batch_update_tasks` calls with different property sets
+- **Rollback on partial property failure** — OmniJS has no transaction support; if a property update fails mid-task, earlier properties on that task may have been applied; this is documented, not mitigated

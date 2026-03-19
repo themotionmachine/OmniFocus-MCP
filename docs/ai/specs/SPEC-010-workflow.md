@@ -10,7 +10,7 @@
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 17 FRs, 6 stories, 35 scenarios |
-| Clarify | `/speckit.clarify` | ⏳ Pending | |
+| Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; return types, position types, batch_update_tasks design clarified |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
@@ -208,8 +208,8 @@ OmniFocus databases at scale.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | OmniJS Bulk APIs | 5 | |
-| 2 | batch_update_tasks Design | 5 | |
+| 1 | OmniJS Bulk APIs | 5 | Return types clarified (void/TaskArray/ProjectArray), position types differ for tasks vs sections, per-item calling pattern confirmed |
+| 2 | batch_update_tasks Design | 5 | addTags+removeTags (no clearTags), 10 properties + 4 clear flags, uniform application, atomic per-task partial failure, explicit clear flags |
 
 ---
 
