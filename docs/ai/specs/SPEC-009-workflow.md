@@ -13,7 +13,7 @@
 | Clarify | `/speckit.clarify` | ✅ Complete | 10 questions resolved (5 search + 5 database) |
 | Plan | `/speckit.plan` | ✅ Complete | 10 tools, 30 source files, 21 test files planned |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 128 items, 18 gaps remediated |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
+| Tasks | `/speckit.tasks` | ✅ Complete | 83 tasks, 11 phases, 48% parallel |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
@@ -359,10 +359,10 @@ Focus on SPEC-009 Search & Database requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 83 |
+| **Phases** | 11 (1 setup, 9 user stories, 1 polish) |
+| **Parallel Opportunities** | 40 tasks (48%) marked [P] |
+| **User Stories Covered** | 9/9 (all FR-001 through FR-016 traced) |
 
 ---
 
