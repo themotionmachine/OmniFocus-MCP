@@ -28,10 +28,10 @@
 
 **Purpose**: Create directory structure and shared schemas that all tools depend on
 
-- [ ] T001 Create contract directory structure: `src/contracts/search-tools/shared/`, `src/contracts/search-tools/`, `src/contracts/database-tools/`
-- [ ] T002 Create test directory structure: `tests/contract/search-tools/`, `tests/contract/database-tools/`, `tests/unit/search-tools/`, `tests/unit/database-tools/`, `tests/integration/search-database/`
-- [ ] T003 [P] Implement shared search result schemas (TaskStatusValueSchema, SearchTaskResultSchema, SearchProjectResultSchema, SearchFolderResultSchema, SearchTagResultSchema, ProjectStatusValueSchema, TagStatusValueSchema) in `src/contracts/search-tools/shared/search-result.ts` per contracts/search-tools.ts design
-- [ ] T004 [P] Implement shared search result barrel export in `src/contracts/search-tools/shared/index.ts`
+- [x] T001 Create contract directory structure: `src/contracts/search-tools/shared/`, `src/contracts/search-tools/`, `src/contracts/database-tools/`
+- [x] T002 Create test directory structure: `tests/contract/search-tools/`, `tests/contract/database-tools/`, `tests/unit/search-tools/`, `tests/unit/database-tools/`, `tests/integration/search-database/`
+- [x] T003 [P] Implement shared search result schemas (TaskStatusValueSchema, SearchTaskResultSchema, SearchProjectResultSchema, SearchFolderResultSchema, SearchTagResultSchema, ProjectStatusValueSchema, TagStatusValueSchema) in `src/contracts/search-tools/shared/search-result.ts` per contracts/search-tools.ts design
+- [x] T004 [P] Implement shared search result barrel export in `src/contracts/search-tools/shared/index.ts`
 
 **Checkpoint**: Directory structure and shared schemas ready. All user story work can now begin.
 
@@ -47,23 +47,23 @@
 
 > **TDD RULE: Write these tests FIRST. Verify they FAIL before any implementation.**
 
-- [ ] T005 [P] [US1] Write contract tests for SearchTasksInputSchema, SearchTasksSuccessSchema, SearchTasksErrorSchema, SearchTasksResponseSchema in `tests/contract/search-tools/search-tasks.test.ts` — validate query min length 1 (FR-016), limit range 1-1000 default 50 (FR-005), status filter default "active" (FR-006), success response with results array and totalMatches (FR-008), error response shape, empty results as success not error (FR-007) -> verify FAILS
-- [ ] T006 [P] [US1] Write contract tests for shared search result schemas (SearchTaskResultSchema with id/name/status/projectName/flagged fields) in `tests/contract/search-tools/shared-search-result.test.ts` — validate TaskStatusValueSchema enum values, nullable projectName, boolean flagged -> verify FAILS
-- [ ] T007 [P] [US1] Write unit tests for searchTasks primitive in `tests/unit/search-tools/searchTasks.test.ts` — test OmniJS script generation with query/limit/status params, case-insensitive matching via toLowerCase, root task skip pattern, status filter mapping (active maps to Available+Blocked+DueSoon+Next+Overdue), result limit applied via slice, totalMatches count, empty result returns success, result shape with projectName "Inbox" for inbox tasks -> verify FAILS
+- [x] T005 [P] [US1] Write contract tests for SearchTasksInputSchema, SearchTasksSuccessSchema, SearchTasksErrorSchema, SearchTasksResponseSchema in `tests/contract/search-tools/search-tasks.test.ts` — validate query min length 1 (FR-016), limit range 1-1000 default 50 (FR-005), status filter default "active" (FR-006), success response with results array and totalMatches (FR-008), error response shape, empty results as success not error (FR-007) -> verify FAILS
+- [x] T006 [P] [US1] Write contract tests for shared search result schemas (SearchTaskResultSchema with id/name/status/projectName/flagged fields) in `tests/contract/search-tools/shared-search-result.test.ts` — validate TaskStatusValueSchema enum values, nullable projectName, boolean flagged -> verify FAILS
+- [x] T007 [P] [US1] Write unit tests for searchTasks primitive in `tests/unit/search-tools/searchTasks.test.ts` — test OmniJS script generation with query/limit/status params, case-insensitive matching via toLowerCase, root task skip pattern, status filter mapping (active maps to Available+Blocked+DueSoon+Next+Overdue), result limit applied via slice, totalMatches count, empty result returns success, result shape with projectName "Inbox" for inbox tasks -> verify FAILS
 
 ### GREEN Phase - Implementation
 
 > **TDD RULE: Write MINIMUM code to make tests pass. No extras.**
 
-- [ ] T008 [US1] Implement SearchTasks contract schemas (SearchTasksInputSchema, SearchTasksSuccessSchema, SearchTasksErrorSchema, SearchTasksResponseSchema) in `src/contracts/search-tools/search-tasks.ts` per contracts/search-tools.ts design -> contract tests GREEN
-- [ ] T009 [US1] Implement searchTasks primitive in `src/tools/primitives/searchTasks.ts` — generate OmniJS script using quickstart.md pattern: flattenedTasks.filter() with case-insensitive substring match, root task skip, status filter mapping, result limit via slice, mapTaskStatus helper, projectName resolution (inInbox -> "Inbox", containingProject -> name, else null) -> unit tests GREEN
-- [ ] T010 [US1] Implement searchTasks definition in `src/tools/definitions/searchTasks.ts` — register MCP tool "search_tasks" with input schema, tool description from plan.md, call primitive, return response
-- [ ] T011 [US1] Register search_tasks tool in `src/server.ts`
+- [x] T008 [US1] Implement SearchTasks contract schemas (SearchTasksInputSchema, SearchTasksSuccessSchema, SearchTasksErrorSchema, SearchTasksResponseSchema) in `src/contracts/search-tools/search-tasks.ts` per contracts/search-tools.ts design -> contract tests GREEN
+- [x] T009 [US1] Implement searchTasks primitive in `src/tools/primitives/searchTasks.ts` — generate OmniJS script using quickstart.md pattern: flattenedTasks.filter() with case-insensitive substring match, root task skip, status filter mapping, result limit via slice, mapTaskStatus helper, projectName resolution (inInbox -> "Inbox", containingProject -> name, else null) -> unit tests GREEN
+- [x] T010 [US1] Implement searchTasks definition in `src/tools/definitions/searchTasks.ts` — register MCP tool "search_tasks" with input schema, tool description from plan.md, call primitive, return response
+- [x] T011 [US1] Register search_tasks tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
-- [ ] T012 [US1] Refactor searchTasks if needed (extract shared OmniJS helpers if pattern emerges) while keeping tests green
-- [ ] T013 [US1] Manual verification: test search_tasks OmniJS script in OmniFocus Script Editor with various queries and status filters
+- [x] T012 [US1] Refactor searchTasks if needed (extract shared OmniJS helpers if pattern emerges) while keeping tests green
+- [x] T013 [US1] Manual verification: test search_tasks OmniJS script in OmniFocus Script Editor with various queries and status filters
 
 **Checkpoint**: search_tasks fully functional with TDD coverage. Users can find tasks by name with status filtering.
 
@@ -77,19 +77,19 @@
 
 ### RED Phase - Tests First (REQUIRED)
 
-- [ ] T014 [P] [US2] Write contract tests for SearchProjectsInputSchema, SearchProjectsSuccessSchema, SearchProjectsErrorSchema, SearchProjectsResponseSchema in `tests/contract/search-tools/search-projects.test.ts` — validate query min length 1 (FR-016), limit range 1-1000 default 50 (FR-005), success with results and totalMatches (FR-008), empty results as success (FR-007) -> verify FAILS
-- [ ] T015 [P] [US2] Write unit tests for searchProjects primitive in `tests/unit/search-tools/searchProjects.test.ts` — test OmniJS script generation with query/limit params, projectsMatching() call, result limit via slice, totalMatches count, result shape with folderName (nullable), mapProjectStatus helper -> verify FAILS
+- [x] T014 [P] [US2] Write contract tests for SearchProjectsInputSchema, SearchProjectsSuccessSchema, SearchProjectsErrorSchema, SearchProjectsResponseSchema in `tests/contract/search-tools/search-projects.test.ts` — validate query min length 1 (FR-016), limit range 1-1000 default 50 (FR-005), success with results and totalMatches (FR-008), empty results as success (FR-007) -> verify FAILS
+- [x] T015 [P] [US2] Write unit tests for searchProjects primitive in `tests/unit/search-tools/searchProjects.test.ts` — test OmniJS script generation with query/limit params, projectsMatching() call, result limit via slice, totalMatches count, result shape with folderName (nullable), mapProjectStatus helper -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T016 [P] [US2] Implement SearchProjects contract schemas in `src/contracts/search-tools/search-projects.ts` per contracts/search-tools.ts design -> contract tests GREEN
-- [ ] T017 [US2] Implement searchProjects primitive in `src/tools/primitives/searchProjects.ts` — generate OmniJS script using quickstart.md pattern: projectsMatching(query), slice to limit, map with id/name/status/folderName -> unit tests GREEN
-- [ ] T018 [US2] Implement searchProjects definition in `src/tools/definitions/searchProjects.ts` — register MCP tool "search_projects" with input schema and description
-- [ ] T019 [US2] Register search_projects tool in `src/server.ts`
+- [x] T016 [P] [US2] Implement SearchProjects contract schemas in `src/contracts/search-tools/search-projects.ts` per contracts/search-tools.ts design -> contract tests GREEN
+- [x] T017 [US2] Implement searchProjects primitive in `src/tools/primitives/searchProjects.ts` — generate OmniJS script using quickstart.md pattern: projectsMatching(query), slice to limit, map with id/name/status/folderName -> unit tests GREEN
+- [x] T018 [US2] Implement searchProjects definition in `src/tools/definitions/searchProjects.ts` — register MCP tool "search_projects" with input schema and description
+- [x] T019 [US2] Register search_projects tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
-- [ ] T020 [US2] Manual verification: test search_projects OmniJS script in OmniFocus Script Editor
+- [x] T020 [US2] Manual verification: test search_projects OmniJS script in OmniFocus Script Editor
 
 **Checkpoint**: search_tasks and search_projects both functional. Core P1 search tools complete.
 
@@ -103,19 +103,19 @@
 
 ### RED Phase - Tests First (REQUIRED)
 
-- [ ] T021 [P] [US3] Write contract tests for SearchFoldersInputSchema, SearchFoldersSuccessSchema, SearchFoldersErrorSchema, SearchFoldersResponseSchema in `tests/contract/search-tools/search-folders.test.ts` — validate query min length, limit, success shape with totalMatches, empty results as success -> verify FAILS
-- [ ] T022 [P] [US3] Write unit tests for searchFolders primitive in `tests/unit/search-tools/searchFolders.test.ts` — test foldersMatching() call, result limit, totalMatches, result shape with parentFolderName (nullable) -> verify FAILS
+- [x] T021 [P] [US3] Write contract tests for SearchFoldersInputSchema, SearchFoldersSuccessSchema, SearchFoldersErrorSchema, SearchFoldersResponseSchema in `tests/contract/search-tools/search-folders.test.ts` — validate query min length, limit, success shape with totalMatches, empty results as success -> verify FAILS
+- [x] T022 [P] [US3] Write unit tests for searchFolders primitive in `tests/unit/search-tools/searchFolders.test.ts` — test foldersMatching() call, result limit, totalMatches, result shape with parentFolderName (nullable) -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T023 [P] [US3] Implement SearchFolders contract schemas in `src/contracts/search-tools/search-folders.ts` per contracts/search-tools.ts design -> contract tests GREEN
-- [ ] T024 [US3] Implement searchFolders primitive in `src/tools/primitives/searchFolders.ts` — generate OmniJS script using quickstart.md pattern: foldersMatching(query), slice to limit, map with id/name/parentFolderName -> unit tests GREEN
-- [ ] T025 [US3] Implement searchFolders definition in `src/tools/definitions/searchFolders.ts` — register MCP tool "search_folders"
-- [ ] T026 [US3] Register search_folders tool in `src/server.ts`
+- [x] T023 [P] [US3] Implement SearchFolders contract schemas in `src/contracts/search-tools/search-folders.ts` per contracts/search-tools.ts design -> contract tests GREEN
+- [x] T024 [US3] Implement searchFolders primitive in `src/tools/primitives/searchFolders.ts` — generate OmniJS script using quickstart.md pattern: foldersMatching(query), slice to limit, map with id/name/parentFolderName -> unit tests GREEN
+- [x] T025 [US3] Implement searchFolders definition in `src/tools/definitions/searchFolders.ts` — register MCP tool "search_folders"
+- [x] T026 [US3] Register search_folders tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
-- [ ] T027 [US3] Manual verification: test search_folders OmniJS script in OmniFocus Script Editor
+- [x] T027 [US3] Manual verification: test search_folders OmniJS script in OmniFocus Script Editor
 
 **Checkpoint**: Three search tools functional (tasks, projects, folders).
 
@@ -129,23 +129,23 @@
 
 ### RED Phase - Tests First (REQUIRED)
 
-- [ ] T028 [P] [US4] Write contract tests for SearchTagsInputSchema, SearchTagsSuccessSchema, SearchTagsErrorSchema, SearchTagsResponseSchema in `tests/contract/search-tools/search-tags.test.ts` — validate query min length, limit, success shape with totalMatches, empty results as success -> verify FAILS
-- [ ] T029 [P] [US4] Write unit tests for searchTags primitive in `tests/unit/search-tools/searchTags.test.ts` — test tagsMatching() call, result limit, totalMatches, result shape with parentTagName (nullable), mapTagStatus helper -> verify FAILS
+- [x] T028 [P] [US4] Write contract tests for SearchTagsInputSchema, SearchTagsSuccessSchema, SearchTagsErrorSchema, SearchTagsResponseSchema in `tests/contract/search-tools/search-tags.test.ts` — validate query min length, limit, success shape with totalMatches, empty results as success -> verify FAILS
+- [x] T029 [P] [US4] Write unit tests for searchTags primitive in `tests/unit/search-tools/searchTags.test.ts` — test tagsMatching() call, result limit, totalMatches, result shape with parentTagName (nullable), mapTagStatus helper -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T030 [P] [US4] Implement SearchTags contract schemas in `src/contracts/search-tools/search-tags.ts` per contracts/search-tools.ts design -> contract tests GREEN
-- [ ] T031 [US4] Implement searchTags primitive in `src/tools/primitives/searchTags.ts` — generate OmniJS script using quickstart.md pattern: tagsMatching(query), slice to limit, map with id/name/status/parentTagName -> unit tests GREEN
-- [ ] T032 [US4] Implement searchTags definition in `src/tools/definitions/searchTags.ts` — register MCP tool "search_tags"
-- [ ] T033 [US4] Register search_tags tool in `src/server.ts`
+- [x] T030 [P] [US4] Implement SearchTags contract schemas in `src/contracts/search-tools/search-tags.ts` per contracts/search-tools.ts design -> contract tests GREEN
+- [x] T031 [US4] Implement searchTags primitive in `src/tools/primitives/searchTags.ts` — generate OmniJS script using quickstart.md pattern: tagsMatching(query), slice to limit, map with id/name/status/parentTagName -> unit tests GREEN
+- [x] T032 [US4] Implement searchTags definition in `src/tools/definitions/searchTags.ts` — register MCP tool "search_tags"
+- [x] T033 [US4] Register search_tags tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
-- [ ] T034 [US4] Manual verification: test search_tags OmniJS script in OmniFocus Script Editor
+- [x] T034 [US4] Manual verification: test search_tags OmniJS script in OmniFocus Script Editor
 
 **Checkpoint**: All 4 search tools complete. Search tools barrel export next.
 
-- [ ] T035 Implement search-tools barrel export in `src/contracts/search-tools/index.ts` — re-export all schemas from shared/, search-tasks, search-projects, search-folders, search-tags
+- [x] T035 Implement search-tools barrel export in `src/contracts/search-tools/index.ts` — re-export all schemas from shared/, search-tasks, search-projects, search-folders, search-tags
 
 ---
 
@@ -157,19 +157,19 @@
 
 ### RED Phase - Tests First (REQUIRED)
 
-- [ ] T036 [P] [US5] Write contract tests for GetDatabaseStatsInputSchema (empty object), TaskStatsSchema, ProjectStatsSchema, GetDatabaseStatsSuccessSchema, GetDatabaseStatsErrorSchema, GetDatabaseStatsResponseSchema in `tests/contract/database-tools/get-database-stats.test.ts` — validate task stats fields (available/blocked/completed/dropped/total), project stats fields (active/onHold/completed/dropped/total), folders/tags/inbox counts, all non-negative integers, total equals sum of parts -> verify FAILS
-- [ ] T037 [P] [US5] Write unit tests for getDatabaseStats primitive in `tests/unit/database-tools/getDatabaseStats.test.ts` — test OmniJS script generation, root task skip pattern in iteration, task status grouping (Available+DueSoon+Next+Overdue -> available), project status mapping, flattenedFolders.length, flattenedTags.length, inbox.length -> verify FAILS
+- [x] T036 [P] [US5] Write contract tests for GetDatabaseStatsInputSchema (empty object), TaskStatsSchema, ProjectStatsSchema, GetDatabaseStatsSuccessSchema, GetDatabaseStatsErrorSchema, GetDatabaseStatsResponseSchema in `tests/contract/database-tools/get-database-stats.test.ts` — validate task stats fields (available/blocked/completed/dropped/total), project stats fields (active/onHold/completed/dropped/total), folders/tags/inbox counts, all non-negative integers, total equals sum of parts -> verify FAILS
+- [x] T037 [P] [US5] Write unit tests for getDatabaseStats primitive in `tests/unit/database-tools/getDatabaseStats.test.ts` — test OmniJS script generation, root task skip pattern in iteration, task status grouping (Available+DueSoon+Next+Overdue -> available), project status mapping, flattenedFolders.length, flattenedTags.length, inbox.length -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T038 [P] [US5] Implement GetDatabaseStats contract schemas in `src/contracts/database-tools/get-database-stats.ts` per contracts/database-tools.ts design -> contract tests GREEN
-- [ ] T039 [US5] Implement getDatabaseStats primitive in `src/tools/primitives/getDatabaseStats.ts` — generate OmniJS script using quickstart.md pattern: iterate flattenedTasks with root task skip, count by status, iterate flattenedProjects, use .length for folders/tags/inbox -> unit tests GREEN
-- [ ] T040 [US5] Implement getDatabaseStats definition in `src/tools/definitions/getDatabaseStats.ts` — register MCP tool "get_database_stats" (parameterless)
-- [ ] T041 [US5] Register get_database_stats tool in `src/server.ts`
+- [x] T038 [P] [US5] Implement GetDatabaseStats contract schemas in `src/contracts/database-tools/get-database-stats.ts` per contracts/database-tools.ts design -> contract tests GREEN
+- [x] T039 [US5] Implement getDatabaseStats primitive in `src/tools/primitives/getDatabaseStats.ts` — generate OmniJS script using quickstart.md pattern: iterate flattenedTasks with root task skip, count by status, iterate flattenedProjects, use .length for folders/tags/inbox -> unit tests GREEN
+- [x] T040 [US5] Implement getDatabaseStats definition in `src/tools/definitions/getDatabaseStats.ts` — register MCP tool "get_database_stats" (parameterless)
+- [x] T041 [US5] Register get_database_stats tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
-- [ ] T042 [US5] Manual verification: test get_database_stats OmniJS script in OmniFocus Script Editor, compare counts with OmniFocus UI
+- [x] T042 [US5] Manual verification: test get_database_stats OmniJS script in OmniFocus Script Editor, compare counts with OmniFocus UI
 
 **Checkpoint**: Database statistics operational. GTD weekly review support ready.
 
@@ -183,19 +183,19 @@
 
 ### RED Phase - Tests First (REQUIRED)
 
-- [ ] T043 [P] [US6] Write contract tests for GetInboxCountInputSchema (empty object), GetInboxCountSuccessSchema (success + count), GetInboxCountErrorSchema, GetInboxCountResponseSchema in `tests/contract/database-tools/get-inbox-count.test.ts` — validate count is non-negative integer, success/error discriminated union -> verify FAILS
-- [ ] T044 [P] [US6] Write unit tests for getInboxCount primitive in `tests/unit/database-tools/getInboxCount.test.ts` — test OmniJS script generation uses inbox.length, returns {success, count}, handles empty inbox (count: 0) -> verify FAILS
+- [x] T043 [P] [US6] Write contract tests for GetInboxCountInputSchema (empty object), GetInboxCountSuccessSchema (success + count), GetInboxCountErrorSchema, GetInboxCountResponseSchema in `tests/contract/database-tools/get-inbox-count.test.ts` — validate count is non-negative integer, success/error discriminated union -> verify FAILS
+- [x] T044 [P] [US6] Write unit tests for getInboxCount primitive in `tests/unit/database-tools/getInboxCount.test.ts` — test OmniJS script generation uses inbox.length, returns {success, count}, handles empty inbox (count: 0) -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T045 [P] [US6] Implement GetInboxCount contract schemas in `src/contracts/database-tools/get-inbox-count.ts` per contracts/database-tools.ts design -> contract tests GREEN
-- [ ] T046 [US6] Implement getInboxCount primitive in `src/tools/primitives/getInboxCount.ts` — generate OmniJS script using quickstart.md pattern: inbox.length -> unit tests GREEN
-- [ ] T047 [US6] Implement getInboxCount definition in `src/tools/definitions/getInboxCount.ts` — register MCP tool "get_inbox_count" (parameterless)
-- [ ] T048 [US6] Register get_inbox_count tool in `src/server.ts`
+- [x] T045 [P] [US6] Implement GetInboxCount contract schemas in `src/contracts/database-tools/get-inbox-count.ts` per contracts/database-tools.ts design -> contract tests GREEN
+- [x] T046 [US6] Implement getInboxCount primitive in `src/tools/primitives/getInboxCount.ts` — generate OmniJS script using quickstart.md pattern: inbox.length -> unit tests GREEN
+- [x] T047 [US6] Implement getInboxCount definition in `src/tools/definitions/getInboxCount.ts` — register MCP tool "get_inbox_count" (parameterless)
+- [x] T048 [US6] Register get_inbox_count tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
-- [ ] T049 [US6] Manual verification: test get_inbox_count OmniJS script in OmniFocus Script Editor
+- [x] T049 [US6] Manual verification: test get_inbox_count OmniJS script in OmniFocus Script Editor
 
 **Checkpoint**: Inbox count operational. All P2 tools complete.
 
@@ -209,19 +209,19 @@
 
 ### RED Phase - Tests First (REQUIRED)
 
-- [ ] T050 [P] [US7] Write contract tests for SaveDatabaseInputSchema (empty object), SaveDatabaseSuccessSchema, SaveDatabaseErrorSchema, SaveDatabaseResponseSchema in `tests/contract/database-tools/save-database.test.ts` — validate success-only response shape (no data fields), discriminated union -> verify FAILS
-- [ ] T051 [P] [US7] Write unit tests for saveDatabase primitive in `tests/unit/database-tools/saveDatabase.test.ts` — test OmniJS script generation calls save(), returns {success: true}, handles save() exception -> verify FAILS
+- [x] T050 [P] [US7] Write contract tests for SaveDatabaseInputSchema (empty object), SaveDatabaseSuccessSchema, SaveDatabaseErrorSchema, SaveDatabaseResponseSchema in `tests/contract/database-tools/save-database.test.ts` — validate success-only response shape (no data fields), discriminated union -> verify FAILS
+- [x] T051 [P] [US7] Write unit tests for saveDatabase primitive in `tests/unit/database-tools/saveDatabase.test.ts` — test OmniJS script generation calls save(), returns {success: true}, handles save() exception -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T052 [P] [US7] Implement SaveDatabase contract schemas in `src/contracts/database-tools/save-database.ts` per contracts/database-tools.ts design -> contract tests GREEN
-- [ ] T053 [US7] Implement saveDatabase primitive in `src/tools/primitives/saveDatabase.ts` — generate OmniJS script using quickstart.md pattern: save() -> unit tests GREEN
-- [ ] T054 [US7] Implement saveDatabase definition in `src/tools/definitions/saveDatabase.ts` — register MCP tool "save_database" (parameterless)
-- [ ] T055 [US7] Register save_database tool in `src/server.ts`
+- [x] T052 [P] [US7] Implement SaveDatabase contract schemas in `src/contracts/database-tools/save-database.ts` per contracts/database-tools.ts design -> contract tests GREEN
+- [x] T053 [US7] Implement saveDatabase primitive in `src/tools/primitives/saveDatabase.ts` — generate OmniJS script using quickstart.md pattern: save() -> unit tests GREEN
+- [x] T054 [US7] Implement saveDatabase definition in `src/tools/definitions/saveDatabase.ts` — register MCP tool "save_database" (parameterless)
+- [x] T055 [US7] Register save_database tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
-- [ ] T056 [US7] Manual verification: test save_database OmniJS script in OmniFocus Script Editor
+- [x] T056 [US7] Manual verification: test save_database OmniJS script in OmniFocus Script Editor
 
 **Checkpoint**: Save and sync operational.
 
@@ -235,19 +235,19 @@
 
 ### RED Phase - Tests First (REQUIRED)
 
-- [ ] T057 [P] [US8] Write contract tests for CleanupDatabaseInputSchema (empty object), CleanupDatabaseSuccessSchema, CleanupDatabaseErrorSchema, CleanupDatabaseResponseSchema in `tests/contract/database-tools/cleanup-database.test.ts` — validate success-only response shape, discriminated union -> verify FAILS
-- [ ] T058 [P] [US8] Write unit tests for cleanupDatabase primitive in `tests/unit/database-tools/cleanupDatabase.test.ts` — test OmniJS script generation calls cleanUp(), returns {success: true}, handles cleanUp() exception -> verify FAILS
+- [x] T057 [P] [US8] Write contract tests for CleanupDatabaseInputSchema (empty object), CleanupDatabaseSuccessSchema, CleanupDatabaseErrorSchema, CleanupDatabaseResponseSchema in `tests/contract/database-tools/cleanup-database.test.ts` — validate success-only response shape, discriminated union -> verify FAILS
+- [x] T058 [P] [US8] Write unit tests for cleanupDatabase primitive in `tests/unit/database-tools/cleanupDatabase.test.ts` — test OmniJS script generation calls cleanUp(), returns {success: true}, handles cleanUp() exception -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T059 [P] [US8] Implement CleanupDatabase contract schemas in `src/contracts/database-tools/cleanup-database.ts` per contracts/database-tools.ts design -> contract tests GREEN
-- [ ] T060 [US8] Implement cleanupDatabase primitive in `src/tools/primitives/cleanupDatabase.ts` — generate OmniJS script using quickstart.md pattern: cleanUp() -> unit tests GREEN
-- [ ] T061 [US8] Implement cleanupDatabase definition in `src/tools/definitions/cleanupDatabase.ts` — register MCP tool "cleanup_database" (parameterless)
-- [ ] T062 [US8] Register cleanup_database tool in `src/server.ts`
+- [x] T059 [P] [US8] Implement CleanupDatabase contract schemas in `src/contracts/database-tools/cleanup-database.ts` per contracts/database-tools.ts design -> contract tests GREEN
+- [x] T060 [US8] Implement cleanupDatabase primitive in `src/tools/primitives/cleanupDatabase.ts` — generate OmniJS script using quickstart.md pattern: cleanUp() -> unit tests GREEN
+- [x] T061 [US8] Implement cleanupDatabase definition in `src/tools/definitions/cleanupDatabase.ts` — register MCP tool "cleanup_database" (parameterless)
+- [x] T062 [US8] Register cleanup_database tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
-- [ ] T063 [US8] Manual verification: test cleanup_database OmniJS script in OmniFocus Script Editor
+- [x] T063 [US8] Manual verification: test cleanup_database OmniJS script in OmniFocus Script Editor
 
 **Checkpoint**: Cleanup operational.
 
@@ -261,28 +261,28 @@
 
 ### RED Phase - Tests First (REQUIRED)
 
-- [ ] T064 [P] [US9] Write contract tests for UndoInputSchema, UndoSuccessSchema (performed/canUndo/canRedo booleans), UndoErrorSchema, UndoResponseSchema in `tests/contract/database-tools/undo.test.ts` — validate performed boolean, canUndo/canRedo post-operation state, discriminated union -> verify FAILS
-- [ ] T065 [P] [US9] Write contract tests for RedoInputSchema, RedoSuccessSchema, RedoErrorSchema, RedoResponseSchema in `tests/contract/database-tools/redo.test.ts` — same shape as undo -> verify FAILS
-- [ ] T066 [P] [US9] Write unit tests for undoOperation primitive in `tests/unit/database-tools/undoOperation.test.ts` — test OmniJS script generation: canUndo pre-check, undo() call only when canUndo is true, returns {performed, canUndo, canRedo} post-state, empty stack returns performed: false (FR-012) -> verify FAILS
-- [ ] T067 [P] [US9] Write unit tests for redoOperation primitive in `tests/unit/database-tools/redoOperation.test.ts` — test OmniJS script generation: canRedo pre-check, redo() call only when canRedo is true, returns {performed, canUndo, canRedo} post-state, empty stack returns performed: false (FR-012) -> verify FAILS
+- [x] T064 [P] [US9] Write contract tests for UndoInputSchema, UndoSuccessSchema (performed/canUndo/canRedo booleans), UndoErrorSchema, UndoResponseSchema in `tests/contract/database-tools/undo.test.ts` — validate performed boolean, canUndo/canRedo post-operation state, discriminated union -> verify FAILS
+- [x] T065 [P] [US9] Write contract tests for RedoInputSchema, RedoSuccessSchema, RedoErrorSchema, RedoResponseSchema in `tests/contract/database-tools/redo.test.ts` — same shape as undo -> verify FAILS
+- [x] T066 [P] [US9] Write unit tests for undoOperation primitive in `tests/unit/database-tools/undoOperation.test.ts` — test OmniJS script generation: canUndo pre-check, undo() call only when canUndo is true, returns {performed, canUndo, canRedo} post-state, empty stack returns performed: false (FR-012) -> verify FAILS
+- [x] T067 [P] [US9] Write unit tests for redoOperation primitive in `tests/unit/database-tools/redoOperation.test.ts` — test OmniJS script generation: canRedo pre-check, redo() call only when canRedo is true, returns {performed, canUndo, canRedo} post-state, empty stack returns performed: false (FR-012) -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T068 [P] [US9] Implement Undo contract schemas in `src/contracts/database-tools/undo.ts` per contracts/database-tools.ts design -> contract tests GREEN
-- [ ] T069 [P] [US9] Implement Redo contract schemas in `src/contracts/database-tools/redo.ts` per contracts/database-tools.ts design -> contract tests GREEN
-- [ ] T070 [US9] Implement undoOperation primitive in `src/tools/primitives/undoOperation.ts` — generate OmniJS script using quickstart.md pattern: canUndo check, conditional undo(), return performed + post-state -> unit tests GREEN
-- [ ] T071 [US9] Implement redoOperation primitive in `src/tools/primitives/redoOperation.ts` — generate OmniJS script using quickstart.md pattern: canRedo check, conditional redo(), return performed + post-state -> unit tests GREEN
-- [ ] T072 [US9] Implement undoOperation definition in `src/tools/definitions/undoOperation.ts` — register MCP tool "undo" with DESTRUCTIVE warning in description
-- [ ] T073 [US9] Implement redoOperation definition in `src/tools/definitions/redoOperation.ts` — register MCP tool "redo" with DESTRUCTIVE warning in description
-- [ ] T074 [US9] Register undo and redo tools in `src/server.ts`
+- [x] T068 [P] [US9] Implement Undo contract schemas in `src/contracts/database-tools/undo.ts` per contracts/database-tools.ts design -> contract tests GREEN
+- [x] T069 [P] [US9] Implement Redo contract schemas in `src/contracts/database-tools/redo.ts` per contracts/database-tools.ts design -> contract tests GREEN
+- [x] T070 [US9] Implement undoOperation primitive in `src/tools/primitives/undoOperation.ts` — generate OmniJS script using quickstart.md pattern: canUndo check, conditional undo(), return performed + post-state -> unit tests GREEN
+- [x] T071 [US9] Implement redoOperation primitive in `src/tools/primitives/redoOperation.ts` — generate OmniJS script using quickstart.md pattern: canRedo check, conditional redo(), return performed + post-state -> unit tests GREEN
+- [x] T072 [US9] Implement undoOperation definition in `src/tools/definitions/undoOperation.ts` — register MCP tool "undo" with DESTRUCTIVE warning in description
+- [x] T073 [US9] Implement redoOperation definition in `src/tools/definitions/redoOperation.ts` — register MCP tool "redo" with DESTRUCTIVE warning in description
+- [x] T074 [US9] Register undo and redo tools in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
-- [ ] T075 [US9] Manual verification: test undo/redo OmniJS scripts in OmniFocus Script Editor — create task, undo, verify removed, redo, verify restored
+- [x] T075 [US9] Manual verification: test undo/redo OmniJS scripts in OmniFocus Script Editor — create task, undo, verify removed, redo, verify restored
 
 **Checkpoint**: All 10 tools implemented. Undo/redo safety net operational.
 
-- [ ] T076 Implement database-tools barrel export in `src/contracts/database-tools/index.ts` — re-export all schemas from get-database-stats, get-inbox-count, save-database, cleanup-database, undo, redo
+- [x] T076 Implement database-tools barrel export in `src/contracts/database-tools/index.ts` — re-export all schemas from get-database-stats, get-inbox-count, save-database, cleanup-database, undo, redo
 
 ---
 
@@ -290,13 +290,13 @@
 
 **Purpose**: Integration testing, documentation, and final validation
 
-- [ ] T077 [P] Scaffold integration test in `tests/integration/search-database/search-database.integration.test.ts` — create test structure for round-trip OmniFocus verification of all 10 tools
-- [ ] T078 [P] Update CLAUDE.md — add Search & Database to Implemented Tool Domains table, update tool count, add phase notes
-- [ ] T079 Run full test suite: `pnpm test` — all existing 2823+ tests pass plus new search/database tests
-- [ ] T080 Run type check: `pnpm typecheck` — zero errors
-- [ ] T081 Run lint: `pnpm lint` — zero errors
-- [ ] T082 Run build: `pnpm build` — successful compilation to dist/
-- [ ] T083 Run coverage: `pnpm test:coverage` — verify new code meets project coverage standards
+- [x] T077 [P] Scaffold integration test in `tests/integration/search-database/search-database.integration.test.ts` — create test structure for round-trip OmniFocus verification of all 10 tools
+- [x] T078 [P] Update CLAUDE.md — add Search & Database to Implemented Tool Domains table, update tool count, add phase notes
+- [x] T079 Run full test suite: `pnpm test` — all existing 2823+ tests pass plus new search/database tests
+- [x] T080 Run type check: `pnpm typecheck` — zero errors
+- [x] T081 Run lint: `pnpm lint` — zero errors
+- [x] T082 Run build: `pnpm build` — successful compilation to dist/
+- [x] T083 Run coverage: `pnpm test:coverage` — verify new code meets project coverage standards
 
 ---
 

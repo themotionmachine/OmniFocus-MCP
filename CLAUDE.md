@@ -6,8 +6,9 @@ This file provides guidance to Claude Code when working with this repository.
 
 OmniFocus MCP Server bridges AI assistants with OmniFocus task management on
 macOS. It uses pure **Omni Automation JavaScript** (OmniJS) to interact with
-OmniFocus, providing 50 tools across 8 domains: tasks, projects, folders, tags,
-reviews, notifications, repetition, and task status/completion. All operations
+OmniFocus, providing 60 tools across 10 domains: tasks, projects, folders, tags,
+reviews, notifications, repetition, task status/completion, search, and database
+operations. All operations
 use OmniJS execution for consistency and reliability.
 
 ## Development Philosophy
@@ -70,7 +71,7 @@ use OmniJS execution for consistency and reliability.
 | Directory | Purpose |
 |-----------|---------|
 | `src/server.ts` | MCP server entry point |
-| `src/contracts/` | Zod schemas per tool domain (8 dirs: folder, notification, project, repetition, review, status, tag, task) |
+| `src/contracts/` | Zod schemas per tool domain (10 dirs: database, folder, notification, project, repetition, review, search, status, tag, task) |
 | `src/tools/definitions/` | Tool schemas and MCP handlers |
 | `src/tools/primitives/` | Core business logic (OmniJS script generation + execution) |
 | `src/utils/` | Shared utilities (logger, OmniJS execution, temp files) |
@@ -220,8 +221,10 @@ Domain-specific rules in `.claude/rules/` load automatically:
 | Notifications | 5 | `notification-tools/` | Relative offsets in seconds, kind-conditional fields |
 | Repetition | 5 | `repetition-tools/` | ICS pass-through, v4.7+ version gating |
 | Status | 6 | `status-tools/` | Batch with idempotent no-op codes, v3.8+ drop API |
+| Search | 4 | `search-tools/` | Smart Match for projects/folders/tags, flattenedTasks.filter() for tasks, shared result schemas |
+| Database | 6 | `database-tools/` | Top-level DB functions (save/cleanUp/undo/redo), canUndo/canRedo pre-check, inbox.length |
 
-**Current baseline:** 2823 tests across 125 files. See workflow files in `docs/ai/specs/` for detailed implementation notes per spec.
+**Current baseline:** 3020 tests across 147 files. See workflow files in `docs/ai/specs/` for detailed implementation notes per spec.
 
 ## Logging
 

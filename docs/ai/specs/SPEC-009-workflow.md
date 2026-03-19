@@ -15,7 +15,7 @@
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 128 items, 18 gaps remediated |
 | Tasks | `/speckit.tasks` | ✅ Complete | 83 tasks, 11 phases, 48% parallel |
 | Analyze | `/speckit.analyze` | ✅ Complete | 0 CRITICAL, 0 HIGH, 3 MEDIUM remediated |
-| Implement | `/speckit.implement` | ⏳ Pending | |
+| Implement | `/speckit.implement` | ✅ Complete | 83/83 tasks, 10 tools, 3020 tests |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -430,21 +430,21 @@ For each task, follow this cycle:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | |
-| 2 - Search Tools | | | |
-| 3 - Database Tools | | | |
-| 4 - Integration & Polish | | | |
+| 1 - Foundation | 4 | 4 | Shared schemas, contract dirs, indexes |
+| 2-5 - Search Tools | 28 | 28 | search_tasks, search_projects, search_folders, search_tags |
+| 6-10 - Database Tools | 41 | 41 | stats, inbox, save, cleanup, undo, redo |
+| 11 - Integration & Polish | 10 | 10 | Server registration, build, final tests |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] Typecheck passes: `pnpm typecheck`
-- [ ] Tests pass: `pnpm test`
-- [ ] Build succeeds: `pnpm build`
-- [ ] Lint passes: `pnpm lint`
-- [ ] All 10 tools registered in `src/server.ts`
+- [x] All tasks marked complete in tasks.md (83/83)
+- [x] Typecheck passes: `pnpm typecheck` (0 errors)
+- [x] Tests pass: `pnpm test` (3020 passed, 146 files)
+- [x] Build succeeds: `pnpm build` (ESM + CJS clean)
+- [x] Lint passes: `pnpm lint` (416 files clean)
+- [x] All 10 tools registered in `src/server.ts`
 - [ ] Manual OmniJS Script Editor verification
 - [ ] PR created and reviewed
 - [ ] Merged to main branch
