@@ -11,7 +11,7 @@
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 10 FRs, 5 user stories, 21 scenarios, 0 clarifications |
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions; FileWrapper.Type confirmed, project support added, 50MB limit, preferredFilename |
-| Plan | `/speckit.plan` | ⏳ Pending | |
+| Plan | `/speckit.plan` | ✅ Complete | 5 tools, 7 contracts, 7 research tasks, 5 ADs, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
@@ -261,11 +261,11 @@ reference materials, and file links within their OmniFocus databases.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | |
-| `research.md` | ⏳ | |
-| `data-model.md` | ⏳ | |
-| `contracts/` | ⏳ | |
-| `quickstart.md` | ⏳ | |
+| `plan.md` | ✅ | 5 tools, 5 ADs, constitution gates |
+| `research.md` | ✅ | 7 research tasks resolved |
+| `data-model.md` | ✅ | AttachmentInfo, LinkedFileInfo, FileWrapperType |
+| `contracts/` | ✅ | 7 files (5 tools + shared + index) |
+| `quickstart.md` | ✅ | Implementation guide |
 
 ---
 
