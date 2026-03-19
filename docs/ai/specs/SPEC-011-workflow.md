@@ -12,7 +12,7 @@
 | Specify | `/speckit.specify` | ✅ Complete | 10 FRs, 5 user stories, 21 scenarios, 0 clarifications |
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions; FileWrapper.Type confirmed, project support added, 50MB limit, preferredFilename |
 | Plan | `/speckit.plan` | ✅ Complete | 5 tools, 7 contracts, 7 research tasks, 5 ADs, 10/10 constitution pass |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (118 items), 17 gaps remediated |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
@@ -335,10 +335,10 @@ Focus on Attachments & Linked Files requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | | | |
-| type-safety | | | |
-| api-workaround | | | |
-| **Total** | | | |
+| api-contracts | 41 | 9 remediated | FR-011, FR-012, NFR-001/002, edge cases |
+| type-safety | 38 | 1 remediated | Zod transform/refine ordering for base64 |
+| api-workaround | 39 | 7 remediated | Data.fromBase64 edge cases, bounds check, URL.fromString null |
+| **Total** | **118** | **17 remediated** | |
 
 ---
 
