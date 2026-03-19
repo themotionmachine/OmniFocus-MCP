@@ -10,7 +10,7 @@
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 10 FRs, 5 user stories, 21 scenarios, 0 clarifications |
-| Clarify | `/speckit.clarify` | ⏳ Pending | |
+| Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions; FileWrapper.Type confirmed, project support added, 50MB limit, preferredFilename |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
@@ -214,8 +214,8 @@ reference materials, and file links within their OmniFocus databases.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | FileWrapper APIs | 6 | |
-| 2 | Linked Files APIs | 5 | |
+| 1 | FileWrapper APIs | 5 | FileWrapper.Type is enum (not UTI), Data.fromBase64 confirmed, preferredFilename fallback, removeAttachmentAtIndex confirmed, contents.length for size |
+| 2 | Linked Files APIs | 5 | linkedFileURLs returns URL objects, removeLinkedFileWithURL exists (URL-based not index), project support added, 50MB hard limit, base64 pass-through to OmniJS |
 
 ---
 

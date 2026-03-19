@@ -15,7 +15,7 @@ still relevant.
 
 **Why this priority**: Reading is the foundation -- users must see what
 attachments exist before they can add or remove them. This delivers immediate
-value by surfacing attachment metadata (name, size, type) that is otherwise
+value by surfacing attachment metadata (name, size, wrapper type) that is otherwise
 only visible in the OmniFocus UI.
 
 **Independent Test**: Can be fully tested by calling `list_attachments` with a
@@ -27,7 +27,7 @@ its inspector pane. Delivers value even without the write tools.
 1. **Given** a task has 3 attachments (a PDF, an image, and a text file),
    **When** I call `list_attachments` with the task's ID,
    **Then** I receive an array of 3 attachment entries, each containing the
-   filename, file type (UTI), and size in bytes.
+   filename, wrapper type (`FileWrapper.Type` enum value), and size in bytes.
 
 2. **Given** a task has no attachments,
    **When** I call `list_attachments` with the task's ID,
@@ -142,7 +142,9 @@ and verifying the returned URLs match the linked files visible in OmniFocus.
 1. **Given** a task has 2 linked files (e.g., `file:///Users/me/doc.pdf` and
    `file:///Users/me/notes.txt`),
    **When** I call `list_linked_files` with the task's ID,
-   **Then** I receive an array of 2 file URL strings.
+   **Then** I receive an array of 2 linked file objects, each containing the
+   full URL string, the filename (`lastPathComponent`), and the file extension
+   (`pathExtension`).
 
 2. **Given** a task has no linked files,
    **When** I call `list_linked_files` with the task's ID,
@@ -215,29 +217,50 @@ because it is macOS-only and serves a narrower use case than embedded attachment
 
 ### Functional Requirements
 
-- **FR-001**: System MUST list all attachments on a task, returning an array of
-  metadata entries each containing the attachment's positional index, filename,
-  file type (UTI string), and size in bytes.
+- **FR-001**: System MUST list all attachments on a task or project, returning
+  an array of metadata entries each containing the attachment's positional index,
+  filename (resolved as `wrapper.preferredFilename || wrapper.filename || 'unnamed'`),
+  wrapper type (`FileWrapper.Type` enum value: File, Directory, or Link), and
+  size in bytes. Note: `FileWrapper.type` returns a structural enum, not a UTI
+  string. File-type differentiation is only available via the filename extension.
+  The `preferredFilename` is preferred because it reflects the name OmniFocus
+  uses for display; `filename` is the fallback for the actual last-read name.
 
-- **FR-002**: System MUST add an attachment to a task given a filename and
-  base64-encoded file data, embedding the decoded file in the task.
+- **FR-002**: System MUST add an attachment to a task or project given a
+  filename and base64-encoded file data, embedding the decoded file in the
+  item. The base64 string is passed into the OmniJS script and decoded via
+  `Data.fromBase64(base64String)` inside OmniJS, since `FileWrapper.withContents()`
+  requires an OmniJS `Data` instance. Server-side TypeScript validates the
+  base64 string before passing it to OmniJS.
 
-- **FR-003**: System MUST remove an attachment from a task given a zero-based
-  positional index, returning an error when the index is out of bounds.
+- **FR-003**: System MUST remove an attachment from a task or project given a
+  zero-based positional index, returning an error when the index is out of
+  bounds.
 
-- **FR-004**: System MUST list all linked file URLs on a task, returning an
-  array of `file://` URL strings.
+- **FR-004**: System MUST list all linked file URLs on a task or project,
+  returning an array of linked file objects each containing the full URL string
+  (`url`), the filename (`lastPathComponent`), and the file extension
+  (`pathExtension`). These properties are extracted from the OmniJS URL object.
 
-- **FR-005**: System MUST add a linked file reference to a task given a `file://`
-  URL string. The URL MUST be validated to use the `file://` scheme before
-  submission to OmniFocus.
+- **FR-005**: System MUST add a linked file reference to a task or project
+  given a `file://` URL string. The URL MUST be validated to use the `file://`
+  scheme before submission to OmniFocus. The URL string is converted to an
+  OmniJS URL object via `URL.fromString(urlString)` inside the script.
 
-- **FR-006**: System MUST accept tasks by their unique identifier. When a task
-  is not found, the system MUST return a descriptive NOT_FOUND error.
+- **FR-006**: System MUST accept tasks or projects by their unique identifier.
+  When a project ID is provided, the system MUST resolve it to the project's
+  root task via `project.task` (matching the repetition tools pattern). When
+  neither a task nor project is found, the system MUST return a descriptive
+  NOT_FOUND error.
 
 - **FR-007**: System MUST warn (but not reject) when adding an attachment whose
   base64-decoded size exceeds 10 MB, noting the potential impact on OmniFocus
   Sync performance.
+
+- **FR-007a**: System MUST reject attachments whose base64-decoded size exceeds
+  50 MB with a validation error. This prevents catastrophic memory allocation
+  from enormous base64 payloads in the JSON-RPC message. Validation is
+  server-side in TypeScript using `Buffer.from(data, 'base64').length`.
 
 - **FR-008**: All 5 tools MUST validate input parameters before execution.
   Empty strings for required fields (task ID, filename, data, URL) MUST be
@@ -252,15 +275,23 @@ because it is macOS-only and serves a narrower use case than embedded attachment
 ### Key Entities
 
 - **Attachment**: An embedded file stored within the OmniFocus database.
-  Key attributes: filename, file type (UTI), size in bytes, positional index
-  within the task's attachment list.
+  Key attributes: filename (resolved as `preferredFilename || filename || 'unnamed'`),
+  wrapper type (`FileWrapper.Type` enum -- always `File` for embedded
+  attachments), size in bytes (from `contents.length`), positional index within
+  the task's attachment list. File-type differentiation relies on the filename
+  extension, not a UTI property.
 
 - **Linked File**: A lightweight macOS file bookmark referencing an external file
-  on the local filesystem. Represented as a `file://` URL string. Not embedded
-  in the database.
+  on the local filesystem. Represented as an object containing the full `file://`
+  URL string (`url`), the filename (`lastPathComponent`), and the file extension
+  (`pathExtension`). Not embedded in the database.
 
-- **Task**: The item that can have attachments and linked files. Identified by
-  its unique OmniFocus ID.
+- **Task**: The primary item that can have attachments and linked files.
+  Identified by its unique OmniFocus ID.
+
+- **Project**: Also supports attachments and linked files via its root task
+  (`project.task`). Identified by its unique OmniFocus ID. All attachment and
+  linked file operations on projects delegate to the project's root task.
 
 ## Success Criteria *(mandatory)*
 
@@ -293,15 +324,23 @@ because it is macOS-only and serves a narrower use case than embedded attachment
   where positional index is stable within a single operation (indices may shift
   after removal).
 
-- `FileWrapper.withContents(name, data)` creates an in-memory FileWrapper
-  suitable for `task.addAttachment()`.
+- `FileWrapper.withContents(name: String or null, contents: Data)` is a class
+  function (not a constructor) that returns a new FileWrapper representing a
+  flat file containing the given data. Suitable for `task.addAttachment()`.
 
-- `Data.fromBase64(string)` is available in the OmniJS runtime and correctly
-  decodes standard base64 strings into Data objects.
+- `Data.fromBase64(string: String)` is available in the OmniJS runtime (per
+  the shared Data class docs) and decodes standard base64 strings into Data
+  objects. However, its error behavior on invalid input is undocumented and
+  may fail silently (a known OmniJS gotcha). Base64 validation MUST be
+  performed server-side in TypeScript (via `Buffer.from(str, 'base64')` with
+  error handling or regex check) before passing data to OmniJS.
 
-- FileWrapper objects expose `filename` and `type` (UTI string) properties.
-  Size can be derived from the `contents` Data object or may require
-  calculation from the original base64 data length.
+- FileWrapper objects expose `filename` (String or null), `preferredFilename`
+  (String or null), `type` (`FileWrapper.Type` enum: File, Directory, Link),
+  `contents` (Data, read-only), and `children` (Array of FileWrapper,
+  read-only). The `type` property returns a structural enum, not a UTI string.
+  Size in bytes is derived from `wrapper.contents.length` (the Data class
+  exposes a `length` property of type Number).
 
 - `task.linkedFileURLs` returns an array of URL objects whose `absoluteString`
   property yields the `file://` URL.
@@ -321,8 +360,9 @@ because it is macOS-only and serves a narrower use case than embedded attachment
 
 ### In Scope
 
-- Listing, adding, and removing embedded attachments on individual tasks
-- Listing and adding linked file references on individual tasks
+- Listing, adding, and removing embedded attachments on individual tasks and
+  projects (projects resolve to root task via `project.task`)
+- Listing and adding linked file references on individual tasks and projects
 - Base64 encoding/decoding for attachment data transfer over MCP JSON protocol
 - Size warnings for attachments exceeding 10 MB
 - Contract definitions and full TDD test coverage
@@ -332,8 +372,26 @@ because it is macOS-only and serves a narrower use case than embedded attachment
 
 - Attachment content extraction or preview (file data is written, not read back)
 - Linked file URL resolution or validation (no filesystem access beyond OmniFocus)
-- Project-level attachments (focus on task attachments only for this phase)
-- Removing linked files (no `removeLinkedFileURL` API documented in OmniFocus)
-- Batch operations across multiple tasks (single task per call)
+- Removing linked files (API `task.removeLinkedFileWithURL(url)` exists per
+  Omni Automation docs but is deferred to a future phase for scope management)
+- Batch operations across multiple tasks/projects (single item per call)
 - Attachment content modification (add/remove only, no in-place editing)
 - File type detection or MIME type inference from data content
+
+## Clarifications
+
+### Session 2026-03-18
+
+- Q: How should the spec handle the absence of UTI metadata from the FileWrapper API (`FileWrapper.type` returns a `FileWrapper.Type` enum -- File/Directory/Link -- not a UTI string)? --> A: Replace "file type (UTI)" with `FileWrapper.Type` enum value and rely on filename extension for type hints. The enum will always be `File` for embedded attachments.
+- Q: The Out of Scope section claims no `removeLinkedFileURL` API exists in OmniFocus. Is this accurate? --> A: Factually incorrect. `task.removeLinkedFileWithURL(url: URL)` exists per Omni Automation docs (v3.8+). Corrected to state the API exists but removal is deferred to a future phase.
+- Q: How should attachment byte size be determined -- from `contents.length` in OmniJS or calculated from base64 string length server-side? --> A: Use `wrapper.contents.length` inside OmniJS. The `Data` class exposes a `length` property (Number, read-only) which gives the exact byte count. This is more reliable than the base64 approximation formula.
+- Q: What are the exact parameters of `FileWrapper.withContents`? --> A: It is a class function: `FileWrapper.withContents(name: String or null, contents: Data)` returning `FileWrapper`. Not a constructor (no `new` keyword).
+- Q: Where should base64 validation occur -- server-side in TypeScript or inside the OmniJS script via `Data.fromBase64()`? --> A: Server-side in TypeScript before passing to OmniJS. `Data.fromBase64()` has undocumented error behavior and may fail silently (a known OmniJS gotcha). Use `Buffer.from(str, 'base64')` with error handling or regex validation in Node.js.
+
+### Session 2026-03-18 (Clarify Session)
+
+- Q: `task.linkedFileURLs` returns URL objects (not strings). How should the `list_linked_files` response represent each linked file? --> A: Return a richer object per linked file containing `url` (from `absoluteString`), `lastPathComponent` (filename), and `pathExtension` (file extension). These 3 properties are extracted from the OmniJS URL object inside the script. This provides useful metadata without being excessive. Source: https://omni-automation.com/shared/url.html (URL class properties).
+- Q: Should attachment and linked file tools support projects in addition to tasks? --> A: Yes. The OmniFocus `Project` class has `attachments`, `addAttachment()`, `removeAttachmentAtIndex()`, `linkedFileURLs`, `addLinkedFileURL()`, and `removeLinkedFileWithURL()` -- all operating on the project's root task. Follow the repetition tools (SPEC-007) pattern: accept both task and project IDs, resolve projects to root task via `project.task`. This matches `getRepetition.ts` and 5+ other primitives. Source: https://omni-automation.com/omnifocus/project.html; `src/tools/primitives/getRepetition.ts`.
+- Q: What is the maximum base64 payload size the MCP server should accept for `add_attachment`? --> A: Add a hard rejection limit at 50 MB (decoded size) in addition to the existing 10 MB sync warning. This prevents catastrophic memory allocation from enormous base64 payloads in the JSON-RPC stdio message. Validation is server-side via `Buffer.from(data, 'base64').length`. Source: Constitution Principle V (Defensive Error Handling); MCP stdio transport constraints.
+- Q: Should `list_attachments` return `preferredFilename` or `filename` from FileWrapper? --> A: Use `preferredFilename` as primary with `filename` as fallback: `wrapper.preferredFilename || wrapper.filename || 'unnamed'`. Return a single `filename` field in the response (KISS). `preferredFilename` is what OmniFocus uses for display and is the more useful value; `filename` is the actual last-read name which may differ. Source: https://omni-automation.com/omnifocus/filewrapper.html; Constitution Principle VII (KISS).
+- Q: How should base64 data flow between TypeScript and OmniJS for `add_attachment`? --> A: Pass the base64 string directly into the OmniJS script as a string literal and decode via `Data.fromBase64(base64String)` inside OmniJS. Server-side TypeScript validates the string is valid base64 (regex or `Buffer.from()` roundtrip) before generating the script. The actual `Data` object construction must happen in OmniJS since `FileWrapper.withContents()` requires an OmniJS `Data` instance. Source: https://omni-automation.com/omnifocus/OF-API.html (`Data.fromBase64()`); https://omni-automation.com/omnifocus/task-attachment.html.
