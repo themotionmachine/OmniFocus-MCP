@@ -15,7 +15,13 @@ export const AddAttachmentInputSchema = z.object({
   data: z
     .string()
     .min(1)
-    .max(67108864)
+    .transform((val) => val.replace(/\s/g, ''))
+    .refine((val) => val.length > 0, {
+      message: 'Base64 data cannot be empty after whitespace stripping'
+    })
+    .refine((val) => val.length <= 67108864, {
+      message: 'Base64 data exceeds maximum length of 67,108,864 characters (~50 MB decoded)'
+    })
     .describe(
       'Base64-encoded file content (whitespace is stripped before validation; max ~50 MB decoded)'
     )

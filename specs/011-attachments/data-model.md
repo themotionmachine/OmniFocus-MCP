@@ -43,7 +43,7 @@ Input for adding an embedded attachment.
 **Validation rules**:
 - `id`: min 1 character
 - `filename`: min 1 character, max 255 characters; must not contain `/`, `\`, or `..` (pure basename only)
-- `data`: min 1 character, max 67,108,864 characters (~50 MB decoded); whitespace is stripped automatically before validation; must match base64 character set (`/^[A-Za-z0-9+/]*={0,2}$/`) after stripping
+- `data`: Zod pipeline strips all whitespace first via `.transform((val) => val.replace(/\s/g, ''))`, then enforces max 67,108,864 characters on the stripped string via `.refine()` (Pattern B -- `.transform()` then `.refine()`, since `.max()` cannot follow `.transform()` in Zod 4.x); must be non-empty after stripping; must match base64 character set (`/^[A-Za-z0-9+/]*={0,2}$/`) after stripping
 - Decoded size > 10 MB: warning in response (template: `"Attachment size ({size} MB) exceeds 10 MB; may impact OmniFocus Sync performance"`)
 - Decoded size > 50 MB: rejection with `SIZE_EXCEEDED` error code
 

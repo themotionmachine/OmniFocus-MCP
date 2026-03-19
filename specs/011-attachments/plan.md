@@ -112,13 +112,14 @@ No violations. All 10 constitution principles pass. No complexity justifications
 ### AD-001: Base64 Data Flow
 
 Base64 string passes through TypeScript (validation) into OmniJS script (decoding):
-1. Zod schema enforces max string length of 67,108,864 characters (~50 MB decoded)
-2. TypeScript strips whitespace from base64 string (`/\s+/g`)
-3. TypeScript validates base64 format (regex `/^[A-Za-z0-9+/]*={0,2}$/`)
-4. TypeScript checks decoded size (warning >10 MB with message template, reject >50 MB with `SIZE_EXCEEDED` code)
-5. Base64 string embedded in OmniJS script as string literal
-6. OmniJS decodes via `Data.fromBase64(base64String)`
-7. OmniJS creates FileWrapper via `FileWrapper.withContents(name, data)`
+1. Zod schema strips all whitespace via `.transform((val) => val.replace(/\s/g, ''))` (accommodates multi-line base64 from MIME/transport wrapping)
+2. Zod schema enforces max stripped string length of 67,108,864 characters (~50 MB decoded) via `.refine((val) => val.length <= 67108864, ...)` (Pattern B: `.transform()` then `.refine()`, matching `add-folder.ts` precedent)
+3. Zod schema validates non-empty via `.refine((val) => val.length > 0, ...)`
+4. TypeScript validates base64 format (regex `/^[A-Za-z0-9+/]*={0,2}$/` on stripped string)
+5. TypeScript checks decoded size (warning >10 MB with message template, reject >50 MB with `SIZE_EXCEEDED` code)
+6. Base64 string embedded in OmniJS script as string literal
+7. OmniJS decodes via `Data.fromBase64(base64String)`
+8. OmniJS creates FileWrapper via `FileWrapper.withContents(name, data)`
 
 ### AD-006: Error Codes for add_attachment
 
@@ -149,3 +150,28 @@ This matches the repetition tools pattern used in 5+ existing tools.
 ### AD-005: No Batch Operations
 
 All tools operate on a single task/project per call. Batch attachment operations (across multiple items) are out of scope per the feature spec, following YAGNI.
+
+### AD-007: OmniJS Defensive Checks for Undocumented API Behavior
+
+Several OmniJS APIs used by attachment tools have undocumented error behavior.
+The following defensive patterns are required, based on codebase precedent:
+
+1. **`Data.fromBase64()` null check** (add_attachment): After decoding, check
+   `if (!data)` and return explicit error. `Data.fromBase64()` returns `null`
+   on invalid input rather than throwing. Precedent: server-side validation in
+   `addNotification.ts` (TypeScript pre-validation + OmniJS verification).
+
+2. **Index bounds checking** (remove_attachment): Before calling
+   `task.removeAttachmentAtIndex(index)`, validate `attachments.length === 0`
+   (empty error) and `index >= attachments.length` (out-of-bounds with valid
+   range). Precedent: `removeNotification.ts` lines 97-112.
+
+3. **`URL.fromString()` null check** (add_linked_file): After parsing, check
+   `if (!url)` and return explicit error. May return `null` for malformed
+   input. Server-side `file://` scheme validation (FR-005) prevents most
+   malformed URLs from reaching OmniJS.
+
+4. **Read-back verification** (add_attachment): After calling
+   `task.addAttachment(wrapper)`, read `task.attachments` and verify the count
+   increased. `addAttachment()` may fail silently on invalid input. Precedent:
+   `addNotification.ts` lines 137-145.

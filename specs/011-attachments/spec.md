@@ -301,11 +301,19 @@ because it is macOS-only and serves a narrower use case than embedded attachment
 
 - **NFR-001**: The `add_attachment` tool MUST enforce a maximum base64 string
   length of 67,108,864 characters (approximately 50 MB decoded) at the Zod
-  schema level via `z.string().max(67108864)`. This prevents the payload from
-  reaching the OmniJS execution environment, where embedding a large string
-  literal in the `app.evaluateJavascript()` call would cause excessive memory
-  pressure in the OmniFocus JavaScript context. The Zod-level check rejects
-  oversized payloads early, before any `Buffer.from()` allocation occurs.
+  schema level. Because whitespace stripping (Edge Cases: whitespace handling)
+  MUST occur before the length check, the Zod schema uses a two-step pipeline:
+  `.transform((val) => val.replace(/\s/g, ''))` to strip all whitespace,
+  followed by `.refine((val) => val.length <= 67108864, ...)` to enforce the
+  max length on the cleaned string. This follows the codebase's established
+  Pattern B (`.transform()` then `.refine()`) from `add-folder.ts` and
+  `edit-folder.ts`. The plain `.max()` method cannot be chained after
+  `.transform()` in Zod 4.x because `.transform()` converts `ZodString` to
+  `ZodEffects`. This prevents oversized payloads from reaching the OmniJS
+  execution environment, where embedding a large string literal in the
+  `app.evaluateJavascript()` call would cause excessive memory pressure in
+  the OmniFocus JavaScript context. The Zod-level check rejects oversized
+  payloads early, before any `Buffer.from()` allocation occurs.
 
 - **NFR-002**: Base64 payloads between 10 MB and 50 MB (decoded) are accepted
   but may cause noticeable latency in OmniJS script execution due to string
@@ -365,16 +373,28 @@ because it is macOS-only and serves a narrower use case than embedded attachment
   where positional index is stable within a single operation (indices may shift
   after removal).
 
-- `FileWrapper.withContents(name: String or null, contents: Data)` is a class
-  function (not a constructor) that returns a new FileWrapper representing a
-  flat file containing the given data. Suitable for `task.addAttachment()`.
+- `FileWrapper.withContents(name: String or null, contents: Data or null)` is
+  a class function (not a constructor) that returns a new FileWrapper
+  representing a flat file containing the given data. The `null` value is
+  explicitly allowed for both parameters per the Omni Automation docs. Passing
+  `null` for name creates a FileWrapper without a preferred filename; passing
+  an empty string creates one with an empty filename (undesirable). The Zod
+  schema enforces `z.string().min(1)` on filename to prevent both cases.
+
+- `task.addAttachment(fileWrapper)` does not document behavior when passed
+  `null` or an invalid FileWrapper. It may fail silently. The OmniJS script
+  MUST read back `task.attachments` after calling `addAttachment()` to verify
+  the attachment was successfully added (following `addNotification.ts`
+  read-back verification precedent).
 
 - `Data.fromBase64(string: String)` is available in the OmniJS runtime (per
   the shared Data class docs) and decodes standard base64 strings into Data
-  objects. However, its error behavior on invalid input is undocumented and
-  may fail silently (a known OmniJS gotcha). Base64 validation MUST be
-  performed server-side in TypeScript (via `Buffer.from(str, 'base64')` with
-  error handling or regex check) before passing data to OmniJS.
+  objects. On invalid input, `Data.fromBase64()` returns `null` rather than
+  throwing an exception. An empty string produces a zero-byte `Data` object.
+  Base64 validation MUST be performed server-side in TypeScript (via
+  `Buffer.from(str, 'base64')` with error handling or regex check) before
+  passing data to OmniJS. The OmniJS script MUST also check the return value
+  (`if (!data)`) as a defense-in-depth measure.
 
 - FileWrapper objects expose `filename` (String or null), `preferredFilename`
   (String or null), `type` (`FileWrapper.Type` enum: File, Directory, Link),
@@ -387,10 +407,22 @@ because it is macOS-only and serves a narrower use case than embedded attachment
   property yields the `file://` URL.
 
 - `task.addLinkedFileURL(url)` accepts a URL object created via
-  `URL.fromString(urlString)` in OmniJS.
+  `URL.fromString(urlString)` in OmniJS. `URL.fromString()` may return `null`
+  for malformed input (following the `URL.Components.fromString()` null-return
+  precedent). The OmniJS script MUST check `if (!url)` before passing to
+  `addLinkedFileURL()`.
+
+- URL properties used for linked file metadata: `absoluteString` (full URL
+  string), `lastPathComponent` (filename -- returns empty string for trailing
+  slashes, `"/"` for root URLs), `pathExtension` (extension without dot --
+  returns empty string when no extension exists). These values are returned
+  as-is without normalization.
 
 - `task.removeAttachmentAtIndex(index)` uses zero-based indexing consistent
-  with JavaScript array conventions.
+  with JavaScript array conventions. The native method's error behavior on
+  out-of-bounds indices is undocumented and may throw or fail silently. The
+  OmniJS script MUST perform bounds checking before calling the native method
+  (following `removeNotification.ts` precedent).
 
 - The `add_linked_file` tool is macOS-only per OmniFocus documentation. The
   default assumption is that the server runs on macOS (the only platform
@@ -445,3 +477,13 @@ because it is macOS-only and serves a narrower use case than embedded attachment
 - Q: Should filenames be validated for path separators or directory traversal sequences? --> A: Yes. The `filename` field must be a pure basename. Reject filenames containing `/`, `\`, or `..` at the Zod validation layer. This prevents unexpected behavior in OmniFocus's internal FileWrapper storage and follows defensive input validation. Source: Constitution Principle V (Defensive Error Handling); macOS APFS filename constraints.
 - Q: What is the maximum filename length for `add_attachment`? --> A: 255 characters, matching the macOS APFS/HFS+ filesystem limit (255 UTF-8 characters per filename component). Enforced at the Zod schema level via `z.string().max(255)`. Source: macOS APFS specification; https://superuser.com/questions/1561484/what-is-the-maximum-length-of-a-filename-apfs.
 - Q: Are there performance or memory concerns with large base64 payloads in OmniJS script execution? --> A: Yes. The base64 string is embedded as a JavaScript string literal in the OmniJS script template passed to `app.evaluateJavascript()`. A 50 MB decoded file produces approximately 67 MB of base64 text, which becomes a string literal in the JavaScript source. The 50 MB hard limit (FR-007a) is enforced at the Zod schema level (`z.string().max(67108864)`) to reject oversized payloads before any buffer allocation or script generation occurs. Between 10 MB and 50 MB, payloads are accepted with a warning (FR-007, FR-012). Source: NFR-001; Constitution Principle V (Defensive Error Handling).
+
+### Session 2026-03-19 (API Workaround Checklist -- OmniJS Edge Cases)
+
+- Q: What happens when `Data.fromBase64()` receives an empty or zero-byte base64 input (e.g., `Data.fromBase64("")`)? --> A: Per the Omni Automation `Data` class documentation (`Data.fromBase64(string: String) -> Data`), the function accepts any string and returns a `Data` object. An empty string produces a zero-byte `Data` object. Invalid base64 characters cause the function to return `null` rather than throwing an exception. **Decision**: Dual-layer validation. (1) TypeScript-side: the Zod schema already enforces `z.string().min(1)` on the `data` field, rejecting empty strings before script generation. (2) OmniJS-side: after calling `Data.fromBase64(base64String)`, the script MUST check `if (!data)` and return `{ success: false, error: "Failed to decode base64 data" }` rather than relying on the general try-catch. This handles the case where server-side regex validation passes but OmniJS still rejects the input. Source: https://omni-automation.com/shared/data.html; Constitution Principle V (Defensive Error Handling).
+- Q: What is the error behavior of `task.removeAttachmentAtIndex(index)` when the index is out of bounds? --> A: The Omni Automation documentation (`removeAttachmentAtIndex(index: Number) -> ()`) does not specify exception behavior for out-of-bounds indices. The method may throw an unhandled exception or fail silently. **Decision**: OmniJS-side bounds checking, following the established precedent in `removeNotification.ts` (lines 97-112). The OmniJS script MUST validate two conditions before calling the native method: (1) `task.attachments.length === 0` returns `{ success: false, error: "Task has no attachments to remove" }`; (2) `index >= task.attachments.length` returns `{ success: false, error: "Attachment index N is out of bounds (task has M attachments, valid range: 0 to M-1)" }`. This makes FR-010 (valid range in error message) implementable regardless of the native method's exception behavior. Source: `src/tools/primitives/removeNotification.ts`; https://omni-automation.com/omnifocus/OF-API.html.
+- Q: Should the bounds check for `removeAttachmentAtIndex` be performed server-side in the OmniJS script or rely on the native method's exception? --> A: OmniJS-side, in the script, before calling the native method. This is the established pattern for all index-based removal operations in this codebase (see `removeNotification.ts`). Server-side bounds checking guarantees consistent, descriptive error messages (including the valid range per FR-010) regardless of the native method's undocumented behavior. The native method's exception (if any) is caught by the outer try-catch as a last resort. Source: `src/tools/primitives/removeNotification.ts`; Constitution Principle V (Defensive Error Handling).
+- Q: What do `URL.lastPathComponent` and `URL.pathExtension` return for edge-case URLs (e.g., `file:///path/to/directory/` with trailing slash, `file:///noextension`, root URL `file:///`)? --> A: Per the Omni Automation URL class documentation: `lastPathComponent` returns the last path segment (`String`, read-only). For a trailing slash (`file:///path/dir/`), it returns an empty string or the directory name depending on implementation (mirrors Apple's `NSURL.lastPathComponent` behavior). For root URLs (`file:///`), it returns `"/"`. `pathExtension` returns the file extension without the dot (`String`, read-only), or an empty string `""` when no extension exists. **Decision**: Pass-through. The OmniJS script reads and returns these values as-is without synthesizing or normalizing. TypeScript consumers of `list_linked_files` output should handle empty strings gracefully. No additional validation is needed because linked file URLs come from OmniFocus's internal bookmarks, which are already well-formed. Source: https://omni-automation.com/shared/url.html (URL class properties: `lastPathComponent`, `pathExtension`, `pathComponents`).
+- Q: What is the error behavior of `URL.fromString()` on invalid input (empty string, malformed URL)? --> A: Per the Omni Automation URL documentation, `URL.fromString(string: String) -> URL` returns a URL object. The related `URL.Components.fromString(string: String) -> URL.Components or null` explicitly returns `null` for invalid input. While `URL.fromString()` does not document `null` return behavior, it may return `null` or throw on malformed input. **Decision**: OmniJS-side null check. After calling `URL.fromString(urlString)`, the script MUST check `if (!url)` and return `{ success: false, error: "Failed to parse URL: <urlString>" }`. Additionally, server-side TypeScript validation already ensures the URL starts with `file://` (FR-005), which eliminates most malformed-URL scenarios before they reach OmniJS. Source: https://omni-automation.com/shared/url.html; https://omni-automation.com/shared/url-components-query.html (`URL.Components.fromString` null return precedent).
+- Q: What happens when `FileWrapper.withContents()` is called with a `null` name? Does OmniJS accept it or throw? --> A: Per the Omni Automation documentation, the signature is `FileWrapper.withContents(name: String or nil, contents: Data or nil) -> FileWrapper`. The `nil` (null) value is explicitly allowed for both parameters. Passing `null` for name creates a FileWrapper without a preferred filename. Passing an empty string `""` creates a FileWrapper with an empty filename (technically valid but undesirable). **Decision**: TypeScript-side prevention. The Zod schema already enforces `z.string().min(1)` on the `filename` parameter, which prevents both `null` and empty strings from reaching the OmniJS script. No additional OmniJS-side check is needed for the name parameter. Source: https://omni-automation.com/omnifocus/filewrapper.html (`withContents` class function signature); https://omni-automation.com/omniplan/filewrappers.html (confirms `String or null` parameter type).
+- Q: What happens when `task.addAttachment()` is called with a failed or null FileWrapper (e.g., if `Data.fromBase64()` returned null and was passed to `FileWrapper.withContents()`)? --> A: The Omni Automation documentation does not specify behavior for `task.addAttachment(null)`. It may fail silently without raising an exception (a known OmniJS gotcha). **Decision**: OmniJS-side read-back verification, following the established precedent in `addNotification.ts` (lines 137-145). After calling `task.addAttachment(wrapper)`, the OmniJS script MUST read back `task.attachments` and verify the attachment count increased. If verification fails, return `{ success: false, error: "Attachment was not successfully added (silent failure)" }`. Additionally, the `Data.fromBase64()` null check (see earlier clarification) prevents null data from reaching `FileWrapper.withContents()` in the first place, providing defense-in-depth. Source: `src/tools/primitives/addNotification.ts`; Constitution Principle V (Defensive Error Handling).
