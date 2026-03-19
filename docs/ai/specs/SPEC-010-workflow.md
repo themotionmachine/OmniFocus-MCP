@@ -15,7 +15,7 @@
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (150 items), 14 gaps remediated |
 | Tasks | `/speckit.tasks` | ✅ Complete | 63 tasks, 8 phases, 21 parallel, 6/6 US covered |
 | Analyze | `/speckit.analyze` | ✅ Complete | 0 CRITICAL, 2 HIGH, 3 MEDIUM — all remediated |
-| Implement | `/speckit.implement` | 🔄 In Progress | omnifocus-developer agent, TDD |
+| Implement | `/speckit.implement` | ✅ Complete | 63/63 tasks, 6 tools, 3055 tests |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -442,14 +442,14 @@ For each task, follow this cycle:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | Shared schemas, contracts, position type |
-| 2 - Move Tasks | | | |
-| 3 - Duplicate Tasks | | | |
-| 4 - Convert to Projects | | | |
-| 5 - Move Sections | | | |
-| 6 - Duplicate Sections | | | |
-| 7 - Batch Update Tasks | | | |
-| 8 - Integration & Polish | | | Server registration, build, final tests |
+| 1 - Foundation | 20 | 20 | Shared schemas, contracts, position type |
+| 2 - Move Tasks (US1) | 6 | 6 | TDD complete |
+| 3 - Duplicate Tasks (US2) | 6 | 6 | TDD complete |
+| 4 - Batch Update Tasks (US3) | 6 | 6 | TDD complete |
+| 5 - Convert to Projects (US4) | 6 | 6 | TDD complete |
+| 6 - Move Sections (US5) | 6 | 6 | TDD complete |
+| 7 - Duplicate Sections (US6) | 6 | 6 | TDD complete |
+| 8 - Integration & Polish | 7 | 7 | Server registration, 3055 tests pass |
 
 ---
 
