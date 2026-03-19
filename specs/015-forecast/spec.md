@@ -67,7 +67,7 @@ As a GTD practitioner, I want to navigate the Forecast perspective to specific d
 - What happens when the start date is after the end date in a range request? The system must return a validation error indicating the start date must be before or equal to the end date.
 - What happens when the date range spans an extremely large period (e.g., 365+ days)? The system should impose a reasonable maximum range limit and return an error if exceeded, to prevent performance degradation.
 - What happens when OmniFocus is not running and a forecast query is made? The system returns an error consistent with other tools' behavior when OmniFocus is unavailable.
-- What happens when the Forecast perspective is not the active perspective and `select_forecast_days` is called? The system should still attempt the navigation; OmniFocus handles perspective switching internally.
+- What happens when the Forecast perspective is not the active perspective and any forecast tool is called? Both `forecastDayForDate()` and `selectForecastDays()` throw errors if Forecast is not active. The OmniJS script auto-switches to Forecast perspective before querying.
 - What happens when `select_forecast_days` is called with an empty list of dates? The system must return a validation error requiring at least one date.
 - How does the system handle dates at timezone boundaries (e.g., 23:59 vs 00:00)? Dates are interpreted as full calendar days in the user's local timezone, consistent with how OmniFocus handles dates.
 
@@ -109,9 +109,30 @@ As a GTD practitioner, I want to navigate the Forecast perspective to specific d
 - OmniFocus must be running for all forecast operations (consistent with all other tools in the MCP server).
 - The default forecast range of "today + 7 days" aligns with typical GTD weekly review workflows.
 - A maximum date range limit of 90 days is a reasonable default to prevent performance issues while supporting quarterly planning horizons. This is an implementation-time decision and can be adjusted.
-- The Forecast perspective data is accessible regardless of which perspective is currently active in OmniFocus; the data reflects the global forecast state.
+- **CRITICAL**: Both `forecastDayForDate()` AND `selectForecastDays()` throw errors if Forecast is not the current perspective. ALL OmniJS scripts for forecast tools MUST first switch to `window.perspective = Perspective.BuiltIn.Forecast` with a `Timer.once(1, callback)` delay before calling either method. The script should auto-switch to Forecast perspective silently (Option A from Clarify Session 2).
 - Badge status is derived at query time from the current state of tasks (it is not a stored value).
 - The navigation tool operates on the frontmost OmniFocus window.
+
+## Clarifications (from API Research)
+
+### Session 1: ForecastDay API Behavior (2026-03-18)
+
+1. **`forecastDayForDate(date)` is a DocumentWindow method** — NOT a static/global method. Access via `document.windows[0].forecastDayForDate(targetDate)`. All forecast data queries require a window reference. There is no `document.forecast` collection.
+2. **Date iteration pattern** — Construct dates using `Calendar.current.startOfDay(now)` + `DateComponents` + `Calendar.current.dateByAddingDateComponents()`, then query each date individually via `window.forecastDayForDate(date)`. Loop over the range, incrementing via DateComponents.
+3. **Complete ForecastDay properties** — `date` (Date r/o), `name` (String r/o), `kind` (ForecastDay.Kind r/o), `badgeCount` (Number r/o), `deferredCount` (Number r/o), plus `badgeKind()` (function returning ForecastDay.Status). Class property: `badgeCountsIncludeDeferredItems` (Boolean r/w) — determines whether badge counts include deferred items.
+4. **`badgeKind()` always returns a value** — The `ForecastDay.Status` enum includes `NoneAvailable` for days with no items. It never returns null/undefined.
+5. **`forecastDay.date` returns a JavaScript Date object** — per API: `var date → Date read-only`. For Past/DistantFuture kinds, the returned date may be years from current time.
+6. **`selectForecastDays(fdays)` accepts an array of ForecastDay objects** (not Date objects). Must first obtain ForecastDay via `forecastDayForDate()`, then pass to `selectForecastDays()`.
+7. **Forecast perspective switching** — The Forecast perspective must be active for `selectForecastDays()`. Pattern: set `window.perspective = Perspective.BuiltIn.Forecast`, then use `Timer.once(1, callback)` to allow perspective switch to complete before querying forecast days.
+
+### Session 2: Forecast Navigation & Edge Cases (2026-03-18)
+
+1. **`selectForecastDays()` throws if Forecast not active** — Official API: "This will throw an error if Forecast is not the current perspective in this window." Does NOT auto-switch. Script must switch first.
+2. **`forecastDayForDate()` ALSO throws if Forecast not active** — Same constraint. Both data and navigation require Forecast perspective. Decision: auto-switch in all OmniJS scripts.
+3. **Past/DistantFuture are aggregate nodes, not individual days** — "If this day's kind is Past or DistantFuture the date returned will be years from the current time." Past is a single node for all past items, not one node per past day. Same for DistantFuture.
+4. **`ForecastDay.Kind` is complete** — Day, Today, Past, FutureMonth, DistantFuture. The `all` property returns the complete array. No undocumented values.
+5. **Empty days still navigate** — `selectForecastDays()` works with ForecastDay objects regardless of badge count. No throw on empty days.
+6. **Timer.once pattern required** — After setting `window.perspective = Perspective.BuiltIn.Forecast`, must use `Timer.once(1, callback)` to allow perspective switch to complete before calling `forecastDayForDate()`. All official examples follow this pattern.
 
 ## Out of Scope
 

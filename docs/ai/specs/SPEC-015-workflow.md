@@ -10,7 +10,7 @@
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 12 FRs, 3 user stories, 16 scenarios, 0 clarifications |
-| Clarify | `/speckit.clarify` | ⏳ Pending | |
+| Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 12 findings; forecastDayForDate is window method, Forecast perspective required for ALL calls, Past/DistantFuture are aggregates |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
@@ -214,8 +214,16 @@ and navigate the OmniFocus Forecast perspective.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | ForecastDay API | 5 | |
-| 2 | Navigation & Edge Cases | 5 | |
+| 1 | ForecastDay API | 5 | forecastDayForDate is DocumentWindow method, Date iteration via Calendar+DateComponents, badgeKind() always returns value, date returns JS Date, no document.forecast collection |
+| 2 | Navigation & Edge Cases | 5 | BOTH forecastDayForDate AND selectForecastDays throw if Forecast not active, Past/DistantFuture are aggregates, ForecastDay.Kind complete, Timer.once pattern required |
+
+#### Critical Corrections from Clarify
+
+1. **Forecast perspective REQUIRED for ALL calls** — Both `forecastDayForDate()` and `selectForecastDays()` throw if Forecast is not active. All OmniJS scripts must auto-switch to Forecast perspective with Timer.once delay.
+2. **`forecastDayForDate()` is a DocumentWindow method** — NOT static. Access via `document.windows[0].forecastDayForDate(targetDate)`.
+3. **Past/DistantFuture are aggregate nodes** — Not individual past days. Date returned is years from current time. Range queries should skip these kinds.
+4. **`badgeCountsIncludeDeferredItems`** — Class property (Boolean r/w) that affects what badgeCount includes.
+5. **`selectForecastDays()` accepts ForecastDay[]** — NOT Date[]. Must obtain ForecastDay objects via forecastDayForDate first.
 
 ---
 
