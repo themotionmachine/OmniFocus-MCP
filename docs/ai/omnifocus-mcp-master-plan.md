@@ -99,7 +99,7 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 | SPEC-008 | Perspectives | 5 | ⏳ Pending | `specs/008-perspectives/` | Specify |
 | SPEC-009 | Search & Database | 10 | ⏳ Pending | `specs/009-search-database/` | Specify |
 | SPEC-011 | Attachments & Linked Files | 5 | ⏳ Pending | `specs/011-attachments/` | Specify |
-| SPEC-010 | Bulk Operations | 6 | 🔄 In Progress | `specs/010-bulk-operations/` | Specify |
+| SPEC-010 | Bulk Operations | 6 | ✅ Complete | `specs/010-bulk-operations/` | Merged ([PR #44](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/44)) |
 | SPEC-012 | TaskPaper Import/Export | 3 | ⏳ Pending | `specs/012-taskpaper/` | Specify |
 | SPEC-014 | Window & UI Control | 8 | ⏳ Pending | `specs/014-window-ui/` | Specify |
 | SPEC-015 | Forecast | 3 | ⏳ Pending | `specs/015-forecast/` | Specify |
@@ -342,7 +342,7 @@ Alternatives considered: Wrapping old implementations in new contracts was rejec
 
 ---
 
-### SPEC-010: Bulk Operations
+### SPEC-010: Bulk Operations ✅ COMPLETE
 
 **Priority:** P2 | **Depends On:** None (Phases 0-5 complete) | **Enables:** None
 
