@@ -27,8 +27,8 @@
 
 **Purpose**: Project initialization -- create shared contracts directory and schemas
 
-- [ ] T001 Create shared schemas directory and file at `src/contracts/attachment-tools/shared/index.ts` with `FileWrapperTypeSchema`, `AttachmentInfoSchema`, and `LinkedFileInfoSchema` (copy from `specs/011-attachments/contracts/shared.ts`; adjust imports: spec uses flat sibling `'./shared.js'` but source uses subdirectory `'./shared/index.js'` -- update barrel re-exports in `index.ts` accordingly)
-- [ ] T002 Create barrel export file at `src/contracts/attachment-tools/index.ts` that re-exports shared schemas (initially only shared; tool contracts added as each story is implemented)
+- [X] T001 Create shared schemas directory and file at `src/contracts/attachment-tools/shared/index.ts` with `FileWrapperTypeSchema`, `AttachmentInfoSchema`, and `LinkedFileInfoSchema` (copy from `specs/011-attachments/contracts/shared.ts`; adjust imports: spec uses flat sibling `'./shared.js'` but source uses subdirectory `'./shared/index.js'` -- update barrel re-exports in `index.ts` accordingly)
+- [X] T002 Create barrel export file at `src/contracts/attachment-tools/index.ts` that re-exports shared schemas (initially only shared; tool contracts added as each story is implemented)
 
 ---
 
@@ -38,9 +38,9 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Write contract tests for shared schemas in `tests/contract/attachment-tools/shared-schemas.contract.test.ts` -- test `AttachmentInfoSchema` (valid/invalid index, filename, type enum, size), `LinkedFileInfoSchema` (valid/invalid url, filename, extension), `FileWrapperTypeSchema` (all 3 enum values, invalid value) -- verify FAILS
-- [ ] T004 [P] Write standalone base64 validation unit tests in `tests/unit/attachment-tools/base64-validation.test.ts` -- test valid base64 strings, strings with whitespace/newlines, invalid characters, empty strings, padding edge cases, size threshold calculations (>10 MB warning, >50 MB rejection) -- verify FAILS
-- [ ] T005 Implement server-side TypeScript base64 validation helper (inline in `addAttachment.ts` primitive as a local function) -- this is distinct from the Zod schema-level validation (NFR-001 whitespace stripping + max length) which lives in the contract: regex validation (`/^[A-Za-z0-9+/]*={0,2}$/` on already-stripped string), size calculation via `Buffer.from(data, 'base64').length`, warning threshold (10 MB), rejection threshold (50 MB with `SIZE_EXCEEDED` code) -- base64 tests turn GREEN
+- [X] T003 [P] Write contract tests for shared schemas in `tests/contract/attachment-tools/shared-schemas.contract.test.ts` -- test `AttachmentInfoSchema` (valid/invalid index, filename, type enum, size), `LinkedFileInfoSchema` (valid/invalid url, filename, extension), `FileWrapperTypeSchema` (all 3 enum values, invalid value) -- verify FAILS
+- [X] T004 [P] Write standalone base64 validation unit tests in `tests/unit/attachment-tools/base64-validation.test.ts` -- test valid base64 strings, strings with whitespace/newlines, invalid characters, empty strings, padding edge cases, size threshold calculations (>10 MB warning, >50 MB rejection) -- verify FAILS
+- [X] T005 Implement server-side TypeScript base64 validation helper (inline in `addAttachment.ts` primitive as a local function) -- this is distinct from the Zod schema-level validation (NFR-001 whitespace stripping + max length) which lives in the contract: regex validation (`/^[A-Za-z0-9+/]*={0,2}$/` on already-stripped string), size calculation via `Buffer.from(data, 'base64').length`, warning threshold (10 MB), rejection threshold (50 MB with `SIZE_EXCEEDED` code) -- base64 tests turn GREEN
 
 **Checkpoint**: Foundation ready -- shared schemas exist, base64 validation is tested, user story implementation can now begin
 
@@ -56,23 +56,23 @@
 
 > **TDD RULE: Write these tests FIRST. Verify they FAIL before any implementation.**
 
-- [ ] T006 [P] [US1] Write contract tests for `list_attachments` schemas in `tests/contract/attachment-tools/list-attachments.contract.test.ts` -- test `ListAttachmentsInputSchema` (valid id, empty id rejection), `ListAttachmentsSuccessSchema` (with attachments array, empty array), `ListAttachmentsErrorSchema` (error string), `ListAttachmentsResponseSchema` discriminated union -- copy schema from `specs/011-attachments/contracts/list-attachments.ts` into `src/contracts/attachment-tools/list-attachments.ts` first, then verify tests FAIL (no primitive yet)
-- [ ] T007 [P] [US1] Write unit tests for `listAttachments` primitive in `tests/unit/attachment-tools/listAttachments.test.ts` -- mock `executeOmniFocusScript` -- test: task with multiple attachments returns correct metadata, task with no attachments returns empty array, task with duplicate filenames returns distinct indices, project ID resolves to root task, ID not found returns error, empty OmniJS output returns error, **edge case: completed/dropped task returns attachments normally (spec Edge Cases)** -- verify FAILS
+- [X] T006 [P] [US1] Write contract tests for `list_attachments` schemas in `tests/contract/attachment-tools/list-attachments.contract.test.ts` -- test `ListAttachmentsInputSchema` (valid id, empty id rejection), `ListAttachmentsSuccessSchema` (with attachments array, empty array), `ListAttachmentsErrorSchema` (error string), `ListAttachmentsResponseSchema` discriminated union -- copy schema from `specs/011-attachments/contracts/list-attachments.ts` into `src/contracts/attachment-tools/list-attachments.ts` first, then verify tests FAIL (no primitive yet)
+- [X] T007 [P] [US1] Write unit tests for `listAttachments` primitive in `tests/unit/attachment-tools/listAttachments.test.ts` -- mock `executeOmniFocusScript` -- test: task with multiple attachments returns correct metadata, task with no attachments returns empty array, task with duplicate filenames returns distinct indices, project ID resolves to root task, ID not found returns error, empty OmniJS output returns error, **edge case: completed/dropped task returns attachments normally (spec Edge Cases)** -- verify FAILS
 
 ### GREEN Phase - Implementation
 
 > **TDD RULE: Write MINIMUM code to make tests pass. No extras.**
 
-- [ ] T008 [US1] Copy `ListAttachmentsInputSchema`, `ListAttachmentsSuccessSchema`, `ListAttachmentsErrorSchema`, `ListAttachmentsResponseSchema` from `specs/011-attachments/contracts/list-attachments.ts` into `src/contracts/attachment-tools/list-attachments.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
-- [ ] T009 [US1] Implement `listAttachments` primitive in `src/tools/primitives/listAttachments.ts` -- OmniJS script: task/project resolution (Task.byIdentifier then Project.byIdentifier with project.task fallback per AD-002), iterate `task.attachments`, extract index/filename/type/size per `AttachmentInfoSchema`, filename resolution (`preferredFilename || filename || 'unnamed'`), size from `contents.length` -- unit tests turn GREEN
-- [ ] T010 [US1] Implement `listAttachments` definition in `src/tools/definitions/listAttachments.ts` -- Zod schema for MCP tool registration, call `listAttachments` primitive, format MCP response -- mirror `listNotifications.ts` pattern
-- [ ] T011 [US1] Register `list_attachments` tool in `src/server.ts`
+- [X] T008 [US1] Copy `ListAttachmentsInputSchema`, `ListAttachmentsSuccessSchema`, `ListAttachmentsErrorSchema`, `ListAttachmentsResponseSchema` from `specs/011-attachments/contracts/list-attachments.ts` into `src/contracts/attachment-tools/list-attachments.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
+- [X] T009 [US1] Implement `listAttachments` primitive in `src/tools/primitives/listAttachments.ts` -- OmniJS script: task/project resolution (Task.byIdentifier then Project.byIdentifier with project.task fallback per AD-002), iterate `task.attachments`, extract index/filename/type/size per `AttachmentInfoSchema`, filename resolution (`preferredFilename || filename || 'unnamed'`), size from `contents.length` -- unit tests turn GREEN
+- [X] T010 [US1] Implement `listAttachments` definition in `src/tools/definitions/listAttachments.ts` -- Zod schema for MCP tool registration, call `listAttachments` primitive, format MCP response -- mirror `listNotifications.ts` pattern
+- [X] T011 [US1] Register `list_attachments` tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
 > **TDD RULE: Improve code quality. Tests MUST stay GREEN.**
 
-- [ ] T012 [US1] Run `pnpm build && pnpm test && pnpm typecheck && pnpm lint` -- all green
+- [X] T012 [US1] Run `pnpm build && pnpm test && pnpm typecheck && pnpm lint` -- all green
 - [ ] T013 [US1] Manual verification: test OmniJS script in Script Editor with a task that has attachments
 
 **Checkpoint**: User Story 1 fully functional -- `list_attachments` works independently
@@ -89,23 +89,23 @@
 
 > **TDD RULE: Write these tests FIRST. Verify they FAIL before any implementation.**
 
-- [ ] T014 [P] [US2] Write contract tests for `add_attachment` schemas in `tests/contract/attachment-tools/add-attachment.contract.test.ts` -- test `AddAttachmentInputSchema` (valid input, empty id, empty filename, filename >255 chars, filename with path separators `/` `\` `..`, empty data, data with whitespace stripping, data exceeding max length, **NFR-001 Zod pipeline: verify `.transform()` strips whitespace before `.refine()` checks max length -- Pattern B**), `AddAttachmentSuccessSchema` (with/without warning field), `AddAttachmentErrorSchema` (with code enum: INVALID_BASE64, SIZE_EXCEEDED, NOT_FOUND), response discriminated union -- copy schema from `specs/011-attachments/contracts/add-attachment.ts` into `src/contracts/attachment-tools/add-attachment.ts` first, then verify tests FAIL
-- [ ] T015 [P] [US2] Write unit tests for `addAttachment` primitive in `tests/unit/attachment-tools/addAttachment.test.ts` -- mock `executeOmniFocusScript` -- test: valid base64 adds attachment and returns count, invalid base64 returns INVALID_BASE64 code, size >10 MB returns success with warning (FR-012 template, **NFR-002 latency note covered by warning presence**), size >50 MB returns SIZE_EXCEEDED code, project ID resolves to root task, ID not found returns NOT_FOUND code, OmniJS silent failure (read-back verification fails) returns error, whitespace-containing base64 is accepted, filename with `/` rejected, filename with `..` rejected -- verify FAILS
+- [X] T014 [P] [US2] Write contract tests for `add_attachment` schemas in `tests/contract/attachment-tools/add-attachment.contract.test.ts` -- test `AddAttachmentInputSchema` (valid input, empty id, empty filename, filename >255 chars, filename with path separators `/` `\` `..`, empty data, data with whitespace stripping, data exceeding max length, **NFR-001 Zod pipeline: verify `.transform()` strips whitespace before `.refine()` checks max length -- Pattern B**), `AddAttachmentSuccessSchema` (with/without warning field), `AddAttachmentErrorSchema` (with code enum: INVALID_BASE64, SIZE_EXCEEDED, NOT_FOUND), response discriminated union -- copy schema from `specs/011-attachments/contracts/add-attachment.ts` into `src/contracts/attachment-tools/add-attachment.ts` first, then verify tests FAIL
+- [X] T015 [P] [US2] Write unit tests for `addAttachment` primitive in `tests/unit/attachment-tools/addAttachment.test.ts` -- mock `executeOmniFocusScript` -- test: valid base64 adds attachment and returns count, invalid base64 returns INVALID_BASE64 code, size >10 MB returns success with warning (FR-012 template, **NFR-002 latency note covered by warning presence**), size >50 MB returns SIZE_EXCEEDED code, project ID resolves to root task, ID not found returns NOT_FOUND code, OmniJS silent failure (read-back verification fails) returns error, whitespace-containing base64 is accepted, filename with `/` rejected, filename with `..` rejected -- verify FAILS
 
 ### GREEN Phase - Implementation
 
 > **TDD RULE: Write MINIMUM code to make tests pass. No extras.**
 
-- [ ] T016 [US2] Copy `AddAttachmentInputSchema`, `AddAttachmentSuccessSchema`, `AddAttachmentErrorSchema`, `AddAttachmentResponseSchema` from `specs/011-attachments/contracts/add-attachment.ts` into `src/contracts/attachment-tools/add-attachment.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
-- [ ] T017 [US2] Implement `addAttachment` primitive in `src/tools/primitives/addAttachment.ts` -- server-side: strip whitespace from data, validate base64 regex, calculate decoded size via `Buffer.from(data, 'base64').length`, check >50 MB rejection (SIZE_EXCEEDED), check >10 MB warning (FR-012 template); OmniJS script: use `escapeForJS()` for embedding base64 string and filename as string literals in the script template (base64 contains `+`, `/`, `=` characters), task/project resolution (AD-002), `Data.fromBase64()` with null check (AD-007), `FileWrapper.withContents(filename, data)`, `task.addAttachment(wrapper)`, read-back verification (AD-007 pattern from addNotification.ts) -- unit tests turn GREEN
-- [ ] T018 [US2] Implement `addAttachment` definition in `src/tools/definitions/addAttachment.ts` -- Zod schema for MCP tool registration, call `addAttachment` primitive, format MCP response -- mirror `addNotification.ts` pattern
-- [ ] T019 [US2] Register `add_attachment` tool in `src/server.ts`
+- [X] T016 [US2] Copy `AddAttachmentInputSchema`, `AddAttachmentSuccessSchema`, `AddAttachmentErrorSchema`, `AddAttachmentResponseSchema` from `specs/011-attachments/contracts/add-attachment.ts` into `src/contracts/attachment-tools/add-attachment.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
+- [X] T017 [US2] Implement `addAttachment` primitive in `src/tools/primitives/addAttachment.ts` -- server-side: strip whitespace from data, validate base64 regex, calculate decoded size via `Buffer.from(data, 'base64').length`, check >50 MB rejection (SIZE_EXCEEDED), check >10 MB warning (FR-012 template); OmniJS script: use `escapeForJS()` for embedding base64 string and filename as string literals in the script template (base64 contains `+`, `/`, `=` characters), task/project resolution (AD-002), `Data.fromBase64()` with null check (AD-007), `FileWrapper.withContents(filename, data)`, `task.addAttachment(wrapper)`, read-back verification (AD-007 pattern from addNotification.ts) -- unit tests turn GREEN
+- [X] T018 [US2] Implement `addAttachment` definition in `src/tools/definitions/addAttachment.ts` -- Zod schema for MCP tool registration, call `addAttachment` primitive, format MCP response -- mirror `addNotification.ts` pattern
+- [X] T019 [US2] Register `add_attachment` tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
 > **TDD RULE: Improve code quality. Tests MUST stay GREEN.**
 
-- [ ] T020 [US2] Run `pnpm build && pnpm test && pnpm typecheck && pnpm lint` -- all green
+- [X] T020 [US2] Run `pnpm build && pnpm test && pnpm typecheck && pnpm lint` -- all green
 - [ ] T021 [US2] Manual verification: test OmniJS script in Script Editor with base64-encoded file data
 
 **Checkpoint**: User Stories 1 AND 2 work -- full read-write cycle for attachments
@@ -124,23 +124,23 @@
 
 > **TDD RULE: Write these tests FIRST. Verify they FAIL before any implementation.**
 
-- [ ] T022 [P] [US3] Write contract tests for `remove_attachment` schemas in `tests/contract/attachment-tools/remove-attachment.contract.test.ts` -- test `RemoveAttachmentInputSchema` (valid, empty id, negative index, non-integer index), `RemoveAttachmentSuccessSchema` (removedFilename, remainingAttachments array with updated indices), `RemoveAttachmentErrorSchema` (error with valid range), response discriminated union -- copy schema from `specs/011-attachments/contracts/remove-attachment.ts` into `src/contracts/attachment-tools/remove-attachment.ts` first, then verify tests FAIL
-- [ ] T023 [P] [US3] Write unit tests for `removeAttachment` primitive in `tests/unit/attachment-tools/removeAttachment.test.ts` -- mock `executeOmniFocusScript` -- test: remove middle attachment returns remaining with updated indices, remove last attachment returns empty array, remove from task with 1 attachment returns empty, out-of-bounds index returns error with valid range (FR-010), task with no attachments returns error, project ID resolves to root task, ID not found returns error -- verify FAILS
+- [X] T022 [P] [US3] Write contract tests for `remove_attachment` schemas in `tests/contract/attachment-tools/remove-attachment.contract.test.ts` -- test `RemoveAttachmentInputSchema` (valid, empty id, negative index, non-integer index), `RemoveAttachmentSuccessSchema` (removedFilename, remainingAttachments array with updated indices), `RemoveAttachmentErrorSchema` (error with valid range), response discriminated union -- copy schema from `specs/011-attachments/contracts/remove-attachment.ts` into `src/contracts/attachment-tools/remove-attachment.ts` first, then verify tests FAIL
+- [X] T023 [P] [US3] Write unit tests for `removeAttachment` primitive in `tests/unit/attachment-tools/removeAttachment.test.ts` -- mock `executeOmniFocusScript` -- test: remove middle attachment returns remaining with updated indices, remove last attachment returns empty array, remove from task with 1 attachment returns empty, out-of-bounds index returns error with valid range (FR-010), task with no attachments returns error, project ID resolves to root task, ID not found returns error -- verify FAILS
 
 ### GREEN Phase - Implementation
 
 > **TDD RULE: Write MINIMUM code to make tests pass. No extras.**
 
-- [ ] T024 [US3] Copy `RemoveAttachmentInputSchema`, `RemoveAttachmentSuccessSchema`, `RemoveAttachmentErrorSchema`, `RemoveAttachmentResponseSchema` from `specs/011-attachments/contracts/remove-attachment.ts` into `src/contracts/attachment-tools/remove-attachment.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
-- [ ] T025 [US3] Implement `removeAttachment` primitive in `src/tools/primitives/removeAttachment.ts` -- OmniJS script: task/project resolution (AD-002), bounds checking BEFORE calling native method (AD-007 pattern from removeNotification.ts): check empty attachments, check index >= length with valid range in error, capture removed filename, call `task.removeAttachmentAtIndex(index)`, read back remaining attachments with updated indices -- unit tests turn GREEN
-- [ ] T026 [US3] Implement `removeAttachment` definition in `src/tools/definitions/removeAttachment.ts` -- Zod schema for MCP tool registration, call `removeAttachment` primitive, format MCP response -- mirror `removeNotification.ts` pattern
-- [ ] T027 [US3] Register `remove_attachment` tool in `src/server.ts`
+- [X] T024 [US3] Copy `RemoveAttachmentInputSchema`, `RemoveAttachmentSuccessSchema`, `RemoveAttachmentErrorSchema`, `RemoveAttachmentResponseSchema` from `specs/011-attachments/contracts/remove-attachment.ts` into `src/contracts/attachment-tools/remove-attachment.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
+- [X] T025 [US3] Implement `removeAttachment` primitive in `src/tools/primitives/removeAttachment.ts` -- OmniJS script: task/project resolution (AD-002), bounds checking BEFORE calling native method (AD-007 pattern from removeNotification.ts): check empty attachments, check index >= length with valid range in error, capture removed filename, call `task.removeAttachmentAtIndex(index)`, read back remaining attachments with updated indices -- unit tests turn GREEN
+- [X] T026 [US3] Implement `removeAttachment` definition in `src/tools/definitions/removeAttachment.ts` -- Zod schema for MCP tool registration, call `removeAttachment` primitive, format MCP response -- mirror `removeNotification.ts` pattern
+- [X] T027 [US3] Register `remove_attachment` tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
 > **TDD RULE: Improve code quality. Tests MUST stay GREEN.**
 
-- [ ] T028 [US3] Run `pnpm build && pnpm test && pnpm typecheck && pnpm lint` -- all green
+- [X] T028 [US3] Run `pnpm build && pnpm test && pnpm typecheck && pnpm lint` -- all green
 - [ ] T029 [US3] Manual verification: test OmniJS script in Script Editor with attachment removal and index re-numbering
 
 **Checkpoint**: Attachment lifecycle complete (list, add, remove)
@@ -157,23 +157,23 @@
 
 > **TDD RULE: Write these tests FIRST. Verify they FAIL before any implementation.**
 
-- [ ] T030 [P] [US4] Write contract tests for `list_linked_files` schemas in `tests/contract/attachment-tools/list-linked-files.contract.test.ts` -- test `ListLinkedFilesInputSchema` (valid id, empty id rejection), `ListLinkedFilesSuccessSchema` (with linked files array, empty array), `ListLinkedFilesErrorSchema` (error string), response discriminated union -- copy schema from `specs/011-attachments/contracts/list-linked-files.ts` into `src/contracts/attachment-tools/list-linked-files.ts` first, then verify tests FAIL
-- [ ] T031 [P] [US4] Write unit tests for `listLinkedFiles` primitive in `tests/unit/attachment-tools/listLinkedFiles.test.ts` -- mock `executeOmniFocusScript` -- test: task with multiple linked files returns correct url/filename/extension, task with no linked files returns empty array, URL edge cases (trailing slash returns empty filename, no extension returns empty string), project ID resolves to root task, ID not found returns error -- verify FAILS
+- [X] T030 [P] [US4] Write contract tests for `list_linked_files` schemas in `tests/contract/attachment-tools/list-linked-files.contract.test.ts` -- test `ListLinkedFilesInputSchema` (valid id, empty id rejection), `ListLinkedFilesSuccessSchema` (with linked files array, empty array), `ListLinkedFilesErrorSchema` (error string), response discriminated union -- copy schema from `specs/011-attachments/contracts/list-linked-files.ts` into `src/contracts/attachment-tools/list-linked-files.ts` first, then verify tests FAIL
+- [X] T031 [P] [US4] Write unit tests for `listLinkedFiles` primitive in `tests/unit/attachment-tools/listLinkedFiles.test.ts` -- mock `executeOmniFocusScript` -- test: task with multiple linked files returns correct url/filename/extension, task with no linked files returns empty array, URL edge cases (trailing slash returns empty filename, no extension returns empty string), project ID resolves to root task, ID not found returns error -- verify FAILS
 
 ### GREEN Phase - Implementation
 
 > **TDD RULE: Write MINIMUM code to make tests pass. No extras.**
 
-- [ ] T032 [US4] Copy `ListLinkedFilesInputSchema`, `ListLinkedFilesSuccessSchema`, `ListLinkedFilesErrorSchema`, `ListLinkedFilesResponseSchema` from `specs/011-attachments/contracts/list-linked-files.ts` into `src/contracts/attachment-tools/list-linked-files.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
-- [ ] T033 [US4] Implement `listLinkedFiles` primitive in `src/tools/primitives/listLinkedFiles.ts` -- OmniJS script: task/project resolution (AD-002), iterate `task.linkedFileURLs`, extract `absoluteString` as url, `lastPathComponent` as filename, `pathExtension` as extension per `LinkedFileInfoSchema` -- unit tests turn GREEN
-- [ ] T034 [US4] Implement `listLinkedFiles` definition in `src/tools/definitions/listLinkedFiles.ts` -- Zod schema for MCP tool registration, call `listLinkedFiles` primitive, format MCP response
-- [ ] T035 [US4] Register `list_linked_files` tool in `src/server.ts`
+- [X] T032 [US4] Copy `ListLinkedFilesInputSchema`, `ListLinkedFilesSuccessSchema`, `ListLinkedFilesErrorSchema`, `ListLinkedFilesResponseSchema` from `specs/011-attachments/contracts/list-linked-files.ts` into `src/contracts/attachment-tools/list-linked-files.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
+- [X] T033 [US4] Implement `listLinkedFiles` primitive in `src/tools/primitives/listLinkedFiles.ts` -- OmniJS script: task/project resolution (AD-002), iterate `task.linkedFileURLs`, extract `absoluteString` as url, `lastPathComponent` as filename, `pathExtension` as extension per `LinkedFileInfoSchema` -- unit tests turn GREEN
+- [X] T034 [US4] Implement `listLinkedFiles` definition in `src/tools/definitions/listLinkedFiles.ts` -- Zod schema for MCP tool registration, call `listLinkedFiles` primitive, format MCP response
+- [X] T035 [US4] Register `list_linked_files` tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
 > **TDD RULE: Improve code quality. Tests MUST stay GREEN.**
 
-- [ ] T036 [US4] Run `pnpm build && pnpm test && pnpm typecheck && pnpm lint` -- all green
+- [X] T036 [US4] Run `pnpm build && pnpm test && pnpm typecheck && pnpm lint` -- all green
 - [ ] T037 [US4] Manual verification: test OmniJS script in Script Editor with a task that has linked files
 
 **Checkpoint**: All read tools complete (list_attachments + list_linked_files)
@@ -190,23 +190,23 @@
 
 > **TDD RULE: Write these tests FIRST. Verify they FAIL before any implementation.**
 
-- [ ] T038 [P] [US5] Write contract tests for `add_linked_file` schemas in `tests/contract/attachment-tools/add-linked-file.contract.test.ts` -- test `AddLinkedFileInputSchema` (valid file:// URL, empty id, empty URL, URL without file:// scheme, https:// URL rejection), `AddLinkedFileSuccessSchema` (linkedFileCount), `AddLinkedFileErrorSchema` (error string), response discriminated union -- copy schema from `specs/011-attachments/contracts/add-linked-file.ts` into `src/contracts/attachment-tools/add-linked-file.ts` first, then verify tests FAIL
-- [ ] T039 [P] [US5] Write unit tests for `addLinkedFile` primitive in `tests/unit/attachment-tools/addLinkedFile.test.ts` -- mock `executeOmniFocusScript` -- test: valid file:// URL adds linked file and returns count, URL without file:// rejected at schema level, project ID resolves to root task, ID not found returns error, OmniJS `URL.fromString()` null return returns error (AD-007) -- verify FAILS
+- [X] T038 [P] [US5] Write contract tests for `add_linked_file` schemas in `tests/contract/attachment-tools/add-linked-file.contract.test.ts` -- test `AddLinkedFileInputSchema` (valid file:// URL, empty id, empty URL, URL without file:// scheme, https:// URL rejection), `AddLinkedFileSuccessSchema` (linkedFileCount), `AddLinkedFileErrorSchema` (error string), response discriminated union -- copy schema from `specs/011-attachments/contracts/add-linked-file.ts` into `src/contracts/attachment-tools/add-linked-file.ts` first, then verify tests FAIL
+- [X] T039 [P] [US5] Write unit tests for `addLinkedFile` primitive in `tests/unit/attachment-tools/addLinkedFile.test.ts` -- mock `executeOmniFocusScript` -- test: valid file:// URL adds linked file and returns count, URL without file:// rejected at schema level, project ID resolves to root task, ID not found returns error, OmniJS `URL.fromString()` null return returns error (AD-007) -- verify FAILS
 
 ### GREEN Phase - Implementation
 
 > **TDD RULE: Write MINIMUM code to make tests pass. No extras.**
 
-- [ ] T040 [US5] Copy `AddLinkedFileInputSchema`, `AddLinkedFileSuccessSchema`, `AddLinkedFileErrorSchema`, `AddLinkedFileResponseSchema` from `specs/011-attachments/contracts/add-linked-file.ts` into `src/contracts/attachment-tools/add-linked-file.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
-- [ ] T041 [US5] Implement `addLinkedFile` primitive in `src/tools/primitives/addLinkedFile.ts` -- OmniJS script: task/project resolution (AD-002), `URL.fromString(urlString)` with null check (AD-007), `task.addLinkedFileURL(url)`, return linkedFileCount -- unit tests turn GREEN
-- [ ] T042 [US5] Implement `addLinkedFile` definition in `src/tools/definitions/addLinkedFile.ts` -- Zod schema for MCP tool registration, call `addLinkedFile` primitive, format MCP response
-- [ ] T043 [US5] Register `add_linked_file` tool in `src/server.ts`
+- [X] T040 [US5] Copy `AddLinkedFileInputSchema`, `AddLinkedFileSuccessSchema`, `AddLinkedFileErrorSchema`, `AddLinkedFileResponseSchema` from `specs/011-attachments/contracts/add-linked-file.ts` into `src/contracts/attachment-tools/add-linked-file.ts` and add re-exports to `src/contracts/attachment-tools/index.ts` -- contract tests turn GREEN
+- [X] T041 [US5] Implement `addLinkedFile` primitive in `src/tools/primitives/addLinkedFile.ts` -- OmniJS script: task/project resolution (AD-002), `URL.fromString(urlString)` with null check (AD-007), `task.addLinkedFileURL(url)`, return linkedFileCount -- unit tests turn GREEN
+- [X] T042 [US5] Implement `addLinkedFile` definition in `src/tools/definitions/addLinkedFile.ts` -- Zod schema for MCP tool registration, call `addLinkedFile` primitive, format MCP response
+- [X] T043 [US5] Register `add_linked_file` tool in `src/server.ts`
 
 ### REFACTOR Phase - Polish
 
 > **TDD RULE: Improve code quality. Tests MUST stay GREEN.**
 
-- [ ] T044 [US5] Run `pnpm build && pnpm test && pnpm typecheck && pnpm lint` -- all green
+- [X] T044 [US5] Run `pnpm build && pnpm test && pnpm typecheck && pnpm lint` -- all green
 - [ ] T045 [US5] Manual verification: test OmniJS script in Script Editor with a `file://` URL
 
 **Checkpoint**: All 5 tools functional -- complete attachment and linked file management
@@ -217,13 +217,13 @@
 
 **Purpose**: Integration testing, validation, and final quality checks across all tools
 
-- [ ] T046 [P] Run full test suite: `pnpm test` -- all tests GREEN across all 5 tools
-- [ ] T047 [P] Run coverage check: `pnpm test:coverage` -- verify coverage for new files
-- [ ] T048 [P] Run `pnpm typecheck` -- zero TypeScript errors
-- [ ] T049 [P] Run `pnpm lint` -- zero lint errors
-- [ ] T050 Run `pnpm build` and verify `dist/` output includes all 5 new tools
+- [X] T046 [P] Run full test suite: `pnpm test` -- all tests GREEN across all 5 tools
+- [X] T047 [P] Run coverage check: `pnpm test:coverage` -- verify coverage for new files
+- [X] T048 [P] Run `pnpm typecheck` -- zero TypeScript errors
+- [X] T049 [P] Run `pnpm lint` -- zero lint errors
+- [X] T050 Run `pnpm build` and verify `dist/` output includes all 5 new tools
 - [ ] T051 Run quickstart.md validation -- manually exercise each tool scenario from `specs/011-attachments/quickstart.md`
-- [ ] T052 Verify all 5 tools registered in `src/server.ts` and appear in MCP tool listing
+- [X] T052 Verify all 5 tools registered in `src/server.ts` and appear in MCP tool listing
 
 ---
 
