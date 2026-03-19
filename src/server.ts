@@ -11,7 +11,9 @@ import * as appendNoteTool from './tools/definitions/appendNote.js';
 import * as assignTagsTool from './tools/definitions/assignTags.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
+import * as batchUpdateTasksTool from './tools/definitions/batchUpdateTasks.js';
 import * as clearRepetitionTool from './tools/definitions/clearRepetition.js';
+import * as convertTasksToProjectsTool from './tools/definitions/convertTasksToProjects.js';
 import * as createProjectTool from './tools/definitions/createProject.js';
 import * as createTagTool from './tools/definitions/createTag.js';
 import * as deleteProjectTool from './tools/definitions/deleteProject.js';
@@ -19,6 +21,8 @@ import * as deleteTagTool from './tools/definitions/deleteTag.js';
 // Import tool definitions
 import * as dropItemsTool from './tools/definitions/dropItems.js';
 import * as dumpDatabaseTool from './tools/definitions/dumpDatabase.js';
+import * as duplicateSectionsTool from './tools/definitions/duplicateSections.js';
+import * as duplicateTasksTool from './tools/definitions/duplicateTasks.js';
 import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as editProjectTool from './tools/definitions/editProject.js';
@@ -40,6 +44,8 @@ import * as markIncompleteTool from './tools/definitions/markIncomplete.js';
 import * as markReviewedTool from './tools/definitions/markReviewed.js';
 import * as moveFolderTool from './tools/definitions/moveFolder.js';
 import * as moveProjectTool from './tools/definitions/moveProject.js';
+import * as moveSectionsTool from './tools/definitions/moveSections.js';
+import * as moveTasksTool from './tools/definitions/moveTasks.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
@@ -415,6 +421,49 @@ server.tool(
   'Postpone an Absolute notification on an OmniFocus task by setting a new fire datetime. Only works on Absolute kind notifications',
   snoozeNotificationTool.schema.shape,
   snoozeNotificationTool.handler
+);
+
+// Phase 10 Bulk Operations Tools
+server.tool(
+  'move_tasks',
+  'Move 1-100 tasks to a target location (project, inbox, or parent task) with position control. Supports placement at beginning/ending of target or before/after a sibling task. Per-item results for partial failures.',
+  moveTasksTool.schema.shape,
+  moveTasksTool.handler
+);
+
+server.tool(
+  'duplicate_tasks',
+  'Duplicate 1-100 tasks to a target location. Copies preserve all properties (name, note, tags, dates, subtasks) and are always active/incomplete. Returns new task IDs and names. Per-item results for partial failures.',
+  duplicateTasksTool.schema.shape,
+  duplicateTasksTool.handler
+);
+
+server.tool(
+  'batch_update_tasks',
+  'Apply property updates uniformly to 1-100 tasks in one operation. Supports flagged status, due/defer/planned dates (with clear flags), estimated minutes, tag add/remove, and note append. Tag removals processed before additions.',
+  batchUpdateTasksTool.schema.shape,
+  batchUpdateTasksTool.handler
+);
+
+server.tool(
+  'convert_tasks_to_projects',
+  'Convert 1-100 tasks to projects. Subtasks become child project tasks. New projects are placed in an optional target folder or at library root. Returns new project IDs and names. Irreversible operation.',
+  convertTasksToProjectsTool.schema.shape,
+  convertTasksToProjectsTool.handler
+);
+
+server.tool(
+  'move_sections',
+  'Move 1-100 sections (folders and/or projects) to a new location in the folder hierarchy. Supports placement within folders or at library root, and before/after sibling sections. Per-item results for partial failures.',
+  moveSectionsTool.schema.shape,
+  moveSectionsTool.handler
+);
+
+server.tool(
+  'duplicate_sections',
+  'Duplicate 1-100 sections (folders and/or projects) to a new location. Copies preserve all contents including child projects, tasks, and settings. Returns new section IDs and names. Per-item results for partial failures.',
+  duplicateSectionsTool.schema.shape,
+  duplicateSectionsTool.handler
 );
 
 // Start the MCP server

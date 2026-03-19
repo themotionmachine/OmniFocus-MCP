@@ -15,7 +15,7 @@
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (150 items), 14 gaps remediated |
 | Tasks | `/speckit.tasks` | ✅ Complete | 63 tasks, 8 phases, 21 parallel, 6/6 US covered |
 | Analyze | `/speckit.analyze` | ✅ Complete | 0 CRITICAL, 2 HIGH, 3 MEDIUM — all remediated |
-| Implement | `/speckit.implement` | ⏳ Pending | |
+| Implement | `/speckit.implement` | 🔄 In Progress | omnifocus-developer agent, TDD |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 

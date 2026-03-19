@@ -30,32 +30,32 @@
 
 ### Shared Schemas
 
-- [ ] T001 Create shared ItemIdentifier schema in `src/contracts/bulk-tools/shared/item-identifier.ts` -- copy from `specs/010-bulk-operations/contracts/shared.ts` ItemIdentifierSchema section, adapting imports for `src/` context
-- [ ] T002 Create shared BulkBatchItemResult and Summary schemas in `src/contracts/bulk-tools/shared/batch.ts` -- copy BulkBatchItemResultSchema and SummarySchema from `specs/010-bulk-operations/contracts/shared.ts`
-- [ ] T003 Create TaskPosition schema in `src/contracts/bulk-tools/shared/task-position.ts` -- copy TaskPositionSchema from `specs/010-bulk-operations/contracts/shared.ts` with all 3 refine validators (exactly-one-target, no-multiple-targets, relativeTo-required)
-- [ ] T004 Create SectionPosition schema in `src/contracts/bulk-tools/shared/section-position.ts` -- copy SectionPositionSchema from `specs/010-bulk-operations/contracts/shared.ts` with relativeTo refine validator
-- [ ] T005 Create PropertyUpdateSet schema in `src/contracts/bulk-tools/shared/property-update.ts` -- copy PropertyUpdateSetSchema from `specs/010-bulk-operations/contracts/shared.ts` with all 5 refine validators (at-least-one-property, 4 mutual exclusions)
-- [ ] T006 Create shared barrel export in `src/contracts/bulk-tools/shared/index.ts` -- re-export all shared schemas from item-identifier, batch, task-position, section-position, property-update
+- [X] T001 Create shared ItemIdentifier schema in `src/contracts/bulk-tools/shared/item-identifier.ts` -- copy from `specs/010-bulk-operations/contracts/shared.ts` ItemIdentifierSchema section, adapting imports for `src/` context
+- [X] T002 Create shared BulkBatchItemResult and Summary schemas in `src/contracts/bulk-tools/shared/batch.ts` -- copy BulkBatchItemResultSchema and SummarySchema from `specs/010-bulk-operations/contracts/shared.ts`
+- [X] T003 Create TaskPosition schema in `src/contracts/bulk-tools/shared/task-position.ts` -- copy TaskPositionSchema from `specs/010-bulk-operations/contracts/shared.ts` with all 3 refine validators (exactly-one-target, no-multiple-targets, relativeTo-required)
+- [X] T004 Create SectionPosition schema in `src/contracts/bulk-tools/shared/section-position.ts` -- copy SectionPositionSchema from `specs/010-bulk-operations/contracts/shared.ts` with relativeTo refine validator
+- [X] T005 Create PropertyUpdateSet schema in `src/contracts/bulk-tools/shared/property-update.ts` -- copy PropertyUpdateSetSchema from `specs/010-bulk-operations/contracts/shared.ts` with all 5 refine validators (at-least-one-property, 4 mutual exclusions)
+- [X] T006 Create shared barrel export in `src/contracts/bulk-tools/shared/index.ts` -- re-export all shared schemas from item-identifier, batch, task-position, section-position, property-update
 
 ### Per-Tool Contracts
 
-- [ ] T007 [P] Create move-tasks contract in `src/contracts/bulk-tools/move-tasks.ts` -- input schema (items + TaskPosition), success/error response discriminated union; reference `specs/010-bulk-operations/contracts/move-tasks.ts`
-- [ ] T008 [P] Create duplicate-tasks contract in `src/contracts/bulk-tools/duplicate-tasks.ts` -- input schema (items + TaskPosition), success/error response with newId/newName; reference `specs/010-bulk-operations/contracts/duplicate-tasks.ts`
-- [ ] T009 [P] Create batch-update-tasks contract in `src/contracts/bulk-tools/batch-update-tasks.ts` -- input schema (items + PropertyUpdateSet), success/error response; reference `specs/010-bulk-operations/contracts/batch-update-tasks.ts`
-- [ ] T010 [P] Create convert-tasks-to-projects contract in `src/contracts/bulk-tools/convert-tasks-to-projects.ts` -- input schema (items + optional targetFolderId/targetFolderName), success/error response with newId/newName; reference `specs/010-bulk-operations/contracts/convert-tasks-to-projects.ts`
-- [ ] T011 [P] Create move-sections contract in `src/contracts/bulk-tools/move-sections.ts` -- input schema (items + SectionPosition), success/error response; reference `specs/010-bulk-operations/contracts/move-sections.ts`
-- [ ] T012 [P] Create duplicate-sections contract in `src/contracts/bulk-tools/duplicate-sections.ts` -- input schema (items + SectionPosition), success/error response with newId/newName; reference `specs/010-bulk-operations/contracts/duplicate-sections.ts`
-- [ ] T013 Create bulk-tools barrel export in `src/contracts/bulk-tools/index.ts` -- re-export all contracts from shared/, move-tasks, duplicate-tasks, batch-update-tasks, convert-tasks-to-projects, move-sections, duplicate-sections
+- [X] T007 [P] Create move-tasks contract in `src/contracts/bulk-tools/move-tasks.ts` -- input schema (items + TaskPosition), success/error response discriminated union; reference `specs/010-bulk-operations/contracts/move-tasks.ts`
+- [X] T008 [P] Create duplicate-tasks contract in `src/contracts/bulk-tools/duplicate-tasks.ts` -- input schema (items + TaskPosition), success/error response with newId/newName; reference `specs/010-bulk-operations/contracts/duplicate-tasks.ts`
+- [X] T009 [P] Create batch-update-tasks contract in `src/contracts/bulk-tools/batch-update-tasks.ts` -- input schema (items + PropertyUpdateSet), success/error response; reference `specs/010-bulk-operations/contracts/batch-update-tasks.ts`
+- [X] T010 [P] Create convert-tasks-to-projects contract in `src/contracts/bulk-tools/convert-tasks-to-projects.ts` -- input schema (items + optional targetFolderId/targetFolderName), success/error response with newId/newName; reference `specs/010-bulk-operations/contracts/convert-tasks-to-projects.ts`
+- [X] T011 [P] Create move-sections contract in `src/contracts/bulk-tools/move-sections.ts` -- input schema (items + SectionPosition), success/error response; reference `specs/010-bulk-operations/contracts/move-sections.ts`
+- [X] T012 [P] Create duplicate-sections contract in `src/contracts/bulk-tools/duplicate-sections.ts` -- input schema (items + SectionPosition), success/error response with newId/newName; reference `specs/010-bulk-operations/contracts/duplicate-sections.ts`
+- [X] T013 Create bulk-tools barrel export in `src/contracts/bulk-tools/index.ts` -- re-export all contracts from shared/, move-tasks, duplicate-tasks, batch-update-tasks, convert-tasks-to-projects, move-sections, duplicate-sections
 
 ### Contract Tests
 
-- [ ] T014 [P] Write shared schemas contract tests in `tests/contract/bulk-tools/shared.contract.test.ts` -- validate ItemIdentifier (id/name/both/neither), BulkBatchItemResult (all fields), Summary, TaskPosition (valid/invalid targets, relativeTo), SectionPosition (valid/invalid), PropertyUpdateSet (at-least-one, mutual exclusions, clearX semantics) -> verify PASSES
-- [ ] T015 [P] Write move-tasks contract tests in `tests/contract/bulk-tools/move-tasks.contract.test.ts` -- validate input (1-100 items, position variants), success response (results + summary), error response -> verify PASSES
-- [ ] T016 [P] Write duplicate-tasks contract tests in `tests/contract/bulk-tools/duplicate-tasks.contract.test.ts` -- validate input, success response with newId/newName, error response -> verify PASSES
-- [ ] T017 [P] Write batch-update-tasks contract tests in `tests/contract/bulk-tools/batch-update-tasks.contract.test.ts` -- validate input (items + properties), success response, error response -> verify PASSES
-- [ ] T018 [P] Write convert-tasks-to-projects contract tests in `tests/contract/bulk-tools/convert-tasks-to-projects.contract.test.ts` -- validate input (items + optional folder), success response with newId/newName, error response -> verify PASSES
-- [ ] T019 [P] Write move-sections contract tests in `tests/contract/bulk-tools/move-sections.contract.test.ts` -- validate input, success response, error response -> verify PASSES
-- [ ] T020 [P] Write duplicate-sections contract tests in `tests/contract/bulk-tools/duplicate-sections.contract.test.ts` -- validate input, success response with newId/newName, error response -> verify PASSES
+- [X] T014 [P] Write shared schemas contract tests in `tests/contract/bulk-tools/shared.contract.test.ts` -- validate ItemIdentifier (id/name/both/neither), BulkBatchItemResult (all fields), Summary, TaskPosition (valid/invalid targets, relativeTo), SectionPosition (valid/invalid), PropertyUpdateSet (at-least-one, mutual exclusions, clearX semantics) -> verify PASSES
+- [X] T015 [P] Write move-tasks contract tests in `tests/contract/bulk-tools/move-tasks.contract.test.ts` -- validate input (1-100 items, position variants), success response (results + summary), error response -> verify PASSES
+- [X] T016 [P] Write duplicate-tasks contract tests in `tests/contract/bulk-tools/duplicate-tasks.contract.test.ts` -- validate input, success response with newId/newName, error response -> verify PASSES
+- [X] T017 [P] Write batch-update-tasks contract tests in `tests/contract/bulk-tools/batch-update-tasks.contract.test.ts` -- validate input (items + properties), success response, error response -> verify PASSES
+- [X] T018 [P] Write convert-tasks-to-projects contract tests in `tests/contract/bulk-tools/convert-tasks-to-projects.contract.test.ts` -- validate input (items + optional folder), success response with newId/newName, error response -> verify PASSES
+- [X] T019 [P] Write move-sections contract tests in `tests/contract/bulk-tools/move-sections.contract.test.ts` -- validate input, success response, error response -> verify PASSES
+- [X] T020 [P] Write duplicate-sections contract tests in `tests/contract/bulk-tools/duplicate-sections.contract.test.ts` -- validate input, success response with newId/newName, error response -> verify PASSES
 
 **Checkpoint**: All shared schemas and per-tool contracts exist with passing tests. `pnpm build && pnpm test` green. No tools implemented yet.
 
@@ -69,18 +69,18 @@
 
 ### RED Phase - Tests First
 
-- [ ] T021 [P] [US1] Write unit tests for moveTasks primitive in `tests/unit/bulk-tools/moveTasks.test.ts` -- test: script generation with all position variants (project by ID/name, task by ID/name, inbox, beginning/ending/before/after), target pre-validation failure (TARGET_NOT_FOUND), relativeTo failure (RELATIVE_TARGET_NOT_FOUND), per-item NOT_FOUND, DISAMBIGUATION_REQUIRED, OPERATION_FAILED, partial failure (some succeed some fail), 100-item batch, inactive target warning, post-move property preservation verification (FR-015: tags, notes, dates, flagged status, subtask hierarchy retained after move), Zod parse of response -> verify FAILS
+- [X] T021 [P] [US1] Write unit tests for moveTasks primitive in `tests/unit/bulk-tools/moveTasks.test.ts` -- test: script generation with all position variants (project by ID/name, task by ID/name, inbox, beginning/ending/before/after), target pre-validation failure (TARGET_NOT_FOUND), relativeTo failure (RELATIVE_TARGET_NOT_FOUND), per-item NOT_FOUND, DISAMBIGUATION_REQUIRED, OPERATION_FAILED, partial failure (some succeed some fail), 100-item batch, inactive target warning, post-move property preservation verification (FR-015: tags, notes, dates, flagged status, subtask hierarchy retained after move), Zod parse of response -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T022 [US1] Implement moveTasks primitive in `src/tools/primitives/moveTasks.ts` -- generateMoveTasksScript() builds OmniJS IIFE with: target resolution (project/task/inbox), position resolution via ChildInsertionLocation (AD-11), relativeTo sibling resolution (AD-15), inactive target warning check (AD-13), per-item loop with Task.byIdentifier/flattenedTasks.byName + disambiguation, moveTasks([task], position) call per item, post-move verification (AD-12), Zod .parse() for response narrowing (AD-09) -> unit tests GREEN
-- [ ] T023 [US1] Implement moveTasks definition in `src/tools/definitions/moveTasks.ts` -- schema = MoveTasksInputSchema, handler calls primitive, discriminated union narrowing (AD-10), format per-item results for MCP text response, handle isError for top-level failures
-- [ ] T024 [US1] Register move_tasks tool in `src/server.ts` -- add import and server.tool() registration following existing pattern
+- [X] T022 [US1] Implement moveTasks primitive in `src/tools/primitives/moveTasks.ts` -- generateMoveTasksScript() builds OmniJS IIFE with: target resolution (project/task/inbox), position resolution via ChildInsertionLocation (AD-11), relativeTo sibling resolution (AD-15), inactive target warning check (AD-13), per-item loop with Task.byIdentifier/flattenedTasks.byName + disambiguation, moveTasks([task], position) call per item, post-move verification (AD-12), Zod .parse() for response narrowing (AD-09) -> unit tests GREEN
+- [X] T023 [US1] Implement moveTasks definition in `src/tools/definitions/moveTasks.ts` -- schema = MoveTasksInputSchema, handler calls primitive, discriminated union narrowing (AD-10), format per-item results for MCP text response, handle isError for top-level failures
+- [X] T024 [US1] Register move_tasks tool in `src/server.ts` -- add import and server.tool() registration following existing pattern
 
 ### REFACTOR Phase
 
-- [ ] T025 [US1] Run `pnpm build && pnpm test` -- all tests green, no regressions
-- [ ] T026 [US1] Manual verification of move_tasks in OmniFocus Script Editor -- test moveTasks() with real tasks, verify position placement
+- [X] T025 [US1] Run `pnpm build && pnpm test` -- all tests green, no regressions
+- [X] T026 [US1] Manual verification of move_tasks in OmniFocus Script Editor -- test moveTasks() with real tasks, verify position placement
 
 **Checkpoint**: move_tasks fully functional. Tasks can be moved between projects, to inbox, to parent tasks with all position variants.
 
@@ -94,18 +94,18 @@
 
 ### RED Phase - Tests First
 
-- [ ] T027 [P] [US2] Write unit tests for duplicateTasks primitive in `tests/unit/bulk-tools/duplicateTasks.test.ts` -- test: script generation with all position variants, duplicateTasks([task], position)[0] access pattern, newId/newName in results, markIncomplete() call for completed/dropped originals (FR-011), subtask duplication, target pre-validation, per-item errors (NOT_FOUND, DISAMBIGUATION_REQUIRED, OPERATION_FAILED), partial failure, inactive target warning, Zod parse -> verify FAILS
+- [X] T027 [P] [US2] Write unit tests for duplicateTasks primitive in `tests/unit/bulk-tools/duplicateTasks.test.ts` -- test: script generation with all position variants, duplicateTasks([task], position)[0] access pattern, newId/newName in results, markIncomplete() call for completed/dropped originals (FR-011), subtask duplication, target pre-validation, per-item errors (NOT_FOUND, DISAMBIGUATION_REQUIRED, OPERATION_FAILED), partial failure, inactive target warning, Zod parse -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T028 [US2] Implement duplicateTasks primitive in `src/tools/primitives/duplicateTasks.ts` -- generateDuplicateTasksScript() builds OmniJS IIFE with: target resolution, position resolution (AD-11), per-item loop with duplicateTasks([task], position)[0], markIncomplete() reset (FR-011/AD-06), read newCopy.id.primaryKey and newCopy.name for result, inactive target warning (AD-13), Zod .parse() (AD-09) -> unit tests GREEN
-- [ ] T029 [US2] Implement duplicateTasks definition in `src/tools/definitions/duplicateTasks.ts` -- schema = DuplicateTasksInputSchema, handler calls primitive, format results with newId/newName
-- [ ] T030 [US2] Register duplicate_tasks tool in `src/server.ts`
+- [X] T028 [US2] Implement duplicateTasks primitive in `src/tools/primitives/duplicateTasks.ts` -- generateDuplicateTasksScript() builds OmniJS IIFE with: target resolution, position resolution (AD-11), per-item loop with duplicateTasks([task], position)[0], markIncomplete() reset (FR-011/AD-06), read newCopy.id.primaryKey and newCopy.name for result, inactive target warning (AD-13), Zod .parse() (AD-09) -> unit tests GREEN
+- [X] T029 [US2] Implement duplicateTasks definition in `src/tools/definitions/duplicateTasks.ts` -- schema = DuplicateTasksInputSchema, handler calls primitive, format results with newId/newName
+- [X] T030 [US2] Register duplicate_tasks tool in `src/server.ts`
 
 ### REFACTOR Phase
 
-- [ ] T031 [US2] Run `pnpm build && pnpm test` -- all tests green, no regressions
-- [ ] T032 [US2] Manual verification of duplicate_tasks in OmniFocus Script Editor -- test duplicateTasks() with real tasks including completed originals
+- [X] T031 [US2] Run `pnpm build && pnpm test` -- all tests green, no regressions
+- [X] T032 [US2] Manual verification of duplicate_tasks in OmniFocus Script Editor -- test duplicateTasks() with real tasks including completed originals
 
 **Checkpoint**: duplicate_tasks fully functional. Tasks can be copied with all properties preserved, copies always active.
 
@@ -119,18 +119,18 @@
 
 ### RED Phase - Tests First
 
-- [ ] T033 [P] [US3] Write unit tests for batchUpdateTasks primitive in `tests/unit/bulk-tools/batchUpdateTasks.test.ts` -- test: script generation with all property combinations (flagged, dueDate, deferDate, estimatedMinutes, plannedDate, note, addTags, removeTags, clearX flags), tag removal-before-addition order (FR-014), version gating for plannedDate/clearPlannedDate (VERSION_NOT_SUPPORTED), per-item TAG_NOT_FOUND, note append behavior (US3 scenario 7), clearDueDate removes due date (US3 scenario 8), mutual exclusion enforcement at schema level, empty properties rejection (FR-013), clearX:false semantics, partial failures, Zod parse -> verify FAILS
+- [X] T033 [P] [US3] Write unit tests for batchUpdateTasks primitive in `tests/unit/bulk-tools/batchUpdateTasks.test.ts` -- test: script generation with all property combinations (flagged, dueDate, deferDate, estimatedMinutes, plannedDate, note, addTags, removeTags, clearX flags), tag removal-before-addition order (FR-014), version gating for plannedDate/clearPlannedDate (VERSION_NOT_SUPPORTED), per-item TAG_NOT_FOUND, note append behavior (US3 scenario 7), clearDueDate removes due date (US3 scenario 8), mutual exclusion enforcement at schema level, empty properties rejection (FR-013), clearX:false semantics, partial failures, Zod parse -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T034 [US3] Implement batchUpdateTasks primitive in `src/tools/primitives/batchUpdateTasks.ts` -- generateBatchUpdateTasksScript() builds OmniJS IIFE with: v4.7+ version check for plannedDate/clearPlannedDate, tag resolution loop (resolve all tags once before item loop), per-item loop with Task.byIdentifier/flattenedTasks.byName + disambiguation, property application (removeTags first then addTags per FR-014), clearX handling (set property to null), note append, try-catch per task for atomic per-task results, Zod .parse() (AD-09) -> unit tests GREEN
-- [ ] T035 [US3] Implement batchUpdateTasks definition in `src/tools/definitions/batchUpdateTasks.ts` -- schema = BatchUpdateTasksInputSchema, handler calls primitive, format per-item results
-- [ ] T036 [US3] Register batch_update_tasks tool in `src/server.ts`
+- [X] T034 [US3] Implement batchUpdateTasks primitive in `src/tools/primitives/batchUpdateTasks.ts` -- generateBatchUpdateTasksScript() builds OmniJS IIFE with: v4.7+ version check for plannedDate/clearPlannedDate, tag resolution loop (resolve all tags once before item loop), per-item loop with Task.byIdentifier/flattenedTasks.byName + disambiguation, property application (removeTags first then addTags per FR-014), clearX handling (set property to null), note append, try-catch per task for atomic per-task results, Zod .parse() (AD-09) -> unit tests GREEN
+- [X] T035 [US3] Implement batchUpdateTasks definition in `src/tools/definitions/batchUpdateTasks.ts` -- schema = BatchUpdateTasksInputSchema, handler calls primitive, format per-item results
+- [X] T036 [US3] Register batch_update_tasks tool in `src/server.ts`
 
 ### REFACTOR Phase
 
-- [ ] T037 [US3] Run `pnpm build && pnpm test` -- all tests green, no regressions
-- [ ] T038 [US3] Manual verification of batch_update_tasks in OmniFocus Script Editor -- test property updates, tag operations, date clearing
+- [X] T037 [US3] Run `pnpm build && pnpm test` -- all tests green, no regressions
+- [X] T038 [US3] Manual verification of batch_update_tasks in OmniFocus Script Editor -- test property updates, tag operations, date clearing
 
 **Checkpoint**: batch_update_tasks fully functional. Multiple properties can be updated across multiple tasks in one operation.
 
@@ -144,18 +144,18 @@
 
 ### RED Phase - Tests First
 
-- [ ] T039 [P] [US4] Write unit tests for convertTasksToProjects primitive in `tests/unit/bulk-tools/convertTasksToProjects.test.ts` -- test: script generation with/without target folder (by ID/name, default to library root), convertTasksToProjects([task], position) API call, newId/newName in results, ALREADY_A_PROJECT error for project root tasks (FR-012), per-item NOT_FOUND, DISAMBIGUATION_REQUIRED, TARGET_NOT_FOUND for invalid folder, partial failure, targetFolderId precedence over targetFolderName, Zod parse -> verify FAILS
+- [X] T039 [P] [US4] Write unit tests for convertTasksToProjects primitive in `tests/unit/bulk-tools/convertTasksToProjects.test.ts` -- test: script generation with/without target folder (by ID/name, default to library root), convertTasksToProjects([task], position) API call, newId/newName in results, ALREADY_A_PROJECT error for project root tasks (FR-012), per-item NOT_FOUND, DISAMBIGUATION_REQUIRED, TARGET_NOT_FOUND for invalid folder, partial failure, targetFolderId precedence over targetFolderName, Zod parse -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T040 [US4] Implement convertTasksToProjects primitive in `src/tools/primitives/convertTasksToProjects.ts` -- generateConvertTasksToProjectsScript() builds OmniJS IIFE with: optional folder resolution (targetFolderId > targetFolderName > library root), pre-validate folder if specified (TARGET_NOT_FOUND), per-item loop with Task.byIdentifier/flattenedTasks.byName, check task.containingProject !== null for ALREADY_A_PROJECT, convertTasksToProjects([task], folder.ending or library.ending) call, read new project ID/name from return value, Zod .parse() (AD-09) -> unit tests GREEN
-- [ ] T041 [US4] Implement convertTasksToProjects definition in `src/tools/definitions/convertTasksToProjects.ts` -- schema = ConvertTasksToProjectsInputSchema, handler calls primitive, format results with newId/newName
-- [ ] T042 [US4] Register convert_tasks_to_projects tool in `src/server.ts`
+- [X] T040 [US4] Implement convertTasksToProjects primitive in `src/tools/primitives/convertTasksToProjects.ts` -- generateConvertTasksToProjectsScript() builds OmniJS IIFE with: optional folder resolution (targetFolderId > targetFolderName > library root), pre-validate folder if specified (TARGET_NOT_FOUND), per-item loop with Task.byIdentifier/flattenedTasks.byName, check task.containingProject !== null for ALREADY_A_PROJECT, convertTasksToProjects([task], folder.ending or library.ending) call, read new project ID/name from return value, Zod .parse() (AD-09) -> unit tests GREEN
+- [X] T041 [US4] Implement convertTasksToProjects definition in `src/tools/definitions/convertTasksToProjects.ts` -- schema = ConvertTasksToProjectsInputSchema, handler calls primitive, format results with newId/newName
+- [X] T042 [US4] Register convert_tasks_to_projects tool in `src/server.ts`
 
 ### REFACTOR Phase
 
-- [ ] T043 [US4] Run `pnpm build && pnpm test` -- all tests green, no regressions
-- [ ] T044 [US4] Manual verification of convert_tasks_to_projects in OmniFocus Script Editor -- test conversion with subtasks, folder placement, root-task rejection
+- [X] T043 [US4] Run `pnpm build && pnpm test` -- all tests green, no regressions
+- [X] T044 [US4] Manual verification of convert_tasks_to_projects in OmniFocus Script Editor -- test conversion with subtasks, folder placement, root-task rejection
 
 **Checkpoint**: convert_tasks_to_projects fully functional. Tasks can be promoted to projects with subtask preservation.
 
@@ -169,18 +169,18 @@
 
 ### RED Phase - Tests First
 
-- [ ] T045 [P] [US5] Write unit tests for moveSections primitive in `tests/unit/bulk-tools/moveSections.test.ts` -- test: script generation with all SectionPosition variants (beginning/ending with/without relativeTo, before/after), placement is required (no default -- SectionPosition has no `.default()` unlike TaskPosition), Folder-then-Project probe resolution (AD-14), itemType set to 'folder' or 'project', mixed folder+project batches, target pre-validation (TARGET_NOT_FOUND), relativeTo resolution, per-item NOT_FOUND, DISAMBIGUATION_REQUIRED (across both types), OPERATION_FAILED (circular hierarchy), post-move verification via parentFolder read (AD-12), library root placement, Zod parse -> verify FAILS
+- [X] T045 [P] [US5] Write unit tests for moveSections primitive in `tests/unit/bulk-tools/moveSections.test.ts` -- test: script generation with all SectionPosition variants (beginning/ending with/without relativeTo, before/after), placement is required (no default -- SectionPosition has no `.default()` unlike TaskPosition), Folder-then-Project probe resolution (AD-14), itemType set to 'folder' or 'project', mixed folder+project batches, target pre-validation (TARGET_NOT_FOUND), relativeTo resolution, per-item NOT_FOUND, DISAMBIGUATION_REQUIRED (across both types), OPERATION_FAILED (circular hierarchy), post-move verification via parentFolder read (AD-12), library root placement, Zod parse -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T046 [US5] Implement moveSections primitive in `src/tools/primitives/moveSections.ts` -- generateMoveSectionsScript() builds OmniJS IIFE with: target resolution (folder or library root from SectionPosition), relativeTo resolution (AD-15), per-item loop with Folder.byIdentifier then Project.byIdentifier probe (AD-14), name-based search across flattenedFolders + flattenedProjects for disambiguation, moveSections([section], position) call per item, post-move verification (AD-12), Zod .parse() (AD-09) -> unit tests GREEN
-- [ ] T047 [US5] Implement moveSections definition in `src/tools/definitions/moveSections.ts` -- schema = MoveSectionsInputSchema, handler calls primitive, format per-item results
-- [ ] T048 [US5] Register move_sections tool in `src/server.ts`
+- [X] T046 [US5] Implement moveSections primitive in `src/tools/primitives/moveSections.ts` -- generateMoveSectionsScript() builds OmniJS IIFE with: target resolution (folder or library root from SectionPosition), relativeTo resolution (AD-15), per-item loop with Folder.byIdentifier then Project.byIdentifier probe (AD-14), name-based search across flattenedFolders + flattenedProjects for disambiguation, moveSections([section], position) call per item, post-move verification (AD-12), Zod .parse() (AD-09) -> unit tests GREEN
+- [X] T047 [US5] Implement moveSections definition in `src/tools/definitions/moveSections.ts` -- schema = MoveSectionsInputSchema, handler calls primitive, format per-item results
+- [X] T048 [US5] Register move_sections tool in `src/server.ts`
 
 ### REFACTOR Phase
 
-- [ ] T049 [US5] Run `pnpm build && pnpm test` -- all tests green, no regressions
-- [ ] T050 [US5] Manual verification of move_sections in OmniFocus Script Editor -- test moving projects between folders, folders to root
+- [X] T049 [US5] Run `pnpm build && pnpm test` -- all tests green, no regressions
+- [X] T050 [US5] Manual verification of move_sections in OmniFocus Script Editor -- test moving projects between folders, folders to root
 
 **Checkpoint**: move_sections fully functional. Folders and projects can be reorganized in the hierarchy.
 
@@ -194,18 +194,18 @@
 
 ### RED Phase - Tests First
 
-- [ ] T051 [P] [US6] Write unit tests for duplicateSections primitive in `tests/unit/bulk-tools/duplicateSections.test.ts` -- test: script generation with all SectionPosition variants, Folder-then-Project probe resolution (AD-14), duplicateSections([section], position)[0] access pattern, newId/newName in results, content preservation (child projects, tasks, settings), target pre-validation, per-item errors, mixed folder+project batches, library root placement, Zod parse -> verify FAILS
+- [X] T051 [P] [US6] Write unit tests for duplicateSections primitive in `tests/unit/bulk-tools/duplicateSections.test.ts` -- test: script generation with all SectionPosition variants, Folder-then-Project probe resolution (AD-14), duplicateSections([section], position)[0] access pattern, newId/newName in results, content preservation (child projects, tasks, settings), target pre-validation, per-item errors, mixed folder+project batches, library root placement, Zod parse -> verify FAILS
 
 ### GREEN Phase - Implementation
 
-- [ ] T052 [US6] Implement duplicateSections primitive in `src/tools/primitives/duplicateSections.ts` -- generateDuplicateSectionsScript() builds OmniJS IIFE with: target resolution, position resolution, per-item loop with Folder-then-Project probe (AD-14), duplicateSections([section], position)[0] call, read newCopy.id.primaryKey and newCopy.name, Zod .parse() (AD-09) -> unit tests GREEN
-- [ ] T053 [US6] Implement duplicateSections definition in `src/tools/definitions/duplicateSections.ts` -- schema = DuplicateSectionsInputSchema, handler calls primitive, format results with newId/newName
-- [ ] T054 [US6] Register duplicate_sections tool in `src/server.ts`
+- [X] T052 [US6] Implement duplicateSections primitive in `src/tools/primitives/duplicateSections.ts` -- generateDuplicateSectionsScript() builds OmniJS IIFE with: target resolution, position resolution, per-item loop with Folder-then-Project probe (AD-14), duplicateSections([section], position)[0] call, read newCopy.id.primaryKey and newCopy.name, Zod .parse() (AD-09) -> unit tests GREEN
+- [X] T053 [US6] Implement duplicateSections definition in `src/tools/definitions/duplicateSections.ts` -- schema = DuplicateSectionsInputSchema, handler calls primitive, format results with newId/newName
+- [X] T054 [US6] Register duplicate_sections tool in `src/server.ts`
 
 ### REFACTOR Phase
 
-- [ ] T055 [US6] Run `pnpm build && pnpm test` -- all tests green, no regressions
-- [ ] T056 [US6] Manual verification of duplicate_sections in OmniFocus Script Editor -- test duplicating projects with tasks, folders with substructure
+- [X] T055 [US6] Run `pnpm build && pnpm test` -- all tests green, no regressions
+- [X] T056 [US6] Manual verification of duplicate_sections in OmniFocus Script Editor -- test duplicating projects with tasks, folders with substructure
 
 **Checkpoint**: duplicate_sections fully functional. Project and folder templates can be duplicated with full content preservation.
 
@@ -215,13 +215,13 @@
 
 **Purpose**: Cross-tool verification, integration tests, documentation, and final validation
 
-- [ ] T057 [P] Write integration test scaffold in `tests/integration/bulk-operations.integration.test.ts` -- test round-trip scenarios: move tasks then move back, duplicate then verify properties, convert task to project then verify subtasks, batch-update then verify each property, move sections then verify hierarchy, duplicate sections then verify contents
-- [ ] T058 [P] Update CLAUDE.md Recent Changes section with bulk-operations implementation details -- tool count, test count, contract locations
-- [ ] T059 Run full test suite: `pnpm test` -- verify all contract, unit, and integration tests pass with no regressions
-- [ ] T060 Run coverage check: `pnpm test:coverage` -- verify coverage meets project standards
-- [ ] T061 Run lint check: `pnpm lint` -- verify no lint violations
-- [ ] T062 Run type check: `pnpm typecheck` -- verify no TypeScript errors
-- [ ] T063 Final build verification: `pnpm build` -- verify clean build with all 6 new tools
+- [X] T057 [P] Write integration test scaffold in `tests/integration/bulk-operations.integration.test.ts` -- test round-trip scenarios: move tasks then move back, duplicate then verify properties, convert task to project then verify subtasks, batch-update then verify each property, move sections then verify hierarchy, duplicate sections then verify contents
+- [X] T058 [P] Update CLAUDE.md Recent Changes section with bulk-operations implementation details -- tool count, test count, contract locations
+- [X] T059 Run full test suite: `pnpm test` -- verify all contract, unit, and integration tests pass with no regressions
+- [X] T060 Run coverage check: `pnpm test:coverage` -- verify coverage meets project standards
+- [X] T061 Run lint check: `pnpm lint` -- verify no lint violations
+- [X] T062 Run type check: `pnpm typecheck` -- verify no TypeScript errors
+- [X] T063 Final build verification: `pnpm build` -- verify clean build with all 6 new tools
 
 ---
 
