@@ -1,18 +1,19 @@
-import type { RemoveTagsInput, RemoveTagsResponse } from '../../contracts/tag-tools/remove-tags.js';
+import {
+  type RemoveTagsInput,
+  type RemoveTagsResponse,
+  RemoveTagsResponseSchema
+} from '../../contracts/tag-tools/remove-tags.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 export async function removeTags(params: RemoveTagsInput): Promise<RemoveTagsResponse> {
   const script = generateRemoveTagsScript(params);
   const result = await executeOmniJS(script);
-  return result as RemoveTagsResponse;
+  return RemoveTagsResponseSchema.parse(result);
 }
 
 function generateRemoveTagsScript(params: RemoveTagsInput): string {
   const { taskIds, tagIds, clearAll } = params;
-
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 
   const taskIdsArray = taskIds.map((id) => `"${escapeForJS(id)}"`).join(', ');
   // When tagIds is undefined, generate empty string for proper empty array literal

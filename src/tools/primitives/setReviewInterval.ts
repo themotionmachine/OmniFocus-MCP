@@ -1,6 +1,7 @@
-import type {
-  SetReviewIntervalInput,
-  SetReviewIntervalResponse
+import {
+  type SetReviewIntervalInput,
+  type SetReviewIntervalResponse,
+  SetReviewIntervalResponseSchema
 } from '../../contracts/review-tools/set-review-interval.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
@@ -19,7 +20,7 @@ export async function setReviewInterval(
 ): Promise<SetReviewIntervalResponse> {
   const script = generateSetReviewIntervalScript(params);
   const result = await executeOmniJS(script);
-  return result as SetReviewIntervalResponse;
+  return SetReviewIntervalResponseSchema.parse(result);
 }
 
 /**

@@ -1,4 +1,9 @@
-import type { EditTagInput, EditTagResponse } from '../../contracts/tag-tools/edit-tag.js';
+import {
+  type EditTagInput,
+  type EditTagResponse,
+  EditTagResponseSchema
+} from '../../contracts/tag-tools/edit-tag.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -10,7 +15,7 @@ import { executeOmniJS } from '../../utils/scriptExecution.js';
 export async function editTag(params: EditTagInput): Promise<EditTagResponse> {
   const script = generateEditTagScript(params);
   const result = await executeOmniJS(script);
-  return result as EditTagResponse;
+  return EditTagResponseSchema.parse(result);
 }
 
 /**
@@ -18,10 +23,6 @@ export async function editTag(params: EditTagInput): Promise<EditTagResponse> {
  */
 function generateEditTagScript(params: EditTagInput): string {
   const { id, name, newName, status, allowsNextAction } = params;
-
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 
   // Build the script
   const idCheck = id

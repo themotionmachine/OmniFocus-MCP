@@ -1,18 +1,10 @@
-import type { CreateTagInput, CreateTagResponse } from '../../contracts/tag-tools/create-tag.js';
+import {
+  type CreateTagInput,
+  type CreateTagResponse,
+  CreateTagResponseSchema
+} from '../../contracts/tag-tools/create-tag.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
-
-/**
- * Escape a string for safe use in JavaScript string literals.
- * Handles quotes, backslashes, and newlines.
- */
-function escapeForJS(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
-}
 
 /**
  * Create a new tag in OmniFocus.
@@ -23,7 +15,7 @@ function escapeForJS(str: string): string {
 export async function createTag(params: CreateTagInput): Promise<CreateTagResponse> {
   const script = generateCreateTagScript(params);
   const result = await executeOmniJS(script);
-  return result as CreateTagResponse;
+  return CreateTagResponseSchema.parse(result);
 }
 
 /**

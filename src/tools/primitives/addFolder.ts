@@ -1,28 +1,17 @@
-import type { AddFolderInput } from '../../contracts/folder-tools/add-folder.js';
+import {
+  type AddFolderInput,
+  type AddFolderResponse,
+  AddFolderResponseSchema
+} from '../../contracts/folder-tools/add-folder.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { logger } from '../../utils/logger.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
-
-/**
- * Response type for addFolder
- */
-export type AddFolderResponse =
-  | { success: true; id: string; name: string }
-  | { success: false; error: string };
 
 /**
  * Generate Omni Automation JavaScript for adding a folder
  */
 function generateOmniScript(params: AddFolderInput): string {
   const { name, position } = params;
-
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t');
 
   // Name is already trimmed by Zod schema transform
   const nameEscaped = escapeForJS(name);
@@ -99,7 +88,7 @@ export async function addFolder(params: AddFolderInput): Promise<AddFolderRespon
 
   try {
     // Execute via Omni Automation (stdin piping, no temp files)
-    const result = (await executeOmniJS(script)) as AddFolderResponse;
+    const result = AddFolderResponseSchema.parse(await executeOmniJS(script));
 
     // Pass through the result (success, or error)
     return result;

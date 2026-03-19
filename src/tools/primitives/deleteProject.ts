@@ -1,7 +1,9 @@
-import type {
-  DeleteProjectInput,
-  DeleteProjectResponse
+import {
+  type DeleteProjectInput,
+  type DeleteProjectResponse,
+  DeleteProjectResponseSchema
 } from '../../contracts/project-tools/index.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { logger } from '../../utils/logger.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
@@ -10,15 +12,6 @@ import { executeOmniJS } from '../../utils/scriptExecution.js';
  */
 function generateOmniScript(params: DeleteProjectInput): string {
   const { id, name } = params;
-
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t');
 
   const idEscaped = id ? escapeForJS(id) : '';
   const nameEscaped = name ? escapeForJS(name) : '';
@@ -117,7 +110,7 @@ export async function deleteProject(params: DeleteProjectInput): Promise<DeleteP
   try {
     const script = generateOmniScript(params);
     const result = await executeOmniJS(script);
-    return result as DeleteProjectResponse;
+    return DeleteProjectResponseSchema.parse(result);
   } catch (error: unknown) {
     logger.error('Error in deleteProject', 'deleteProject', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

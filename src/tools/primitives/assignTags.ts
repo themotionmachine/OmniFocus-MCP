@@ -1,18 +1,19 @@
-import type { AssignTagsInput, AssignTagsResponse } from '../../contracts/tag-tools/assign-tags.js';
+import {
+  type AssignTagsInput,
+  type AssignTagsResponse,
+  AssignTagsResponseSchema
+} from '../../contracts/tag-tools/assign-tags.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 export async function assignTags(params: AssignTagsInput): Promise<AssignTagsResponse> {
   const script = generateAssignTagsScript(params);
   const result = await executeOmniJS(script);
-  return result as AssignTagsResponse;
+  return AssignTagsResponseSchema.parse(result);
 }
 
 function generateAssignTagsScript(params: AssignTagsInput): string {
   const { taskIds, tagIds } = params;
-
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 
   const taskIdsJSON = JSON.stringify(taskIds.map(escapeForJS));
   const tagIdsJSON = JSON.stringify(tagIds.map(escapeForJS));

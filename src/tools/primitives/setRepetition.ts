@@ -1,7 +1,9 @@
-import type {
-  SetRepetitionInput,
-  SetRepetitionResponse
+import {
+  type SetRepetitionInput,
+  type SetRepetitionResponse,
+  SetRepetitionResponseSchema
 } from '../../contracts/repetition-tools/set-repetition.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -21,7 +23,7 @@ export async function setRepetition(params: SetRepetitionInput): Promise<SetRepe
     };
   }
 
-  return result as SetRepetitionResponse;
+  return SetRepetitionResponseSchema.parse(result);
 }
 
 /**
@@ -73,16 +75,4 @@ export function generateSetRepetitionScript(params: SetRepetitionInput): string 
     return JSON.stringify({ success: false, error: e.message || String(e) });
   }
 })();`;
-}
-
-/**
- * Escape string for safe embedding in JavaScript.
- */
-function escapeForJS(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
 }

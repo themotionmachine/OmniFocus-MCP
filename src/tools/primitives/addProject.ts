@@ -1,3 +1,4 @@
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { logger } from '../../utils/logger.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
@@ -18,10 +19,6 @@ export interface AddProjectParams {
  * Generate Omni Automation JavaScript for project creation
  */
 function generateOmniScript(params: AddProjectParams): string {
-  // Escape strings for JavaScript - escape backslashes first, then quotes
-  const escapeForJS = (str: string): string =>
-    str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-
   const name = escapeForJS(params.name);
   const note = params.note ? escapeForJS(params.note) : '';
   const dueDate = params.dueDate || '';

@@ -1,4 +1,9 @@
-import type { EditProjectInput, EditProjectResponse } from '../../contracts/project-tools/index.js';
+import {
+  type EditProjectInput,
+  type EditProjectResponse,
+  EditProjectResponseSchema
+} from '../../contracts/project-tools/index.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -10,7 +15,7 @@ import { executeOmniJS } from '../../utils/scriptExecution.js';
 export async function editProject(params: EditProjectInput): Promise<EditProjectResponse> {
   const script = generateEditProjectScript(params);
   const result = await executeOmniJS(script);
-  return result as EditProjectResponse;
+  return EditProjectResponseSchema.parse(result);
 }
 
 /**
@@ -34,15 +39,6 @@ function generateEditProjectScript(params: EditProjectInput): string {
     shouldUseFloatingTimeZone,
     estimatedMinutes
   } = params;
-
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t');
 
   // Build the script
   const idCheck = id

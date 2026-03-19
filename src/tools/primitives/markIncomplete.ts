@@ -1,6 +1,7 @@
-import type {
-  MarkIncompleteInput,
-  MarkIncompleteResponse
+import {
+  type MarkIncompleteInput,
+  type MarkIncompleteResponse,
+  MarkIncompleteResponseSchema
 } from '../../contracts/status-tools/mark-incomplete.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
@@ -20,7 +21,7 @@ import { executeOmniJS } from '../../utils/scriptExecution.js';
 export async function markIncomplete(params: MarkIncompleteInput): Promise<MarkIncompleteResponse> {
   const script = generateMarkIncompleteScript(params);
   const result = await executeOmniJS(script);
-  return result as MarkIncompleteResponse;
+  return MarkIncompleteResponseSchema.parse(result);
 }
 
 /**

@@ -1,4 +1,8 @@
-import type { DropItemsInput, DropItemsResponse } from '../../contracts/status-tools/drop-items.js';
+import {
+  type DropItemsInput,
+  type DropItemsResponse,
+  DropItemsResponseSchema
+} from '../../contracts/status-tools/drop-items.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -19,7 +23,7 @@ import { executeOmniJS } from '../../utils/scriptExecution.js';
 export async function dropItems(params: DropItemsInput): Promise<DropItemsResponse> {
   const script = generateDropItemsScript(params);
   const result = await executeOmniJS(script);
-  return result as DropItemsResponse;
+  return DropItemsResponseSchema.parse(result);
 }
 
 /**

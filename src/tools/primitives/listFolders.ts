@@ -1,5 +1,10 @@
 import type { z } from 'zod';
-import type { Folder, ListFoldersInputSchema } from '../../contracts/folder-tools/list-folders.js';
+import {
+  type ListFoldersInputSchema,
+  type ListFoldersResponse,
+  ListFoldersResponseSchema
+} from '../../contracts/folder-tools/list-folders.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { logger } from '../../utils/logger.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
@@ -7,28 +12,10 @@ import { executeOmniJS } from '../../utils/scriptExecution.js';
 type ListFoldersParams = z.input<typeof ListFoldersInputSchema>;
 
 /**
- * Response type for listFolders
- */
-export type ListFoldersSuccessResponse = { success: true; folders: Folder[] };
-export type ListFoldersErrorResponse = { success: false; error: string };
-export type ListFoldersResponse = ListFoldersSuccessResponse | ListFoldersErrorResponse;
-
-/**
- * Type guard to check if response is an error
- */
-function isErrorResponse(response: ListFoldersResponse): response is ListFoldersErrorResponse {
-  return response.success === false;
-}
-
-/**
  * Generate Omni Automation JavaScript for listing folders
  */
 function generateOmniScript(params: ListFoldersParams): string {
   const { status, parentId, includeChildren = true } = params;
-
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 
   const parentIdEscaped = parentId ? escapeForJS(parentId) : '';
   const statusFilter = status ? escapeForJS(status) : '';
@@ -114,20 +101,9 @@ export async function listFolders(params: ListFoldersParams = {}): Promise<ListF
 
   try {
     // Execute via Omni Automation (stdin piping, no temp files)
-    const result = (await executeOmniJS(script)) as ListFoldersResponse;
+    const result = ListFoldersResponseSchema.parse(await executeOmniJS(script));
 
-    // Use type guard for proper narrowing
-    if (isErrorResponse(result)) {
-      return {
-        success: false as const,
-        error: result.error
-      };
-    }
-
-    return {
-      success: true as const,
-      folders: result.folders
-    };
+    return result;
   } catch (error: unknown) {
     logger.error('Error in listFolders', 'listFolders', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

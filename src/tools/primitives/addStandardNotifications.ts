@@ -1,7 +1,9 @@
-import type {
-  AddStandardNotificationsInput,
-  AddStandardNotificationsResponse
+import {
+  type AddStandardNotificationsInput,
+  type AddStandardNotificationsResponse,
+  AddStandardNotificationsResponseSchema
 } from '../../contracts/notification-tools/add-standard-notifications.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -22,7 +24,7 @@ export async function addStandardNotifications(
 ): Promise<AddStandardNotificationsResponse> {
   const script = generateAddStandardNotificationsScript(params);
   const result = await executeOmniJS(script);
-  return result as AddStandardNotificationsResponse;
+  return AddStandardNotificationsResponseSchema.parse(result);
 }
 
 /**
@@ -191,16 +193,4 @@ export function generateAddStandardNotificationsScript(
     });
   }
 })();`;
-}
-
-/**
- * Escape a string for safe embedding in a JavaScript string literal.
- */
-function escapeForJS(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
 }

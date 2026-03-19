@@ -1,7 +1,9 @@
-import type {
-  GetProjectsForReviewInput,
-  GetProjectsForReviewResponse
+import {
+  type GetProjectsForReviewInput,
+  type GetProjectsForReviewResponse,
+  GetProjectsForReviewResponseSchema
 } from '../../contracts/review-tools/get-projects-for-review.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -15,7 +17,7 @@ export async function getProjectsForReview(
 ): Promise<GetProjectsForReviewResponse> {
   const script = generateGetProjectsForReviewScript(params);
   const result = await executeOmniJS(script);
-  return result as GetProjectsForReviewResponse;
+  return GetProjectsForReviewResponseSchema.parse(result);
 }
 
 /**
@@ -168,16 +170,4 @@ export function generateGetProjectsForReviewScript(params: GetProjectsForReviewI
     });
   }
 })();`;
-}
-
-/**
- * Escape string for safe embedding in JavaScript.
- */
-function escapeForJS(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
 }

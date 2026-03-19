@@ -15,10 +15,8 @@ describe('createProject', () => {
     // T027
     const mockResponse = {
       success: true,
-      project: {
-        id: 'project123',
-        name: 'New Project'
-      }
+      id: 'project123',
+      name: 'New Project'
     };
 
     vi.mocked(executeOmniJS).mockResolvedValue(mockResponse);
@@ -27,8 +25,8 @@ describe('createProject', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.project.id).toBe('project123');
-      expect(result.project.name).toBe('New Project');
+      expect(result.id).toBe('project123');
+      expect(result.name).toBe('New Project');
     }
     expect(executeOmniJS).toHaveBeenCalledOnce();
   });
@@ -37,10 +35,8 @@ describe('createProject', () => {
     // T028
     const mockResponse = {
       success: true,
-      project: {
-        id: 'project456',
-        name: 'New'
-      }
+      id: 'project456',
+      name: 'New'
     };
 
     vi.mocked(executeOmniJS).mockResolvedValue(mockResponse);
@@ -63,10 +59,8 @@ describe('createProject', () => {
     // T029
     const mockResponse = {
       success: true,
-      project: {
-        id: 'project789',
-        name: 'Sequential'
-      }
+      id: 'project789',
+      name: 'Sequential'
     };
 
     vi.mocked(executeOmniJS).mockResolvedValue(mockResponse);
@@ -91,10 +85,8 @@ describe('createProject', () => {
     // T030
     const mockResponse = {
       success: true,
-      project: {
-        id: 'project101',
-        name: 'SAL'
-      }
+      id: 'project101',
+      name: 'SAL'
     };
 
     vi.mocked(executeOmniJS).mockResolvedValue(mockResponse);
@@ -119,10 +111,8 @@ describe('createProject', () => {
     // T031
     const mockResponse = {
       success: true,
-      project: {
-        id: 'project202',
-        name: 'Both'
-      }
+      id: 'project202',
+      name: 'Both'
     };
 
     vi.mocked(executeOmniJS).mockResolvedValue(mockResponse);

@@ -1,7 +1,9 @@
-import type {
-  GetRepetitionInput,
-  GetRepetitionResponse
+import {
+  type GetRepetitionInput,
+  type GetRepetitionResponse,
+  GetRepetitionResponseSchema
 } from '../../contracts/repetition-tools/get-repetition.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -21,7 +23,7 @@ export async function getRepetition(params: GetRepetitionInput): Promise<GetRepe
     };
   }
 
-  return result as GetRepetitionResponse;
+  return GetRepetitionResponseSchema.parse(result);
 }
 
 /**
@@ -109,16 +111,4 @@ export function generateGetRepetitionScript(params: GetRepetitionInput): string 
     return JSON.stringify({ success: false, error: e.message || String(e) });
   }
 })();`;
-}
-
-/**
- * Escape string for safe embedding in JavaScript.
- */
-function escapeForJS(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
 }

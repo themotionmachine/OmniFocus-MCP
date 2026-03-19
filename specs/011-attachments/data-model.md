@@ -1,0 +1,116 @@
+# Data Model: Attachments & Linked Files
+
+**Feature Branch**: `011-attachments`
+**Date**: 2026-03-18
+
+## Entities
+
+### AttachmentInfo
+
+Metadata returned by `list_attachments` for each embedded file in a task/project.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `index` | `number` | Zero-based positional index in the attachments array |
+| `filename` | `string` | Resolved as `preferredFilename \|\| filename \|\| 'unnamed'` |
+| `type` | `'File' \| 'Directory' \| 'Link'` | `FileWrapper.Type` enum value (always `'File'` for embedded attachments) |
+| `size` | `number` | Size in bytes from `wrapper.contents.length` |
+
+**Notes**:
+- `index` is stable within a single `list_attachments` call but may shift after removal operations.
+- `type` is always `'File'` for embedded attachments; `'Directory'` and `'Link'` are theoretically possible but unlikely in practice.
+
+### LinkedFileInfo
+
+Metadata returned by `list_linked_files` for each linked file reference on a task/project.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | `string` | Full `file://` URL from `URL.absoluteString` |
+| `filename` | `string` | Filename from `URL.lastPathComponent` |
+| `extension` | `string` | File extension from `URL.pathExtension` |
+
+### AddAttachmentParams
+
+Input for adding an embedded attachment.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | `string` | Yes | Task or project OmniFocus ID |
+| `filename` | `string` | Yes | Name for the embedded file (non-empty) |
+| `data` | `string` | Yes | Base64-encoded file content (non-empty) |
+
+**Validation rules**:
+- `id`: min 1 character
+- `filename`: min 1 character, max 255 characters; must not contain `/`, `\`, or `..` (pure basename only)
+- `data`: Zod pipeline strips all whitespace first via `.transform((val) => val.replace(/\s/g, ''))`, then enforces max 69,905,068 characters on the stripped string via `.refine()` (Pattern B -- `.transform()` then `.refine()`, since `.max()` cannot follow `.transform()` in Zod 4.x); must be non-empty after stripping; must match base64 character set (`/^[A-Za-z0-9+/]*={0,2}$/`) after stripping
+- Decoded size > 10 MB: warning in response (template: `"Attachment size ({size} MB) exceeds 10 MB; may impact OmniFocus Sync performance"`)
+- Decoded size > 50 MB: rejection with `SIZE_EXCEEDED` error code
+
+### AddAttachmentError Codes
+
+| Code | Meaning | When |
+|------|---------|------|
+| `INVALID_BASE64` | `data` field contains invalid base64 characters (after whitespace stripping) | Server-side regex validation fails |
+| `SIZE_EXCEEDED` | Decoded payload exceeds the 50 MB hard limit | `Math.floor((data.length * 3) / 4) - padding > 52,428,800` |
+| `NOT_FOUND` | Provided ID does not match any task or project | `Task.byIdentifier()` and `Project.byIdentifier()` both return null |
+
+### RemoveAttachmentParams
+
+Input for removing an embedded attachment by index.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | `string` | Yes | Task or project OmniFocus ID |
+| `index` | `number` | Yes | Zero-based index of attachment to remove |
+
+**Validation rules**:
+- `id`: min 1 character
+- `index`: non-negative integer (z.number().int().min(0))
+
+### AddLinkedFileParams
+
+Input for adding a linked file reference.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | `string` | Yes | Task or project OmniFocus ID |
+| `url` | `string` | Yes | `file://` URL string |
+
+**Validation rules**:
+- `id`: min 1 character
+- `url`: min 1 character, must start with `file://`
+
+## Relationships
+
+```text
+Task / Project (via project.task)
+├── attachments: AttachmentInfo[]     (embedded FileWrapper objects)
+└── linkedFileURLs: LinkedFileInfo[]  (lightweight URL bookmarks)
+```
+
+- A task or project can have zero or more attachments.
+- A task or project can have zero or more linked files.
+- Attachments are embedded binary data stored in the OmniFocus database.
+- Linked files are lightweight `file://` URL references to local filesystem.
+- Projects delegate all attachment/linked file operations to their root task via `project.task`.
+
+## State Transitions
+
+No state machines apply. Attachments and linked files are simple CRUD:
+- **Create**: Add attachment / Add linked file
+- **Read**: List attachments / List linked files
+- **Delete**: Remove attachment by index (linked file removal deferred to future phase)
+
+Attachment indices shift after removal (e.g., removing index 1 from [0,1,2] yields new indices [0,1]).
+
+## OmniJS API Mapping
+
+| Operation | OmniJS API |
+|-----------|-----------|
+| List attachments | `task.attachments` (array of FileWrapper) |
+| Add attachment | `task.addAttachment(FileWrapper.withContents(name, Data.fromBase64(str)))` |
+| Remove attachment | `task.removeAttachmentAtIndex(index)` |
+| List linked files | `task.linkedFileURLs` (array of URL) |
+| Add linked file | `task.addLinkedFileURL(URL.fromString(urlString))` |
+| Resolve project | `Project.byIdentifier(id).task` |

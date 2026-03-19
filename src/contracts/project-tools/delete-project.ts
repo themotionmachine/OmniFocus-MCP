@@ -40,11 +40,11 @@ export type DeleteProjectSuccess = z.infer<typeof DeleteProjectSuccessSchema>;
  * Includes standard error and disambiguation error.
  */
 export const DeleteProjectErrorSchema = z.union([
+  DisambiguationErrorSchema,
   z.object({
     success: z.literal(false),
     error: z.string().describe('Error message')
-  }),
-  DisambiguationErrorSchema
+  })
 ]);
 
 export type DeleteProjectError = z.infer<typeof DeleteProjectErrorSchema>;

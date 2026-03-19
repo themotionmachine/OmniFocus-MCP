@@ -1,6 +1,7 @@
-import type {
-  MarkReviewedInput,
-  MarkReviewedResponse
+import {
+  type MarkReviewedInput,
+  type MarkReviewedResponse,
+  MarkReviewedResponseSchema
 } from '../../contracts/review-tools/mark-reviewed.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
@@ -21,7 +22,7 @@ import { executeOmniJS } from '../../utils/scriptExecution.js';
 export async function markReviewed(params: MarkReviewedInput): Promise<MarkReviewedResponse> {
   const script = generateMarkReviewedScript(params);
   const result = await executeOmniJS(script);
-  return result as MarkReviewedResponse;
+  return MarkReviewedResponseSchema.parse(result);
 }
 
 /**

@@ -1,7 +1,9 @@
-import type {
-  ClearRepetitionInput,
-  ClearRepetitionResponse
+import {
+  type ClearRepetitionInput,
+  type ClearRepetitionResponse,
+  ClearRepetitionResponseSchema
 } from '../../contracts/repetition-tools/clear-repetition.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -23,7 +25,7 @@ export async function clearRepetition(
     };
   }
 
-  return result as ClearRepetitionResponse;
+  return ClearRepetitionResponseSchema.parse(result);
 }
 
 /**
@@ -73,16 +75,4 @@ export function generateClearRepetitionScript(params: ClearRepetitionInput): str
     return JSON.stringify({ success: false, error: e.message || String(e) });
   }
 })();`;
-}
-
-/**
- * Escape string for safe embedding in JavaScript.
- */
-function escapeForJS(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
 }

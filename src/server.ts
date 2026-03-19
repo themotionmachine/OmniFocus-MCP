@@ -2,7 +2,9 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import * as addAttachmentTool from './tools/definitions/addAttachment.js';
 import * as addFolderTool from './tools/definitions/addFolder.js';
+import * as addLinkedFileTool from './tools/definitions/addLinkedFile.js';
 import * as addNotificationTool from './tools/definitions/addNotification.js';
 import * as addOmniFocusTaskTool from './tools/definitions/addOmniFocusTask.js';
 import * as addProjectTool from './tools/definitions/addProject.js';
@@ -33,7 +35,9 @@ import * as getProjectTool from './tools/definitions/getProject.js';
 import * as getProjectsForReviewTool from './tools/definitions/getProjectsForReview.js';
 import * as getRepetitionTool from './tools/definitions/getRepetition.js';
 import * as getTaskTool from './tools/definitions/getTask.js';
+import * as listAttachmentsTool from './tools/definitions/listAttachments.js';
 import * as listFoldersTool from './tools/definitions/listFolders.js';
+import * as listLinkedFilesTool from './tools/definitions/listLinkedFiles.js';
 import * as listNotificationsTool from './tools/definitions/listNotifications.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
 import * as listProjectsTool from './tools/definitions/listProjects.js';
@@ -47,6 +51,7 @@ import * as moveProjectTool from './tools/definitions/moveProject.js';
 import * as moveSectionsTool from './tools/definitions/moveSections.js';
 import * as moveTasksTool from './tools/definitions/moveTasks.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
+import * as removeAttachmentTool from './tools/definitions/removeAttachment.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as removeNotificationTool from './tools/definitions/removeNotification.js';
@@ -421,6 +426,42 @@ server.tool(
   'Postpone an Absolute notification on an OmniFocus task by setting a new fire datetime. Only works on Absolute kind notifications',
   snoozeNotificationTool.schema.shape,
   snoozeNotificationTool.handler
+);
+
+// Attachment tools
+server.tool(
+  'list_attachments',
+  'List all embedded file attachments on an OmniFocus task or project. Returns filename, type, size, and zero-based index for each attachment. Use the index with remove_attachment to remove a specific attachment',
+  listAttachmentsTool.schema.shape,
+  listAttachmentsTool.handler
+);
+
+server.tool(
+  'add_attachment',
+  'Add a base64-encoded file as an embedded attachment to an OmniFocus task or project. Files over 10 MB return a sync performance warning; files over 50 MB are rejected',
+  addAttachmentTool.schema.shape,
+  addAttachmentTool.handler
+);
+
+server.tool(
+  'remove_attachment',
+  'Remove a specific embedded attachment from an OmniFocus task or project by its zero-based index. Call list_attachments first to get current indices. Remaining attachments are re-indexed',
+  removeAttachmentTool.schema.shape,
+  removeAttachmentTool.handler
+);
+
+server.tool(
+  'list_linked_files',
+  'List all linked file URL references on an OmniFocus task or project. Returns url, filename, and extension for each linked file',
+  listLinkedFilesTool.schema.shape,
+  listLinkedFilesTool.handler
+);
+
+server.tool(
+  'add_linked_file',
+  'Add a linked file reference (file:// URL) to an OmniFocus task or project. The file is not embedded; only a reference to the filesystem path is stored',
+  addLinkedFileTool.schema.shape,
+  addLinkedFileTool.handler
 );
 
 // Phase 10 Bulk Operations Tools

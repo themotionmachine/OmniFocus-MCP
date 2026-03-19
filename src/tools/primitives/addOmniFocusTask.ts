@@ -1,3 +1,4 @@
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { logger } from '../../utils/logger.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
@@ -21,10 +22,6 @@ export interface AddOmniFocusTaskParams {
  * Generate Omni Automation JavaScript for task creation
  */
 function generateOmniScript(params: AddOmniFocusTaskParams): string {
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-
   const name = escapeForJS(params.name);
   const note = params.note ? escapeForJS(params.note) : '';
   const dueDate = params.dueDate || '';

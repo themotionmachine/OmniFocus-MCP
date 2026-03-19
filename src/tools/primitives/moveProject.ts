@@ -1,4 +1,9 @@
-import type { MoveProjectInput, MoveProjectResponse } from '../../contracts/project-tools/index.js';
+import {
+  type MoveProjectInput,
+  type MoveProjectResponse,
+  MoveProjectResponseSchema
+} from '../../contracts/project-tools/index.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { logger } from '../../utils/logger.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
@@ -16,15 +21,6 @@ function generateOmniScript(params: MoveProjectInput): string {
     beforeProject,
     afterProject
   } = params;
-
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t');
 
   const idEscaped = id ? escapeForJS(id) : '';
   const nameEscaped = name ? escapeForJS(name) : '';
@@ -198,7 +194,7 @@ export async function moveProject(params: MoveProjectInput): Promise<MoveProject
   try {
     const script = generateOmniScript(params);
     const result = await executeOmniJS(script);
-    return result as MoveProjectResponse;
+    return MoveProjectResponseSchema.parse(result);
   } catch (error: unknown) {
     logger.error('Error in moveProject', 'moveProject', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -158,10 +158,15 @@ describe('listTasks with date and status filters', () => {
         {
           id: 'task1',
           name: 'Task due in range',
-          status: 'Available',
+          taskStatus: 'Available',
           dueDate: '2025-06-15T00:00:00Z',
           flagged: false,
-          completed: false
+          deferDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: [],
+          tagNames: []
         }
       ]
     };
@@ -187,16 +192,28 @@ describe('listTasks with date and status filters', () => {
         {
           id: 'task1',
           name: 'Available task',
-          status: 'Available',
+          taskStatus: 'Available',
           flagged: false,
-          completed: false
+          deferDate: null,
+          dueDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: [],
+          tagNames: []
         },
         {
           id: 'task2',
           name: 'Blocked task',
-          status: 'Blocked',
+          taskStatus: 'Blocked',
           flagged: false,
-          completed: false
+          deferDate: null,
+          dueDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: [],
+          tagNames: []
         }
       ]
     };
@@ -208,8 +225,8 @@ describe('listTasks with date and status filters', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.tasks).toHaveLength(2);
-      expect(result.tasks[0].status).toBe('Available');
-      expect(result.tasks[1].status).toBe('Blocked');
+      expect(result.tasks[0].taskStatus).toBe('Available');
+      expect(result.tasks[1].taskStatus).toBe('Blocked');
     }
   });
 
@@ -220,9 +237,15 @@ describe('listTasks with date and status filters', () => {
         {
           id: 'task1',
           name: 'Flagged task',
-          status: 'Available',
+          taskStatus: 'Available',
           flagged: true,
-          completed: false
+          deferDate: null,
+          dueDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: [],
+          tagNames: []
         }
       ]
     };
@@ -245,16 +268,28 @@ describe('listTasks with date and status filters', () => {
         {
           id: 'task1',
           name: 'Active task',
-          status: 'Available',
+          taskStatus: 'Available',
           flagged: false,
-          completed: false
+          deferDate: null,
+          dueDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: [],
+          tagNames: []
         },
         {
           id: 'task2',
           name: 'Completed task',
-          status: 'Available',
+          taskStatus: 'Completed',
           flagged: false,
-          completed: true
+          deferDate: null,
+          dueDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: [],
+          tagNames: []
         }
       ]
     };
@@ -266,7 +301,7 @@ describe('listTasks with date and status filters', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.tasks).toHaveLength(2);
-      expect(result.tasks[1].completed).toBe(true);
+      expect(result.tasks[1].taskStatus).toBe('Completed');
     }
   });
 
@@ -329,13 +364,15 @@ describe('listTasks with tag filter', () => {
         {
           id: 'task1',
           name: 'Task with both tags',
-          status: 'Available',
+          taskStatus: 'Available',
           flagged: false,
-          completed: false,
-          tags: [
-            { id: 't1', name: 'Work' },
-            { id: 't2', name: 'Urgent' }
-          ]
+          deferDate: null,
+          dueDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: ['t1', 't2'],
+          tagNames: ['Work', 'Urgent']
         }
       ]
     };
@@ -360,18 +397,28 @@ describe('listTasks with tag filter', () => {
         {
           id: 'task1',
           name: 'Task with t1',
-          status: 'Available',
+          taskStatus: 'Available',
           flagged: false,
-          completed: false,
-          tags: [{ id: 't1', name: 'Work' }]
+          deferDate: null,
+          dueDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: ['t1'],
+          tagNames: ['Work']
         },
         {
           id: 'task2',
           name: 'Task with t2',
-          status: 'Available',
+          taskStatus: 'Available',
           flagged: false,
-          completed: false,
-          tags: [{ id: 't2', name: 'Urgent' }]
+          deferDate: null,
+          dueDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: ['t2'],
+          tagNames: ['Urgent']
         }
       ]
     };
@@ -395,18 +442,28 @@ describe('listTasks with tag filter', () => {
         {
           id: 'task1',
           name: 'Task with Work tag',
-          status: 'Available',
+          taskStatus: 'Available',
           flagged: false,
-          completed: false,
-          tags: [{ id: 't1', name: 'Work' }]
+          deferDate: null,
+          dueDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: ['t1'],
+          tagNames: ['Work']
         },
         {
           id: 'task2',
           name: 'Task with Urgent tag',
-          status: 'Available',
+          taskStatus: 'Available',
           flagged: false,
-          completed: false,
-          tags: [{ id: 't2', name: 'Urgent' }]
+          deferDate: null,
+          dueDate: null,
+          plannedDate: null,
+          projectId: null,
+          projectName: null,
+          tagIds: ['t2'],
+          tagNames: ['Urgent']
         }
       ]
     };

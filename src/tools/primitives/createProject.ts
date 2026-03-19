@@ -1,7 +1,9 @@
-import type {
-  CreateProjectInput,
-  CreateProjectResponse
+import {
+  type CreateProjectInput,
+  type CreateProjectResponse,
+  CreateProjectResponseSchema
 } from '../../contracts/project-tools/index.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { logger } from '../../utils/logger.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
@@ -29,15 +31,6 @@ function generateOmniScript(params: CreateProjectInput): string {
     shouldUseFloatingTimeZone,
     estimatedMinutes
   } = params;
-
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t');
 
   const nameEscaped = escapeForJS(name);
   const folderIdEscaped = folderId ? escapeForJS(folderId) : '';
@@ -221,7 +214,7 @@ export async function createProject(params: CreateProjectInput): Promise<CreateP
   try {
     const script = generateOmniScript(params);
     const result = await executeOmniJS(script);
-    return result as CreateProjectResponse;
+    return CreateProjectResponseSchema.parse(result);
   } catch (error: unknown) {
     logger.error('Error in createProject', 'createProject', { error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

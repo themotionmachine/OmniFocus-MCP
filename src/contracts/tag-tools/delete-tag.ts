@@ -28,11 +28,11 @@ export const DeleteTagSuccessSchema = z.object({
  * Includes standard error and disambiguation error.
  */
 export const DeleteTagErrorSchema = z.union([
+  DisambiguationErrorSchema,
   z.object({
     success: z.literal(false),
     error: z.string().describe('Error message')
-  }),
-  DisambiguationErrorSchema
+  })
 ]);
 
 /**

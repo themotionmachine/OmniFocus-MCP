@@ -1,7 +1,9 @@
-import type {
-  RemoveNotificationInput,
-  RemoveNotificationResponse
+import {
+  type RemoveNotificationInput,
+  type RemoveNotificationResponse,
+  RemoveNotificationResponseSchema
 } from '../../contracts/notification-tools/remove-notification.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -15,7 +17,7 @@ export async function removeNotification(
 ): Promise<RemoveNotificationResponse> {
   const script = generateRemoveNotificationScript(params);
   const result = await executeOmniJS(script);
-  return result as RemoveNotificationResponse;
+  return RemoveNotificationResponseSchema.parse(result);
 }
 
 /**
@@ -130,16 +132,4 @@ export function generateRemoveNotificationScript(params: RemoveNotificationInput
     });
   }
 })();`;
-}
-
-/**
- * Escape string for safe embedding in JavaScript.
- */
-function escapeForJS(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
 }

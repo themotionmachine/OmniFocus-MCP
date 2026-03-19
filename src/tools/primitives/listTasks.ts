@@ -1,4 +1,9 @@
-import type { ListTasksInput, ListTasksResponse } from '../../contracts/task-tools/list-tasks.js';
+import {
+  type ListTasksInput,
+  type ListTasksResponse,
+  ListTasksResponseSchema
+} from '../../contracts/task-tools/list-tasks.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -10,7 +15,7 @@ import { executeOmniJS } from '../../utils/scriptExecution.js';
 export async function listTasks(params: ListTasksInput): Promise<ListTasksResponse> {
   const script = generateListTasksScript(params);
   const result = await executeOmniJS(script);
-  return result as ListTasksResponse;
+  return ListTasksResponseSchema.parse(result);
 }
 
 /**
@@ -315,16 +320,4 @@ function generateDateFilters(
   }
 
   return filters.length > 0 ? filters.join('\n') : '// No date filters';
-}
-
-/**
- * Escape string for safe embedding in JavaScript.
- */
-function escapeForJS(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
 }

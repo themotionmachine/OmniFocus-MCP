@@ -1,4 +1,9 @@
-import type { DeleteTagInput, DeleteTagResponse } from '../../contracts/tag-tools/delete-tag.js';
+import {
+  type DeleteTagInput,
+  type DeleteTagResponse,
+  DeleteTagResponseSchema
+} from '../../contracts/tag-tools/delete-tag.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
 /**
@@ -12,7 +17,7 @@ import { executeOmniJS } from '../../utils/scriptExecution.js';
 export async function deleteTag(params: DeleteTagInput): Promise<DeleteTagResponse> {
   const script = generateDeleteTagScript(params);
   const result = await executeOmniJS(script);
-  return result as DeleteTagResponse;
+  return DeleteTagResponseSchema.parse(result);
 }
 
 /**
@@ -20,10 +25,6 @@ export async function deleteTag(params: DeleteTagInput): Promise<DeleteTagRespon
  */
 function generateDeleteTagScript(params: DeleteTagInput): string {
   const { id, name } = params;
-
-  // Escape string values for JavaScript
-  const escapeForJS = (str: string): string =>
-    str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 
   return `(function() {
   try {

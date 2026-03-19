@@ -1,3 +1,4 @@
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { logger } from '../../utils/logger.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
 
@@ -12,10 +13,6 @@ export interface RemoveItemParams {
  * Generate Omni Automation JavaScript for item removal
  */
 function generateOmniScript(params: RemoveItemParams): string {
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-
   const id = params.id ? escapeForJS(params.id) : '';
   const name = params.name ? escapeForJS(params.name) : '';
   const itemType = params.itemType;

@@ -1,30 +1,17 @@
-import type { MoveFolderInput } from '../../contracts/folder-tools/move-folder.js';
-import type { DisambiguationError } from '../../contracts/folder-tools/shared/disambiguation.js';
+import {
+  type MoveFolderInput,
+  type MoveFolderResponse,
+  MoveFolderResponseSchema
+} from '../../contracts/folder-tools/move-folder.js';
+import { escapeForJS } from '../../utils/escapeForJS.js';
 import { logger } from '../../utils/logger.js';
 import { executeOmniJS } from '../../utils/scriptExecution.js';
-
-/**
- * Response type for moveFolder
- */
-export type MoveFolderResponse =
-  | { success: true; id: string; name: string }
-  | { success: false; error: string }
-  | DisambiguationError;
 
 /**
  * Generate Omni Automation JavaScript for moving a folder
  */
 function generateOmniScript(params: MoveFolderInput): string {
   const { id, name, position } = params;
-
-  // Escape strings for JavaScript
-  const escapeForJS = (str: string): string =>
-    str
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t');
 
   const idEscaped = id ? escapeForJS(id) : '';
   const nameEscaped = name ? escapeForJS(name) : '';
@@ -174,7 +161,7 @@ export async function moveFolder(params: MoveFolderInput): Promise<MoveFolderRes
 
   try {
     // Execute via Omni Automation (stdin piping, no temp files)
-    const result = (await executeOmniJS(script)) as MoveFolderResponse;
+    const result = MoveFolderResponseSchema.parse(await executeOmniJS(script));
 
     // Pass through the result (success, error, or disambiguation)
     return result;
