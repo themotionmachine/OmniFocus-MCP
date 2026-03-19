@@ -10,7 +10,7 @@
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 43 FRs, 5 user stories, 25 scenarios, 0 clarifications |
-| Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
+| Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; byName() confirmed, iconColor confirmed v4.5.2+, clean-break migration |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
@@ -201,8 +201,16 @@ for context-based task views.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | OmniJS API | | |
-| 2 | Legacy Migration | | |
+| 1 | OmniJS Perspective API | 5 asked, 5 answered | `byName()`/`byIdentifier()` confirmed; `iconColor` confirmed v4.5.2+; `archivedFilterRules` opaque object (v4.2+); FR-010 corrected, FR-012a added, FR-039 CONTINGENCY removed |
+| 2 | Legacy Migration | 5 asked, 5 answered | Clean break: new `type` enum replaces legacy booleans; new Zod contracts; replace-in-place in server.ts; CSS hex for iconColor input; delete legacy files |
+
+#### Critical Corrections from Clarify
+
+1. **`byName()` and `byIdentifier()` EXIST** — FR-010 corrected. Spec originally said "no `byName()` method exists" — API confirms both exist on `Perspective.Custom`.
+2. **`iconColor` confirmed (v4.5.2+)** — FR-039 CONTINGENCY removed. Version-gated with `app.userVersion.atLeast(new Version('4.5.2'))`.
+3. **`archivedFilterRules` version-gated (v4.2+)** — FR-012a added. Opaque object returned via JSON.stringify.
+4. **Clean-break migration** — No backward compatibility. Delete legacy files, replace registrations in server.ts.
+5. **CSS hex color input** — `set_perspective_icon` accepts "#RRGGBB" or "#RRGGBBAA", converts to `Color.RGB()` in primitive.
 
 ---
 

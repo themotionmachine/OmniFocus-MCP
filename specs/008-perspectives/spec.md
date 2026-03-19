@@ -38,6 +38,41 @@ This phase replaces two legacy tools that predate the modern architecture:
 Three new tools are added: `switch_perspective`, `export_perspective`, and
 `set_perspective_icon`.
 
+**Migration Strategy: Clean Break**
+
+The migration follows a clean-break approach with no backward compatibility shims:
+
+- **Input schemas**: The legacy `includeBuiltIn`/`includeCustom` boolean parameters are
+  replaced with a single `type` enum ("all"/"builtin"/"custom"). No dual-support period.
+- **Response shapes**: New Zod contract schemas following the modern
+  definitions/primitives/contracts pattern replace the legacy undocumented response shapes.
+  The legacy `OmnifocusPerspective` interface in `types.ts` and `PerspectiveItem` interface
+  are superseded by new contracts in `src/contracts/perspective-tools/`.
+- **server.ts transition**: Old tool registrations (`list_perspectives` and
+  `get_perspective_view`) are removed and replaced with new registrations in-place. The old
+  `get_perspective_view` tool name is retired entirely (replaced by `get_perspective`).
+- **File cleanup**: Legacy files are deleted, not deprecated:
+  - Delete `src/tools/definitions/listPerspectives.ts` (legacy definition)
+  - Delete `src/tools/definitions/getPerspectiveView.ts` (legacy definition)
+  - Delete `src/tools/primitives/listPerspectives.ts` (legacy primitive)
+  - Delete `src/tools/primitives/getPerspectiveView.ts` (legacy primitive)
+  - Remove `OmnifocusPerspective` interface from `src/types.ts`
+- **Rationale**: MCP tools are consumed by AI assistants, not versioned APIs with external
+  consumers. The legacy tools have no tests, no contracts, and no documented response shapes.
+  No deprecation period is needed.
+
+---
+
+## Clarifications
+
+### Session 2026-03-18
+
+- Q: Should the new `list_perspectives` use the spec's clean `type` enum parameter or maintain backward-compatible `includeBuiltIn`/`includeCustom` boolean parameters? → A: Clean break. Use the new `type` enum. MCP tools are consumed by AI assistants, not versioned APIs. No external consumers to break. The legacy tool has no tests or contracts.
+- Q: Should the new tools use clean Zod contract schemas or maintain backward-compatible response shapes matching the legacy `OmnifocusPerspective`/`PerspectiveItem` interfaces? → A: Clean break on response shapes. Use new Zod contract schemas following the modern definitions/primitives/contracts pattern. The legacy response shapes are undocumented and untested.
+- Q: How should the transition be handled in server.ts -- replace registrations in-place or add alongside with deprecation? → A: Replace in-place. Remove old tool registrations and register new ones. Delete old primitive and definition files. No deprecation period needed since there are no external consumers.
+- Q: What color input format should `set_perspective_icon` accept for the `color` parameter? → A: Accept CSS hex strings (e.g., "#FF0000") and convert to OmniJS `Color.RGB(r, g, b, a)` in the primitive. This is the simplest format for AI assistants to produce.
+- Q: What is the general migration principle for any remaining ambiguities about legacy tool handling? → A: Clean break, no backward compatibility shims. Delete old files, create new files following current architecture patterns.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
@@ -202,8 +237,7 @@ As a GTD practitioner, I want to set a perspective's icon color so I can visuall
 organize my perspectives in the OmniFocus sidebar.
 
 **Why this priority**: Visual customization is a convenience feature. The `iconColor`
-property must be verified in OmniFocus Script Editor before implementation; this
-tool may be dropped if the property does not exist.
+property is available in OmniFocus v4.5.2+ and must be version-gated accordingly.
 
 **Independent Test**: Can be tested by calling `set_perspective_icon` on a custom
 perspective with a color value and verifying the color changes in OmniFocus.
@@ -244,17 +278,17 @@ perspective with a color value and verifying the color changes in OmniFocus.
 - **Empty custom perspectives list**: When no custom perspectives exist, `list_perspectives`
   should return an empty array for the custom section, not an error.
 
-- **Perspective with complex filter rules**: Filter rules are stored as archived JSON.
-  The system should return them as-is without attempting to interpret or validate the
-  rule structure.
+- **Perspective with complex filter rules**: Filter rules are stored as opaque objects
+  owned by OmniFocus. The system serializes them via `JSON.stringify` and returns them
+  as-is without attempting to interpret or validate the rule structure. Requires v4.2+.
 
 - **Export file format**: Custom perspective exports produce `.ofocus-perspective` files
   via the `fileWrapper()` API. The system should handle the binary/wrapper format
   appropriately.
 
-- **`iconColor` property may not exist**: The `iconColor` property is not documented in
-  official OmniAutomation docs. If verification in Script Editor shows it does not exist,
-  `set_perspective_icon` must be dropped from the spec.
+- **`iconColor` requires v4.5.2+**: The `iconColor` property was added in OmniFocus v4.5.2.
+  The `set_perspective_icon` tool must version-gate using
+  `app.userVersion.atLeast(new Version('4.5.2'))` and return a clear error on older versions.
 
 - **Concurrent perspective switches**: If multiple `switch_perspective` calls arrive
   rapidly, only the last one should win (natural behavior of setting a window property).
@@ -269,7 +303,8 @@ perspective with a color value and verifying the color changes in OmniFocus.
 - **FR-002**: Tool MUST return all custom perspectives from `Perspective.Custom.all` with
   names, identifiers, and filter rule summaries
 - **FR-003**: Tool MUST support a `type` filter parameter accepting "all", "builtin", or
-  "custom" (default: "all")
+  "custom" (default: "all"). This replaces the legacy `includeBuiltIn`/`includeCustom`
+  boolean parameters -- no backward-compatible aliases are provided
 - **FR-004**: Built-in perspectives MUST include: Inbox, Projects, Tags, Forecast, Flagged,
   Review (these are always present on macOS)
 - **FR-005**: Custom perspectives MUST include `identifier`, `name`, and
@@ -278,22 +313,30 @@ perspective with a color value and verifying the color changes in OmniFocus.
   group (built-in first, then custom)
 - **FR-007**: Tool MUST return a `totalCount` indicating the total number of perspectives
   returned
-- **FR-008**: Tool MUST replace the legacy `list_perspectives` tool (same tool name, new
-  implementation)
+- **FR-008**: Tool MUST replace the legacy `list_perspectives` tool in-place in server.ts
+  (same tool name, new implementation with new definition/primitive/contract files; legacy
+  files deleted)
 
 ### Functional Requirements - get_perspective
 
 - **FR-009**: Tool MUST accept either a perspective `name` or `identifier` parameter
-- **FR-010**: Tool MUST look up custom perspectives by filtering `Perspective.Custom.all`
-  by name (no `byName()` method exists)
+- **FR-010**: Tool MUST look up custom perspectives using `Perspective.Custom.byName(name)`
+  for name-based lookups and `Perspective.Custom.byIdentifier(id)` for identifier-based
+  lookups (both return `Perspective.Custom` or `null`)
 - **FR-011**: Tool MUST return perspective metadata: name, identifier, type (builtin/custom)
 - **FR-012**: For custom perspectives, tool MUST return filter rule configuration including
-  `archivedFilterRules` and `archivedTopLevelFilterAggregation`
+  `archivedFilterRules` (serialized as-is via `JSON.stringify` -- opaque object owned by
+  OmniFocus, not parsed or validated) and `archivedTopLevelFilterAggregation`
+- **FR-012a**: Filter rule properties (`archivedFilterRules`, `archivedTopLevelFilterAggregation`)
+  MUST be version-gated using `app.userVersion.atLeast(new Version('4.2'))`. When the
+  OmniFocus version is below 4.2, these fields MUST be omitted (returned as `null`)
 - **FR-013**: Tool MUST return an error when the specified perspective is not found
 - **FR-014**: When name matches multiple custom perspectives, tool MUST return a
   disambiguation error with matching candidates
 - **FR-015**: Tool MUST replace the legacy `get_perspective_view` tool with the new
-  `get_perspective` tool name
+  `get_perspective` tool name. The old tool registration is removed from server.ts and
+  legacy definition/primitive files are deleted. The new tool uses clean Zod contract
+  schemas -- no backward-compatible response shape aliases
 - **FR-016**: For built-in perspectives, tool MUST return available metadata (name, type)
   noting that built-in perspectives have limited queryable properties
 
@@ -334,15 +377,16 @@ perspective with a color value and verifying the color changes in OmniFocus.
 - **FR-034**: Tool MUST return an error if the perspective is built-in (only custom
   perspectives can have their icon color modified)
 - **FR-035**: Tool MUST set the `iconColor` property on the custom perspective
-- **FR-036**: Tool MUST validate the color value format before attempting to set it
+- **FR-036**: Tool MUST accept color as a CSS hex string (e.g., "#FF0000" or "#ff0000")
+  and convert to OmniJS `Color.RGB(r, g, b, a)` in the primitive. The primitive MUST
+  validate the hex format (3, 4, 6, or 8 hex digits with leading `#`) before conversion
 - **FR-037**: Tool MUST return confirmation including the perspective name and the
   color that was set
 - **FR-038**: Tool MUST return an error if the specified perspective is not found
-- **FR-039**: CONTINGENCY: The `iconColor` property is not documented in official
-  OmniAutomation docs. FR-033 through FR-038 are contingent on verifying the property
-  exists via OmniFocus Script Editor during implementation. If `iconColor` does not
-  exist or is not writable, `set_perspective_icon` (FR-033 through FR-038) MUST be
-  dropped, reducing the tool count from 5 to 4.
+- **FR-039**: Tool MUST version-gate `iconColor` using
+  `app.userVersion.atLeast(new Version('4.5.2'))`. When the OmniFocus version is below
+  4.5.2, the tool MUST return an error indicating that icon color is not supported on
+  this version. The `iconColor` property accepts a `Color` object input.
 
 ### Error Handling Requirements
 
@@ -356,8 +400,8 @@ perspective with a color value and verifying the color changes in OmniFocus.
 
 | Parameter      | Lookup Method                                   | Scope             |
 | -------------- | ----------------------------------------------- | ----------------- |
-| `identifier`   | Direct match via `Perspective.Custom.all`        | Custom only       |
-| `name`         | Filter `Perspective.Custom.all` by name + match built-in names | All perspectives  |
+| `identifier`   | `Perspective.Custom.byIdentifier(id)`            | Custom only       |
+| `name`         | `Perspective.Custom.byName(name)` + match built-in names | All perspectives  |
 
 **Lookup precedence**: When `identifier` is provided, it takes precedence over `name`.
 If both are provided, only `identifier` is used.
@@ -433,9 +477,15 @@ or meaningful on macOS.
 - The `writeFileRepresentationIntoDirectory()` method accepts a URL object for the
   target directory
 - `document.windows[0]` reliably references the frontmost OmniFocus window
-- Filter rules stored as `archivedFilterRules` are returned as JSON-parseable strings
-- The `set_perspective_icon` tool is contingent on `iconColor` property verification;
-  if the property does not exist, the tool count drops from 5 to 4
+- Filter rules stored as `archivedFilterRules` are opaque objects serialized via
+  `JSON.stringify` in OmniJS; the structure is owned by OmniFocus and not parsed or
+  validated by the MCP server
+- The `iconColor` property is confirmed available in OmniFocus v4.5.2+; version-gated
+  at runtime
+- `archivedFilterRules` and `archivedTopLevelFilterAggregation` are confirmed available
+  in OmniFocus v4.2+; version-gated at runtime
+- `Perspective.Custom.byName()` and `Perspective.Custom.byIdentifier()` are available
+  as direct lookup methods (confirmed in OmniFocus API)
 
 ---
 

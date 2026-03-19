@@ -31,12 +31,19 @@
 
 ## Notes
 
-- FR-039 documents a CONTINGENCY (not a clarification) for `set_perspective_icon`: the
-  `iconColor` property must be verified in OmniFocus Script Editor during implementation.
-  If it does not exist, FR-033 through FR-038 and User Story 5 will be dropped, reducing
-  the tool count from 5 to 4. This is an explicit design decision, not an unresolved question.
-- OmniJS API references (`Perspective.Custom.all`, `fileWrapper()`,
-  `document.windows[0].perspective`) appear in functional requirements and key entities.
-  These are domain-specific references necessary for this OmniFocus MCP server project,
-  consistent with the pattern established in prior specs (e.g., 005-review-system).
-  No general implementation details (languages, frameworks, architecture) are prescribed.
+- FR-039 CONTINGENCY resolved: `iconColor` confirmed available in OmniFocus v4.5.2+
+  (source: omni-automation.com/omnifocus/OF-API.html). Version-gated at runtime using
+  `app.userVersion.atLeast(new Version('4.5.2'))`. All 5 tools are confirmed.
+- FR-010 corrected: `Perspective.Custom.byName()` and `Perspective.Custom.byIdentifier()`
+  confirmed as direct API methods (source: omni-automation.com/omnifocus/OF-API.html).
+  Spec previously stated "no `byName()` method exists" -- this was incorrect.
+- FR-012a added: `archivedFilterRules` and `archivedTopLevelFilterAggregation` version-gated
+  to v4.2+ following the same pattern as `set_advanced_repetition` in SPEC-007.
+- `archivedFilterRules` treated as opaque object serialized via `JSON.stringify` -- not
+  parsed or validated by the MCP server.
+- OmniJS API references (`Perspective.Custom.all`, `byName()`, `byIdentifier()`,
+  `fileWrapper()`, `document.windows[0].perspective`) appear in functional requirements
+  and key entities. These are domain-specific references necessary for this OmniFocus MCP
+  server project, consistent with the pattern established in prior specs (e.g.,
+  005-review-system, 007-repetition-rules). No general implementation details (languages,
+  frameworks, architecture) are prescribed.
