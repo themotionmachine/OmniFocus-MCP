@@ -19,6 +19,8 @@ export const SelectForecastDaysInputSchema = z.object({
       'Array of dates in ISO 8601 format (YYYY-MM-DD) to navigate to. Interpreted as local time.'
     )
 });
+
+export type SelectForecastDaysInput = z.infer<typeof SelectForecastDaysInputSchema>;
 ```
 
 ## Output Schema (Success)
@@ -40,6 +42,8 @@ export const SelectForecastDaysSuccessSchema = z.object({
       'UI state change warning. Always present. Informs AI assistant that the visible OmniFocus Forecast perspective was changed.'
     )
 });
+
+export type SelectForecastDaysSuccess = z.infer<typeof SelectForecastDaysSuccessSchema>;
 ```
 
 ## Output Schema (Error)
@@ -55,6 +59,8 @@ export const SelectForecastDaysErrorSchema = z.object({
       'Error code: INVALID_DATE, NO_WINDOW, PERSPECTIVE_SWITCH_FAILED, EMPTY_DATES'
     )
 });
+
+export type SelectForecastDaysError = z.infer<typeof SelectForecastDaysErrorSchema>;
 ```
 
 ## Response (Discriminated Union)
@@ -64,6 +70,8 @@ export const SelectForecastDaysResponseSchema = z.discriminatedUnion('success', 
   SelectForecastDaysSuccessSchema,
   SelectForecastDaysErrorSchema
 ]);
+
+export type SelectForecastDaysResponse = z.infer<typeof SelectForecastDaysResponseSchema>;
 ```
 
 ## Validation Rules
@@ -75,6 +83,8 @@ export const SelectForecastDaysResponseSchema = z.discriminatedUnion('success', 
 
 ## OmniJS Pattern
 
+**NOTE**: Uses synchronous IIFE pattern. Timer.once is NOT used because `evaluateJavascript` returns synchronously (see research.md item 11).
+
 ```javascript
 (function() {
   try {
@@ -83,29 +93,24 @@ export const SelectForecastDaysResponseSchema = z.discriminatedUnion('success', 
       return JSON.stringify({ success: false, error: 'No OmniFocus window is open', code: 'NO_WINDOW' });
     }
     win.perspective = Perspective.BuiltIn.Forecast;
-    Timer.once(1, function() {
-      try {
-        var fdays = [];
-        var selectedDates = [];
-        dateStrings.forEach(function(dateStr) {
-          var d = new Date(dateStr);
-          var fday = win.forecastDayForDate(d);
-          fdays.push(fday);
-          selectedDates.push(d.toISOString());
-        });
-        win.selectForecastDays(fdays);
-        return JSON.stringify({
-          success: true,
-          selectedDates: selectedDates,
-          selectedCount: fdays.length,
-          warning: 'This operation changed the visible Forecast perspective in OmniFocus to show the selected dates. The user may notice the view has changed.'
-        });
-      } catch (e) {
-        return JSON.stringify({ success: false, error: e.message || String(e) });
-      }
+    // Synchronous perspective switch; forecastDayForDate()/selectForecastDays() called immediately.
+    var fdays = [];
+    var selectedDates = [];
+    dateStrings.forEach(function(dateStr) {
+      var d = new Date(dateStr);
+      var fday = win.forecastDayForDate(d);
+      fdays.push(fday);
+      selectedDates.push(d.toISOString());
+    });
+    win.selectForecastDays(fdays);
+    return JSON.stringify({
+      success: true,
+      selectedDates: selectedDates,
+      selectedCount: fdays.length,
+      warning: 'This operation changed the visible Forecast perspective in OmniFocus to show the selected dates. The user may notice the view has changed.'
     });
   } catch (e) {
-    return JSON.stringify({ success: false, error: e.message || String(e) });
+    return JSON.stringify({ success: false, error: e.message || String(e), code: 'PERSPECTIVE_SWITCH_FAILED' });
   }
 })();
 ```

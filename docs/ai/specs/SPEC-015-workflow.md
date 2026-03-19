@@ -12,7 +12,7 @@
 | Specify | `/speckit.specify` | ✅ Complete | 12 FRs, 3 user stories, 16 scenarios, 0 clarifications |
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 12 findings; forecastDayForDate is window method, Forecast perspective required for ALL calls, Past/DistantFuture are aggregates |
 | Plan | `/speckit.plan` | ✅ Complete | 3 tools, 12 source files, 7 test files, 10 research decisions, 10/10 constitution pass |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (124 items), 18 gaps remediated; Timer.once incompatibility found, synchronous IIFE required |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
@@ -338,10 +338,10 @@ Focus on Forecast requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-workaround | | | |
-| type-safety | | | |
-| api-contracts | | | |
-| **Total** | | | |
+| api-workaround | 36 | 7 (all remediated) | Timer.once incompatibility, dayCount formula, perspective switch race condition, date I/O asymmetry |
+| type-safety | 48 | 7 (all remediated) | z.infer exports, date validation, validation layers, OmniJS result narrowing, error code typing |
+| api-contracts | 40 | 4 (all remediated) | Shared schema reuse, error code rationale, date format asymmetry |
+| **Total** | **124** | **18 (all remediated)** | |
 
 ---
 

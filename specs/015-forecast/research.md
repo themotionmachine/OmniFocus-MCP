@@ -17,22 +17,20 @@
 
 ### 2. Forecast Perspective Auto-Switch Pattern
 
-**Decision**: All OmniJS forecast scripts must auto-switch to Forecast perspective with `Timer.once(1, callback)` delay before calling any Forecast API methods.
+**Decision**: All OmniJS forecast scripts must auto-switch to Forecast perspective synchronously before calling any Forecast API methods. **UPDATED**: Timer.once pattern is NOT used (see item 11 for rationale).
 
-**Rationale**: Both `forecastDayForDate()` and `selectForecastDays()` throw errors if the Forecast perspective is not active. The Forecast perspective must be set and a 1-second timer delay allows the perspective switch to complete before API calls. This pattern is documented in official OmniJS examples.
+**Rationale**: Both `forecastDayForDate()` and `selectForecastDays()` throw errors if the Forecast perspective is not active. The perspective switch is set synchronously via `window.perspective = Perspective.BuiltIn.Forecast`, then Forecast APIs are called immediately. Official OmniJS examples use `Timer.once(1, callback)` for plugin/URL-scheme contexts, but this is incompatible with the MCP server's JXA `evaluateJavascript` execution model (see item 11).
 
 **Pattern**:
 ```javascript
 var win = document.windows[0];
 win.perspective = Perspective.BuiltIn.Forecast;
-Timer.once(1, function() {
-  // Forecast API calls safe here
-  var fday = win.forecastDayForDate(targetDate);
-});
+// Synchronous -- no Timer.once. If perspective not yet effective, catch block handles error.
+var fday = win.forecastDayForDate(targetDate);
 ```
 
 **Alternatives considered**:
-- Synchronous check-and-call: Not possible; perspective switch is asynchronous
+- Timer.once(1, callback): Incompatible with evaluateJavascript; return value lost (see item 11)
 - Skip perspective switch (assume already active): Unreliable; other tools may have changed the perspective
 - Check current perspective first, skip switch if already Forecast: Adds complexity for marginal benefit; always switching is idempotent and simpler (KISS)
 
@@ -167,3 +165,57 @@ win.selectForecastDays(fdays);
 **Alternatives considered**:
 - Warning only in tool description: Not visible in response; AI assistant might not relay it
 - Separate confirmation step: Over-engineered for a read/navigate operation (YAGNI)
+
+### 11. Timer.once Incompatibility with evaluateJavascript (Checklist Gap Resolution)
+
+**Decision**: Do NOT use `Timer.once(1, callback)` in OmniJS scripts executed via this MCP server. Use the standard synchronous IIFE pattern instead.
+
+**Rationale**: The MCP server executes OmniJS via JXA `app.evaluateJavascript(script)` (see `src/utils/scriptExecution.ts`). This call is synchronous -- it blocks until the script body finishes and returns the last evaluated expression. `Timer.once(1, callback)` schedules the callback to fire 1 second AFTER `evaluateJavascript` has already returned. Any `return JSON.stringify(...)` inside the callback is discarded. No existing primitive in this codebase (50+ tools) uses Timer.once. The official examples on omni-automation.com that use Timer.once are designed for OmniJS plugin/URL-scheme execution contexts, not for the JXA embedding model.
+
+**Implication**: The perspective switch (`window.perspective = Perspective.BuiltIn.Forecast`) must be set synchronously, followed by an immediate call to `forecastDayForDate()` in the same execution. If the synchronous approach fails because the perspective hasn't taken effect, the script catches the error and returns PERSPECTIVE_SWITCH_FAILED. Implementers MUST verify this in OmniFocus Script Editor before integration.
+
+**Sources**:
+- `src/utils/scriptExecution.ts` line 31: `const result = app.evaluateJavascript(...)` (synchronous)
+- omni-automation.com/omnifocus/window.html: "scripts may occasionally incorporate the use of a Timer function to allow the window time to change views" (plugin context)
+- discourse.omnigroup.com: `evaluateJavascript` returns synchronously in JXA context
+
+**Alternatives considered**:
+- Use Timer.once as shown in official examples: Incompatible with evaluateJavascript; return value lost
+- Use a polling/retry loop inside the script: Over-engineered; try synchronous first, fail gracefully
+- Use a different execution method (URL scheme): Would require architecture change; out of scope
+
+### 12. dayCount Calculation Formula
+
+**Decision**: Use millisecond arithmetic on midnight-normalized dates for day counting: `Math.round((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1`.
+
+**Rationale**: The Calendar API prohibition (Constitution Principle III) applies to adding variable-length periods (months/years) where DST transitions cause off-by-one errors. Day counting between midnight-normalized dates (`Calendar.current.startOfDay()`) is safe with millisecond math because both dates are at 00:00:00. This pattern is consistent with `getProjectsForReview.ts` which uses `getTime()` for date comparisons. The `+1` makes the range inclusive of both start and end dates.
+
+**Sources**:
+- `src/tools/primitives/getProjectsForReview.ts`: Uses `getTime()` for date comparisons
+- `specs/005-review-system/research.md`: Calendar API vs millisecond math guidance
+
+### 13. badgeCountsIncludeDeferredItems Handling
+
+**Decision**: Do NOT read or set `ForecastDay.badgeCountsIncludeDeferredItems` in any forecast tool. Document as out-of-scope.
+
+**Rationale**: This is a class-level Boolean property (confirmed via omni-automation.com/omnifocus/forecast.html) that controls a global Forecast preference. Modifying it would change behavior for all of OmniFocus, not just the MCP query. The separate `badgeCount` and `deferredCount` instance properties already provide the data breakdown needed by AI assistants. Setting this property falls under "Forecast preferences or settings" which is explicitly out of scope.
+
+**Sources**:
+- omni-automation.com/omnifocus/forecast.html: "Determines whether or not badges on Forecast days include items that are not yet available"
+- Spec Out of Scope: "Forecast preferences or settings (deferred to future settings-related specifications)"
+
+### 14. badgeKind() for Deferred-Only Days
+
+**Decision**: Document that `badgeKind()` returns `NoneAvailable` for days with only deferred items (no available tasks).
+
+**Rationale**: Per official API documentation, `NoneAvailable` means "There are no available tasks on the node's day. The node's badgeCount is guaranteed to be zero." A day with only deferred items has `badgeCount = 0` and `deferredCount > 0`. The `badgeKind()` function reflects available/due task status only, not deferred items.
+
+**Sources**:
+- omni-automation.com/omnifocus/forecast.html: ForecastDay.Status.NoneAvailable definition
+- omni-automation.com/omnifocus/OF-API.html: `NoneAvailable` -- "There are no available tasks"
+
+### 15. Date Input/Output Format Asymmetry
+
+**Decision**: Document the intentional asymmetry between local-time date inputs (YYYY-MM-DD) and UTC date outputs (`Date.toISOString()`).
+
+**Rationale**: Input dates use YYYY-MM-DD interpreted as local time (consistent with OmniFocus, per FR-008). Output dates use JavaScript's `Date.toISOString()` which produces UTC strings. This means midnight local time may appear as a different date in UTC for timezones west of GMT (e.g., `2026-03-18` in UTC-8 becomes `2026-03-18T08:00:00.000Z`). This is documented as intentional; AI assistants should be aware of the timezone offset in output dates.

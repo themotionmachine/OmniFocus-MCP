@@ -22,6 +22,15 @@ Represents a single calendar day's forecast data as returned by the MCP server.
 - `badgeCount` for Past/DistantFuture nodes reflects ALL items in that aggregate category, not a single day
 - `badgeStatus` is derived from `badgeKind()` function call (parentheses required)
 
+**Date Input/Output Format Asymmetry**:
+- **Input**: Clients provide dates as `YYYY-MM-DD` local date strings (e.g., `"2026-03-19"`), interpreted as local time consistent with OmniFocus date handling (FR-008).
+- **Output**: The `date` field in ForecastDayOutput uses JavaScript `Date.toISOString()` which produces UTC strings (e.g., `"2026-03-19T00:00:00.000Z"` for midnight local time in UTC+0, or `"2026-03-19T08:00:00.000Z"` for midnight local time in UTC-8).
+- **Implication**: AI assistants should be aware that output dates are UTC and may display a different calendar date for timezones west of GMT. This asymmetry is intentional: input format is user-friendly, output format is machine-parseable.
+- **Source**: Spec Clarifications Session 3 item 2, consistent with `src/contracts/task-tools/shared/task.ts` Date Handling pattern.
+
+**Shared Schema Reuse**:
+This schema is reused identically by both `get_forecast_range` (as an array element) and `get_forecast_day` (as a single object). The OmniJS `forecastDayForDate(date)` API returns identical ForecastDay objects regardless of query pattern -- there are no additional properties available for single-day queries. See plan.md "ForecastDayOutput Shared Schema Reuse" design decision for full rationale.
+
 ### ForecastDayKind (Enum)
 
 Classification of a forecast day node.
@@ -48,6 +57,8 @@ Badge status classification for a forecast day.
 | Overdue | Items are overdue |
 
 **Source**: `ForecastDay.Status.*` OmniJS enum constants, accessed via `forecastDay.badgeKind()`.
+
+**Note on deferred-only days**: A day with only deferred items (not yet available) returns `NoneAvailable` with `badgeCount = 0` and `deferredCount > 0`. The `badgeKind()` function reflects available/due task status only; deferred items are tracked separately via `deferredCount`.
 
 ## Relationships
 
