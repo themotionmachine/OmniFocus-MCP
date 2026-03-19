@@ -15,6 +15,8 @@ import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
 import * as batchUpdateTasksTool from './tools/definitions/batchUpdateTasks.js';
 import * as clearRepetitionTool from './tools/definitions/clearRepetition.js';
+import * as collapseItemsTool from './tools/definitions/collapseItems.js';
+import * as collapseNotesTool from './tools/definitions/collapseNotes.js';
 import * as convertTasksToProjectsTool from './tools/definitions/convertTasksToProjects.js';
 import * as createProjectTool from './tools/definitions/createProject.js';
 import * as createTagTool from './tools/definitions/createTag.js';
@@ -29,6 +31,9 @@ import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as editProjectTool from './tools/definitions/editProject.js';
 import * as editTagTool from './tools/definitions/editTag.js';
+import * as expandItemsTool from './tools/definitions/expandItems.js';
+import * as expandNotesTool from './tools/definitions/expandNotes.js';
+import * as focusItemsTool from './tools/definitions/focusItems.js';
 import * as getNextTaskTool from './tools/definitions/getNextTask.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
 import * as getProjectTool from './tools/definitions/getProject.js';
@@ -56,6 +61,8 @@ import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as removeNotificationTool from './tools/definitions/removeNotification.js';
 import * as removeTagsTool from './tools/definitions/removeTags.js';
+import * as revealItemsTool from './tools/definitions/revealItems.js';
+import * as selectItemsTool from './tools/definitions/selectItems.js';
 import * as setAdvancedRepetitionTool from './tools/definitions/setAdvancedRepetition.js';
 import * as setCommonRepetitionTool from './tools/definitions/setCommonRepetition.js';
 import * as setFloatingTimezoneTool from './tools/definitions/setFloatingTimezone.js';
@@ -64,6 +71,7 @@ import * as setProjectTypeTool from './tools/definitions/setProjectType.js';
 import * as setRepetitionTool from './tools/definitions/setRepetition.js';
 import * as setReviewIntervalTool from './tools/definitions/setReviewInterval.js';
 import * as snoozeNotificationTool from './tools/definitions/snoozeNotification.js';
+import * as unfocusTool from './tools/definitions/unfocus.js';
 import { logger } from './utils/logger.js';
 
 // Create an MCP server
@@ -426,6 +434,63 @@ server.tool(
   'Postpone an Absolute notification on an OmniFocus task by setting a new fire datetime. Only works on Absolute kind notifications',
   snoozeNotificationTool.schema.shape,
   snoozeNotificationTool.handler
+);
+
+// Phase 14 Window & UI Control Tools
+server.tool(
+  'reveal_items',
+  'Reveal one or more items in the OmniFocus outline, scrolling and expanding the hierarchy so they become visible on screen. WARNING: This operation changes the visible OmniFocus UI state.',
+  revealItemsTool.schema.shape,
+  revealItemsTool.handler
+);
+
+server.tool(
+  'expand_items',
+  'Expand outline nodes to show their children, with optional recursive expansion of all descendants. WARNING: This operation changes the visible OmniFocus UI state.',
+  expandItemsTool.schema.shape,
+  expandItemsTool.handler
+);
+
+server.tool(
+  'collapse_items',
+  'Collapse outline nodes to hide their children, with optional recursive collapse of all descendants. WARNING: This operation changes the visible OmniFocus UI state.',
+  collapseItemsTool.schema.shape,
+  collapseItemsTool.handler
+);
+
+server.tool(
+  'expand_notes',
+  'Expand notes on outline nodes to show note content inline, with optional recursive expansion on all descendants. WARNING: This operation changes the visible OmniFocus UI state.',
+  expandNotesTool.schema.shape,
+  expandNotesTool.handler
+);
+
+server.tool(
+  'collapse_notes',
+  'Collapse notes on outline nodes to hide note content, with optional recursive collapse on all descendants. WARNING: This operation changes the visible OmniFocus UI state.',
+  collapseNotesTool.schema.shape,
+  collapseNotesTool.handler
+);
+
+server.tool(
+  'focus_items',
+  'Focus the OmniFocus window on one or more projects or folders, narrowing the view to show only those items and their contents. Only projects and folders are valid — tasks and tags are rejected. WARNING: This operation changes the visible OmniFocus UI state.',
+  focusItemsTool.schema.shape,
+  focusItemsTool.handler
+);
+
+server.tool(
+  'unfocus',
+  'Clear focus from the OmniFocus window, restoring the full outline view. Idempotent — calling when already unfocused succeeds as a no-op. WARNING: This operation changes the visible OmniFocus UI state.',
+  unfocusTool.schema.shape,
+  unfocusTool.handler
+);
+
+server.tool(
+  'select_items',
+  'Select one or more items in the OmniFocus outline for visual review. Supports extending the existing selection or replacing it. Performs pre-flight reveal to ensure items are visible. WARNING: This operation changes the visible OmniFocus UI state.',
+  selectItemsTool.schema.shape,
+  selectItemsTool.handler
 );
 
 // Attachment tools

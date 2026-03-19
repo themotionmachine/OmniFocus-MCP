@@ -21,7 +21,7 @@ This document defines the specification roadmap for all remaining work. Each spe
 
 ## Roadmap Overview
 
-The remaining work is decomposed into **14 specifications** across **5 dependency tiers**:
+The remaining work is decomposed into **15 specifications** across **5 dependency tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
 |------|-------|---------|-----------------|
@@ -75,6 +75,8 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
     │    └── SPEC-018-019: Pasteboard & Document/Sync (7 tools)
     │
     └──► TIER 5 (Sequential — Optimization + Plugin Packaging)
+         ├── SPEC-022: OmniJS Response Validation (0 new tools, refactor)
+         │      │  Can run in parallel with SPEC-020
          ├── SPEC-020: Server Optimization (3 tools + infrastructure)
          │      │
          └── SPEC-021: Plugin & Skills Architecture (0 MCP tools,
@@ -101,12 +103,13 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 | SPEC-011 | Attachments & Linked Files | 5 | ✅ Complete | `specs/011-attachments/` | Merged ([PR #43](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/43)) |
 | SPEC-010 | Bulk Operations | 6 | ✅ Complete | `specs/010-bulk-operations/` | Merged ([PR #44](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/44)) |
 | SPEC-012 | TaskPaper Import/Export | 3 | ⏳ Pending | `specs/012-taskpaper/` | Specify |
-| SPEC-014 | Window & UI Control | 8 | ⏳ Pending | `specs/014-window-ui/` | Specify |
+| SPEC-014 | Window & UI Control | 8 | 🔄 In Progress | `specs/014-window-ui/` | PR Review ([PR #45](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/45)) |
 | SPEC-015 | Forecast | 3 | ⏳ Pending | `specs/015-forecast/` | Specify |
 | SPEC-016-017 | Settings & Deep Links | 5 | ⏳ Pending | `specs/016-settings-deeplinks/` | Specify |
 | SPEC-018-019 | Pasteboard & Document/Sync | 7 | ⏳ Pending | `specs/018-pasteboard-sync/` | Specify |
 | SPEC-020 | Server Optimization | 3 | ⏳ Pending | `specs/020-server-optimization/` | Blocked by all |
 | SPEC-021 | Plugin & Skills Architecture | 0 tools + 6 skills | ⏳ Pending | `specs/021-plugin-skills/` | Depends on SPEC-020 |
+| SPEC-022 | OmniJS Response Validation | 0 (refactor) | ⏳ Pending | `specs/022-response-validation/` | Parallel with SPEC-020 |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -799,6 +802,48 @@ Evidence: Anthropic's 32-page "Complete Guide to Building Skills for Claude" doc
 
 ---
 
+### SPEC-022: OmniJS Response Validation
+
+**Priority:** P2 | **Depends On:** None (all tool phases complete or in progress) | **Enables:** Improved runtime safety for SPEC-020 Server class migration
+
+**Goal:** Replace all `as Type` assertions on `executeOmniJS()` return values with Zod runtime validation across every primitive, enforcing the project's own "NEVER use type assertions" rule and catching OmniJS script bugs at the boundary.
+
+**Scope:**
+
+- 0 new MCP tools (cross-cutting refactor of ~43 existing primitives)
+- Replace every `return result as FooResponse` with `FooResponseSchema.parse(result)` or a lightweight wrapper
+- Decide on error strategy: `parse()` (throws `ZodError`) vs `safeParse()` (returns error object that can be wrapped in a structured MCP error)
+- Add a shared validation utility if warranted (e.g., `validateOmniJSResponse<T>(result, schema)`) to standardize error wrapping across all primitives
+- Update unit tests that mock `executeOmniJS` — mocks must now return schema-compliant objects or tests will fail at the parse boundary
+- Update CLAUDE.md to document the new pattern as the canonical way to handle `executeOmniJS` results
+
+**Motivation:**
+
+Currently, `executeOmniJS()` returns `Promise<unknown>` and every primitive casts the result with `as FooResponse`. This means:
+- If an OmniJS script has a typo in its JSON output (e.g., `sucess` instead of `success`), the cast silently lets it through
+- The Zod schemas exist for every response type but are only used in contract tests, never at the actual runtime boundary
+- The project's CLAUDE.md rule "NEVER use type assertions (`as Type`) — use Zod or type narrowing instead" is violated 43 times
+
+**Out of Scope:**
+
+- Changing `executeOmniJS` itself (its `Promise<unknown>` return type is correct)
+- Adding new Zod schemas (all response schemas already exist in `src/contracts/`)
+- Performance optimization of Zod parsing (Zod 4.x is fast enough for this use case)
+- Changing OmniJS script output formats (scripts remain unchanged)
+
+**Key Decisions:**
+
+**parse vs safeParse Decision (TBD):** Must decide whether OmniJS returning unexpected JSON should throw (crashing the tool call) or return a structured error. `parse()` is simpler — the MCP SDK catches thrown errors and returns them to the client. `safeParse()` allows custom error formatting but adds boilerplate to every primitive. Recommendation: Start with `parse()` for simplicity; the MCP SDK's error handling is sufficient.
+
+**Key Files:**
+
+- `src/tools/primitives/*.ts` — All ~43 primitive files need the `as Type` → `.parse()` change
+- `src/contracts/*/` — Import schemas (already exist, just need importing in primitives)
+- `tests/unit/*/` — Update mocks to return schema-compliant objects
+- `CLAUDE.md` — Document the new canonical pattern
+
+---
+
 ## Environment & Deployment Context
 
 ### Existing Infrastructure (No Changes Needed)
@@ -862,8 +907,9 @@ The following order maximizes value delivery while respecting dependencies (SPEC
 | 10 | SPEC-015 | 3 tools | Forecast is read-only, lower risk |
 | 11 | SPEC-016-017 | 5 tools | Settings + Deep Links are small utilities |
 | 12 | SPEC-018-019 | 7 tools | Pasteboard + Sync are app-level operations |
-| 13 | SPEC-020 | 3 tools + infra | Server Optimization — toolsets, TOON, logging, Tool Search compat |
-| 14 | SPEC-021 | 6 skills + 2 agents | Plugin & Skills — the user-facing product, wraps everything above |
+| 13 | SPEC-022 | 0 (refactor) | OmniJS Response Validation — replace `as Type` with Zod parse |
+| 14 | SPEC-020 | 3 tools + infra | Server Optimization — toolsets, TOON, logging, Tool Search compat |
+| 15 | SPEC-021 | 6 skills + 2 agents | Plugin & Skills — the user-facing product, wraps everything above |
 
 ---
 
