@@ -119,7 +119,7 @@ tests/
     convert-tasks-to-projects.contract.test.ts
     move-sections.contract.test.ts
     duplicate-sections.contract.test.ts
-  unit/primitives/
+  unit/bulk-tools/
     moveTasks.test.ts
     duplicateTasks.test.ts
     batchUpdateTasks.test.ts
@@ -164,7 +164,7 @@ All tools validate the shared target location (project, folder, inbox) before it
 Uses the native OmniJS `convertTasksToProjects()` function rather than manually creating projects and moving subtasks. Called one item at a time for per-item error handling.
 
 ### AD-08: Error code taxonomy
-9 error codes covering all failure modes: NOT_FOUND, DISAMBIGUATION_REQUIRED, TARGET_NOT_FOUND, OPERATION_FAILED, TAG_NOT_FOUND, RELATIVE_TARGET_NOT_FOUND, ALREADY_A_PROJECT, VERSION_NOT_SUPPORTED, VALIDATION_ERROR.
+9 error codes covering all failure modes. Per-item codes (in BulkBatchItemResult): NOT_FOUND, DISAMBIGUATION_REQUIRED, OPERATION_FAILED, TAG_NOT_FOUND, ALREADY_A_PROJECT, VERSION_NOT_SUPPORTED. Top-level codes (in ErrorSchema): TARGET_NOT_FOUND, RELATIVE_TARGET_NOT_FOUND, VALIDATION_ERROR.
 
 ### AD-09: Zod parse for OmniJS result type narrowing
 All 6 primitives MUST use `XxxResponseSchema.parse(result)` to narrow the `unknown` return type of `executeOmniJS()` into the typed response. Type assertions (`as Type`) are prohibited per CLAUDE.md and Constitution I (Type-First Development). The Zod response schema already exists in the contracts; the primitive imports it and calls `.parse()` at the boundary. If the OmniJS script returns malformed JSON, `ZodError` propagates to the definition handler's `try/catch` block and surfaces as a structured error. This establishes the correct pattern for all future tools.

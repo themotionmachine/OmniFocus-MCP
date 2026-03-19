@@ -69,7 +69,7 @@
 
 ### RED Phase - Tests First
 
-- [ ] T021 [P] [US1] Write unit tests for moveTasks primitive in `tests/unit/bulk-tools/moveTasks.test.ts` -- test: script generation with all position variants (project by ID/name, task by ID/name, inbox, beginning/ending/before/after), target pre-validation failure (TARGET_NOT_FOUND), relativeTo failure (RELATIVE_TARGET_NOT_FOUND), per-item NOT_FOUND, DISAMBIGUATION_REQUIRED, OPERATION_FAILED, partial failure (some succeed some fail), 100-item batch, inactive target warning, Zod parse of response -> verify FAILS
+- [ ] T021 [P] [US1] Write unit tests for moveTasks primitive in `tests/unit/bulk-tools/moveTasks.test.ts` -- test: script generation with all position variants (project by ID/name, task by ID/name, inbox, beginning/ending/before/after), target pre-validation failure (TARGET_NOT_FOUND), relativeTo failure (RELATIVE_TARGET_NOT_FOUND), per-item NOT_FOUND, DISAMBIGUATION_REQUIRED, OPERATION_FAILED, partial failure (some succeed some fail), 100-item batch, inactive target warning, post-move property preservation verification (FR-015: tags, notes, dates, flagged status, subtask hierarchy retained after move), Zod parse of response -> verify FAILS
 
 ### GREEN Phase - Implementation
 
@@ -119,7 +119,7 @@
 
 ### RED Phase - Tests First
 
-- [ ] T033 [P] [US3] Write unit tests for batchUpdateTasks primitive in `tests/unit/bulk-tools/batchUpdateTasks.test.ts` -- test: script generation with all property combinations (flagged, dueDate, deferDate, estimatedMinutes, plannedDate, note, addTags, removeTags, clearX flags), tag removal-before-addition order (FR-014), version gating for plannedDate/clearPlannedDate (VERSION_NOT_SUPPORTED), per-item TAG_NOT_FOUND, note append behavior, mutual exclusion enforcement at schema level, empty properties rejection (FR-013), clearX:false semantics, partial failures, Zod parse -> verify FAILS
+- [ ] T033 [P] [US3] Write unit tests for batchUpdateTasks primitive in `tests/unit/bulk-tools/batchUpdateTasks.test.ts` -- test: script generation with all property combinations (flagged, dueDate, deferDate, estimatedMinutes, plannedDate, note, addTags, removeTags, clearX flags), tag removal-before-addition order (FR-014), version gating for plannedDate/clearPlannedDate (VERSION_NOT_SUPPORTED), per-item TAG_NOT_FOUND, note append behavior (US3 scenario 7), clearDueDate removes due date (US3 scenario 8), mutual exclusion enforcement at schema level, empty properties rejection (FR-013), clearX:false semantics, partial failures, Zod parse -> verify FAILS
 
 ### GREEN Phase - Implementation
 
@@ -169,7 +169,7 @@
 
 ### RED Phase - Tests First
 
-- [ ] T045 [P] [US5] Write unit tests for moveSections primitive in `tests/unit/bulk-tools/moveSections.test.ts` -- test: script generation with all SectionPosition variants (beginning/ending with/without relativeTo, before/after), Folder-then-Project probe resolution (AD-14), itemType set to 'folder' or 'project', mixed folder+project batches, target pre-validation (TARGET_NOT_FOUND), relativeTo resolution, per-item NOT_FOUND, DISAMBIGUATION_REQUIRED (across both types), OPERATION_FAILED (circular hierarchy), post-move verification via parentFolder read (AD-12), library root placement, Zod parse -> verify FAILS
+- [ ] T045 [P] [US5] Write unit tests for moveSections primitive in `tests/unit/bulk-tools/moveSections.test.ts` -- test: script generation with all SectionPosition variants (beginning/ending with/without relativeTo, before/after), placement is required (no default -- SectionPosition has no `.default()` unlike TaskPosition), Folder-then-Project probe resolution (AD-14), itemType set to 'folder' or 'project', mixed folder+project batches, target pre-validation (TARGET_NOT_FOUND), relativeTo resolution, per-item NOT_FOUND, DISAMBIGUATION_REQUIRED (across both types), OPERATION_FAILED (circular hierarchy), post-move verification via parentFolder read (AD-12), library root placement, Zod parse -> verify FAILS
 
 ### GREEN Phase - Implementation
 

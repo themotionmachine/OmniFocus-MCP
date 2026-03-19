@@ -14,7 +14,7 @@
 | Plan | `/speckit.plan` | ✅ Complete | 8 ADs, 8 RTs, 8 contract files, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (150 items), 14 gaps remediated |
 | Tasks | `/speckit.tasks` | ✅ Complete | 63 tasks, 8 phases, 21 parallel, 6/6 US covered |
-| Analyze | `/speckit.analyze` | ⏳ Pending | |
+| Analyze | `/speckit.analyze` | ✅ Complete | 0 CRITICAL, 2 HIGH, 3 MEDIUM — all remediated |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -397,7 +397,11 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| F1 | HIGH | plan.md listed `tests/unit/primitives/` but codebase uses `tests/unit/bulk-tools/` | ✅ Fixed path in plan.md |
+| R1 | MEDIUM | AD-08 error codes didn't distinguish per-item vs top-level | ✅ Rewrote AD-08 with clear separation |
+| C1 | MEDIUM | T021 missing FR-015 property preservation test coverage | ✅ Added explicit FR-015 reference |
+| B1 | MEDIUM | T033 missing US3 acceptance scenario references | ✅ Added scenario 7/8 references |
+| P1 | MEDIUM | T045 missing SectionPosition placement-required test note | ✅ Added placement validation note |
 
 ---
 
