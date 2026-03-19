@@ -9,7 +9,7 @@
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit.specify` | ⏳ Pending | |
+| Specify | `/speckit.specify` | ✅ Complete | 12 FRs, 3 user stories, 16 scenarios, 0 clarifications |
 | Clarify | `/speckit.clarify` | ⏳ Pending | |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
@@ -41,18 +41,26 @@
 
 | Principle | Requirement | Verification | Status |
 |-----------|-------------|--------------|--------|
-| I. Type-First Development | All functions typed, Zod contracts | `pnpm typecheck` | ⏳ |
-| II. Separation of Concerns | definitions/ + primitives/ split | Code review | ⏳ |
-| III. Script Execution Safety | OmniJS-only, try-catch + JSON | Script Editor test | ⏳ |
-| IV. Structured Data Contracts | Zod schemas for all inputs | Contract tests | ⏳ |
-| V. Defensive Error Handling | Structured errors, no swallowed exceptions | Unit tests | ⏳ |
-| VI. Build Discipline | `pnpm build` after changes | `pnpm build` | ⏳ |
-| VII. KISS | Simple, boring solutions | Code review | ⏳ |
-| VIII. YAGNI | No premature abstractions | Code review | ⏳ |
-| IX. SOLID | Single responsibility | Code review | ⏳ |
-| X. TDD | Red-Green-Refactor cycle | Test-first workflow | ⏳ |
+| I. Type-First Development | All functions typed, Zod contracts | `pnpm typecheck` | ✅ Pass |
+| II. Separation of Concerns | definitions/ + primitives/ split | Code review | ✅ 50 definitions, 50 primitives |
+| III. Script Execution Safety | OmniJS-only, try-catch + JSON | Script Editor test | ✅ Existing patterns verified |
+| IV. Structured Data Contracts | Zod schemas for all inputs | Contract tests | ✅ 8 contract dirs |
+| V. Defensive Error Handling | Structured errors, no swallowed exceptions | Unit tests | ✅ 2823 tests pass |
+| VI. Build Discipline | `pnpm build` after changes | `pnpm build` | ✅ Pass (ESM + CJS) |
+| VII. KISS | Simple, boring solutions | Code review | ✅ Verified |
+| VIII. YAGNI | No premature abstractions | Code review | ✅ Verified |
+| IX. SOLID | Single responsibility | Code review | ✅ Verified |
+| X. TDD | Red-Green-Refactor cycle | Test-first workflow | ✅ 125 test files |
 
-**Constitution Check:** ⏳ Pending
+**Constitution Check:** ✅ Verified 2026-03-18 — Constitution v2.0.0 (RATIFIED), all principles satisfied
+
+**Baseline Snapshot:**
+
+- Typecheck: clean
+- Tests: 2823 passing / 125 files
+- Build: clean (ESM + CJS)
+- Lint: 360 files, 0 errors
+- Branch: `015-forecast` (worktree)
 
 ---
 
@@ -160,14 +168,17 @@ and navigate the OmniFocus Forecast perspective.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 12 (FR-001 through FR-012) |
+| User Stories | 3 (P1: 1, P2: 1, P3: 1) |
+| Acceptance Criteria | 16 scenarios, 6 edge cases |
+| Success Criteria | 6 (SC-001 through SC-006) |
+| Assumptions | 6 documented |
+| NEEDS CLARIFICATION | 0 |
 
 ### Files Generated
 
-- [ ] `specs/015-forecast/spec.md`
-- [ ] `specs/015-forecast/checklists/requirements.md`
+- [x] `specs/015-forecast/spec.md`
+- [x] `specs/015-forecast/checklists/requirements.md`
 
 ---
 
