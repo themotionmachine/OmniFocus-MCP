@@ -14,7 +14,7 @@
 | Plan | `/speckit.plan` | ✅ Complete | 7 ADs, 8 research tasks, 9 contract files, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (135 items), 22 gaps remediated |
 | Tasks | `/speckit.tasks` | ✅ Complete | 57 tasks, 9 phases, 35 parallel, 5/5 US covered |
-| Analyze | `/speckit.analyze` | ⏳ Pending | |
+| Analyze | `/speckit.analyze` | ✅ Complete | 8 findings (1 CRITICAL, 2 MEDIUM, 5 LOW), all remediated |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -410,7 +410,18 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| F1 | CRITICAL | `z.discriminatedUnion` with duplicate `success: true` variants in export-perspective contract | ✅ Changed to `z.union()` (SPEC-007 pattern) |
+| F2 | MEDIUM | Missing type exports in barrel index.ts | ✅ Added FileSuccess/MetadataSuccess type exports |
+| F3 | MEDIUM | Plan summary says "three new tools" but lists four | ✅ Fixed to "four new tools" |
+| F4 | MEDIUM | T044/T046 delete files that were already overwritten by GREEN phase | ✅ Reworded to "verify legacy content replaced" |
+| F5 | LOW | FR-030 promises base64 data but contract returns metadata only | ✅ Updated FR-030 to match contract design |
+| F6 | LOW | Constitution uses "TypeScript enums" but codebase uses Zod enums | ℹ️ Informational — all specs use Zod enums consistently |
+| F7 | LOW | T049 covers all 5 tool registrations in one task | ℹ️ Acceptable — single file edit |
+| F8 | LOW | byName() case sensitivity unspecified for OmniJS | ℹ️ data-model.md clarifies: case-insensitive in TypeScript for built-ins |
+
+**Constitution Alignment**: All 10 principles PASS — 0 violations
+**FR Coverage**: 43/43 (100%)
+**iconColor Handling**: Verified correct (v4.5.2+ version gate, built-in rejection, idempotent overwrite)
 
 ---
 

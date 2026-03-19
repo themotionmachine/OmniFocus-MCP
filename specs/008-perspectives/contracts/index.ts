@@ -4,9 +4,11 @@
 export {
   type ExportPerspectiveError,
   ExportPerspectiveErrorSchema,
+  type ExportPerspectiveFileSuccess,
   ExportPerspectiveFileSuccessSchema,
   type ExportPerspectiveInput,
   ExportPerspectiveInputSchema,
+  type ExportPerspectiveMetadataSuccess,
   ExportPerspectiveMetadataSuccessSchema,
   type ExportPerspectiveResponse,
   ExportPerspectiveResponseSchema

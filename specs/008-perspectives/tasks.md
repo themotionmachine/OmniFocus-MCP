@@ -222,9 +222,9 @@
 
 **Purpose**: Delete legacy files, remove old interfaces, and update server.ts registrations. Migration order: new files are already created (Phases 3-7), now delete old files and update registrations.
 
-- [ ] T044 Delete legacy primitive `src/tools/primitives/listPerspectives.ts` (replaced by new implementation in Phase 3)
+- [ ] T044 Verify legacy content is replaced in `src/tools/primitives/listPerspectives.ts` (new implementation written in Phase 3 overwrites legacy file)
 - [ ] T045 Delete legacy primitive `src/tools/primitives/getPerspectiveView.ts` (retired, replaced by getPerspective)
-- [ ] T046 [P] Delete legacy definition `src/tools/definitions/listPerspectives.ts` (replaced by new implementation in Phase 3)
+- [ ] T046 [P] Verify legacy content is replaced in `src/tools/definitions/listPerspectives.ts` (new implementation written in Phase 3 overwrites legacy file)
 - [ ] T047 [P] Delete legacy definition `src/tools/definitions/getPerspectiveView.ts` (retired, replaced by getPerspective)
 - [ ] T048 Remove `OmnifocusPerspective` interface from `src/types.ts` (superseded by contracts in `src/contracts/perspective-tools/`)
 - [ ] T049 Update `src/server.ts`: remove old `list_perspectives` and `get_perspective_view` registrations (imports + `server.tool()` calls), add new registrations for all 5 tools (`list_perspectives`, `get_perspective`, `switch_perspective`, `export_perspective`, `set_perspective_icon`) importing from new definitions

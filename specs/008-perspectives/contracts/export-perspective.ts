@@ -78,9 +78,12 @@ export const ExportPerspectiveErrorSchema = z.object({
 export type ExportPerspectiveError = z.infer<typeof ExportPerspectiveErrorSchema>;
 
 /**
- * Complete response schema (discriminated union).
+ * Complete response schema.
+ * Uses z.union() because Zod 4.x discriminatedUnion requires unique
+ * discriminator values, but both success variants share success: true.
+ * Type narrowing still works via TypeScript control flow on success + filePath/fileName.
  */
-export const ExportPerspectiveResponseSchema = z.discriminatedUnion('success', [
+export const ExportPerspectiveResponseSchema = z.union([
   ExportPerspectiveFileSuccessSchema,
   ExportPerspectiveMetadataSuccessSchema,
   ExportPerspectiveErrorSchema

@@ -6,7 +6,7 @@
 ## Summary
 
 Replace two legacy perspective tools (`list_perspectives`, `get_perspective_view`) and add
-three new tools (`get_perspective`, `switch_perspective`, `export_perspective`,
+four new tools (`get_perspective`, `switch_perspective`, `export_perspective`,
 `set_perspective_icon`) for full perspective management through the MCP server. Uses clean-break
 migration: delete legacy files, no backward compatibility. All tools follow the modern
 definitions/primitives/contracts architecture with Zod schemas, version-gated OmniJS APIs, and

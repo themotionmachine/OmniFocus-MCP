@@ -421,8 +421,8 @@ perspective with a color value and verifying the color changes in OmniFocus.
   for file output
 - **FR-029**: When `saveTo` is provided, tool MUST use
   `writeFileRepresentationIntoDirectory()` to save the file and return the output path
-- **FR-030**: When `saveTo` is not provided, tool MUST return the configuration data
-  in the response (base64-encoded if binary)
+- **FR-030**: When `saveTo` is not provided, tool MUST return export metadata
+  (filename, file type) in the response
 - **FR-031**: Tool MUST return an error if the specified perspective is not found
 - **FR-032**: Tool MUST return an error if the `saveTo` directory does not exist or is
   not writable
