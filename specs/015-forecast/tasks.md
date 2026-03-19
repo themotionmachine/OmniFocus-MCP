@@ -69,7 +69,7 @@
 > **TDD RULE: Write these tests FIRST. Verify they FAIL before any implementation.**
 
 - [ ] T007 [P] [US1] Write contract tests for GetForecastRangeInput, GetForecastRangeSuccess, GetForecastRangeError, and GetForecastRangeResponse schemas in `tests/contract/forecast-tools/get-forecast-range.contract.test.ts` -- verify FAILS
-- [ ] T008 [P] [US1] Write unit tests for getForecastRange primitive (default dates, custom range, date validation, range validation, 90-day limit, OmniJS script generation, perspective switch, error handling) in `tests/unit/forecast-tools/getForecastRange.test.ts` -- verify FAILS
+- [ ] T008 [P] [US1] Write unit tests for getForecastRange primitive (default dates, custom range, date validation, range validation, 90-day limit, OmniJS script generation including kindToString/statusToString mapping for all ForecastDay.Kind and ForecastDay.Status enum values per FR-003/FR-004, perspective switch, error handling) in `tests/unit/forecast-tools/getForecastRange.test.ts` -- verify FAILS
 
 ### GREEN Phase - Implementation
 
@@ -107,7 +107,7 @@
 > **TDD RULE: Write these tests FIRST. Verify they FAIL before any implementation.**
 
 - [ ] T016 [P] [US2] Write contract tests for GetForecastDayInput, GetForecastDaySuccess, GetForecastDayError, and GetForecastDayResponse schemas in `tests/contract/forecast-tools/get-forecast-day.contract.test.ts` -- verify FAILS
-- [ ] T017 [P] [US2] Write unit tests for getForecastDay primitive (default date today, custom date, date validation, OmniJS script generation, perspective switch, error handling) in `tests/unit/forecast-tools/getForecastDay.test.ts` -- verify FAILS
+- [ ] T017 [P] [US2] Write unit tests for getForecastDay primitive (default date today, custom date, date validation, OmniJS script generation including kindToString/statusToString mapping for all ForecastDay.Kind and ForecastDay.Status enum values per FR-003/FR-004, perspective switch, error handling) in `tests/unit/forecast-tools/getForecastDay.test.ts` -- verify FAILS
 
 ### GREEN Phase - Implementation
 

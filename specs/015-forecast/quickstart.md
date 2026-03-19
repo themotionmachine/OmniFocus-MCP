@@ -124,8 +124,8 @@ Navigate the Forecast perspective to specific dates.
 | Contracts | `src/contracts/forecast-tools/` |
 | Definitions | `src/tools/definitions/getForecast*.ts`, `selectForecastDays.ts` |
 | Primitives | `src/tools/primitives/getForecast*.ts`, `selectForecastDays.ts` |
-| Contract tests | `tests/contracts/forecast-tools/` |
-| Unit tests | `tests/unit/tools/primitives/getForecast*.test.ts`, `selectForecastDays.test.ts` |
+| Contract tests | `tests/contract/forecast-tools/` |
+| Unit tests | `tests/unit/forecast-tools/getForecast*.test.ts`, `selectForecastDays.test.ts` |
 
 ## Testing
 
@@ -137,10 +137,10 @@ pnpm test
 pnpm test -- --testPathPattern=forecast
 
 # Run contract tests only
-pnpm test -- --testPathPattern=contracts/forecast
+pnpm test -- --testPathPattern=contract/forecast
 
 # Run unit tests only
-pnpm test -- --testPathPattern=unit/tools/primitives/.*[Ff]orecast
+pnpm test -- --testPathPattern=unit/forecast-tools
 ```
 
 ## TDD Workflow

@@ -80,12 +80,12 @@ src/
     └── selectForecastDays.ts       # OmniJS script generator + executor
 
 tests/
-├── contracts/forecast-tools/
+├── contract/forecast-tools/
 │   ├── get-forecast-range.contract.test.ts
 │   ├── get-forecast-day.contract.test.ts
 │   ├── select-forecast-days.contract.test.ts
 │   └── shared.contract.test.ts
-└── unit/tools/primitives/
+└── unit/forecast-tools/
     ├── getForecastRange.test.ts
     ├── getForecastDay.test.ts
     └── selectForecastDays.test.ts

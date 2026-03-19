@@ -14,7 +14,7 @@
 | Plan | `/speckit.plan` | ✅ Complete | 3 tools, 12 source files, 7 test files, 10 research decisions, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (124 items), 18 gaps remediated; Timer.once incompatibility found, synchronous IIFE required |
 | Tasks | `/speckit.tasks` | ✅ Complete | 39 tasks, 6 phases, 8 parallel, 3/3 US covered |
-| Analyze | `/speckit.analyze` | ⏳ Pending | |
+| Analyze | `/speckit.analyze` | ✅ Complete | 8 findings (0C, 1H, 1M, 6L), all remediated; test paths fixed, enum coverage clarified |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -410,7 +410,9 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| F1 | HIGH | Test path convention mismatch (plan.md, quickstart.md used `tests/contracts/` plural) | ✅ Fixed to `tests/contract/` singular, `tests/unit/forecast-tools/` |
+| F2 | MEDIUM | ForecastDay enum mapping test coverage not explicit in T008/T017 | ✅ Added kindToString/statusToString mentions |
+| F3-F8 | LOW | Verification confirmations (UI warning, date params, IIFE pattern, error codes, FR coverage) | ✅ All verified correct |
 
 ---
 
