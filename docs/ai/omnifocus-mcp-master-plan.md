@@ -102,7 +102,7 @@ The remaining work is decomposed into **14 specifications** across **5 dependenc
 | SPEC-010 | Bulk Operations | 6 | ⏳ Pending | `specs/010-bulk-operations/` | Specify |
 | SPEC-012 | TaskPaper Import/Export | 3 | ⏳ Pending | `specs/012-taskpaper/` | Specify |
 | SPEC-014 | Window & UI Control | 8 | ⏳ Pending | `specs/014-window-ui/` | Specify |
-| SPEC-015 | Forecast | 3 | ⏳ Pending | `specs/015-forecast/` | Specify |
+| SPEC-015 | Forecast | 3 | 🔄 In Progress | `specs/015-forecast/` | Specify |
 | SPEC-016-017 | Settings & Deep Links | 5 | ⏳ Pending | `specs/016-settings-deeplinks/` | Specify |
 | SPEC-018-019 | Pasteboard & Document/Sync | 7 | ⏳ Pending | `specs/018-pasteboard-sync/` | Specify |
 | SPEC-020 | Server Optimization | 3 | ⏳ Pending | `specs/020-server-optimization/` | Blocked by all |
