@@ -10,7 +10,7 @@
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 16 FRs, 9 stories, 28 scenarios |
-| Clarify | `/speckit.clarify` | ⏳ Pending | OmniJS API research needed |
+| Clarify | `/speckit.clarify` | ✅ Complete | 10 questions resolved (5 search + 5 database) |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
@@ -203,8 +203,8 @@ These questions were resolved during brainstorming review (2026-03-18):
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | OmniJS Search API | | |
-| 2 | Database Operations | | |
+| 1 | Search Behavior | 5 | Name-only search, active default, rich results, no sort param, single field |
+| 2 | Database Operations | 5 | cleanUp void, undo/redo returns state, stats by status, inbox count only |
 
 ---
 

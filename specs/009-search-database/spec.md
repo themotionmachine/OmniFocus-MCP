@@ -173,7 +173,7 @@ A GTD practitioner wants to undo or redo the most recent operation performed thr
 - **FR-003**: System MUST allow searching folders by name using relevance-ranked matching, returning matching folders with ID, name, and parent folder
 - **FR-004**: System MUST allow searching tags by name using relevance-ranked matching, returning matching tags with ID, name, and parent tag
 - **FR-005**: All search operations MUST accept a configurable result limit parameter with a default of 50 and a maximum of 1000
-- **FR-006**: Task search MUST accept a status filter parameter that defaults to showing only active tasks, with options to include completed, dropped, or all tasks
+- **FR-006**: Task search MUST accept a `status` filter parameter that defaults to "active" (showing only active tasks), with accepted values: "active" (default), "completed", "dropped", or "all"
 - **FR-007**: All search operations MUST return an empty result set (not an error) when no items match the query
 - **FR-008**: All search operations MUST return the total number of matches alongside the limited result set, so users know if results were truncated
 - **FR-009**: System MUST provide a database cleanup operation that triggers OmniFocus's built-in clean up behavior
@@ -187,7 +187,7 @@ A GTD practitioner wants to undo or redo the most recent operation performed thr
 
 ### Key Entities
 
-- **Search Result**: A matched item containing its identifier, display name, item type, and type-specific metadata (project association for tasks, folder location for projects, parent relationships for folders and tags)
+- **Search Result**: A matched item containing: id, name, status, and parent context. Parent context is type-specific: project name for tasks (or "Inbox" if unassigned), folder name for projects, parent folder name for folders, parent tag name for tags (or null if top-level). This "rich result" shape provides enough context for identification without a follow-up detail query.
 - **Search Query**: A user-provided text string used for matching, combined with optional filters (status, limit) that constrain results
 - **Database Statistics**: An aggregate summary of the OmniFocus database containing counts by item type and status, providing a health overview of the GTD system
 - **Inbox Count**: A single numeric value representing the number of unprocessed items in the OmniFocus inbox
@@ -219,6 +219,25 @@ A GTD practitioner wants to undo or redo the most recent operation performed thr
 - The `inbox` collection provides `.length` for counting inbox items without iterating
 - Task status values for filtering align with OmniFocus `Task.Status` enum values (Available, Blocked, Completed, Dropped, etc.)
 - Database statistics are computed by iterating flattened collections with status-based filtering — this is acceptable performance for typical OmniFocus databases (under 10,000 items)
+- No sort parameter is provided for search results — `*Matching()` methods return relevance-ordered results (Quick Open semantics) and `flattenedTasks.filter()` returns database order; both are acceptable without user-configurable sorting
+
+## Clarifications
+
+### Session 2026-03-18
+
+- Q: What properties should search match against for each item type? → A: Name only — search matches exclusively against the `name` property. Note search is explicitly out of scope, deferred to SPEC-020 for performance reasons (iterating large note text blobs degrades search speed in databases with thousands of items).
+- Q: What should `search_tasks` default status filter be and what values should the `status` parameter accept? → A: Defaults to active tasks only. The `status` filter parameter accepts "active" (default), "completed", "dropped", or "all".
+- Q: What fields should each search result include? → A: Rich results — id, name, status, and parent context (project name for tasks, folder name for projects, parent tag name for tags). This gives AI assistants enough context to identify and act on items without a follow-up lookup call.
+- Q: Should search results include a sort parameter or rely on natural ordering? → A: No sort parameter. `*Matching()` returns relevance-ordered results naturally (Quick Open semantics); `flattenedTasks.filter()` returns in database order, which is acceptable for substring matches with a limit parameter.
+- Q: Should search support matching against multiple fields (name AND note) or single field only? → A: Single field only (name). Consistent with the out-of-scope decision on note search; multi-field matching is deferred to SPEC-020.
+
+### Session 2026-03-18 (Database Operations)
+
+- Q: What should `cleanup_database` return? → A: Success/failure only (boolean). `cleanUp()` is void in OmniJS and returns no information about processed items. The tool cannot report counts of items moved.
+- Q: What should `undo`/`redo` return after the operation? → A: Success boolean + post-operation `canUndo`/`canRedo` state. This gives AI assistants enough info to know if they can continue undoing/redoing.
+- Q: Should `get_database_stats` break down by status? → A: Yes. Tasks by status (active, completed, dropped counts), projects by status (active, completed, dropped, on-hold counts), plus folder count, tag count, and inbox count.
+- Q: Should `get_inbox_count` return just the count or also sample items? → A: Just the count (number). This is meant to be lightweight. AI assistants can use `search_tasks` or `list_tasks` for item details.
+- Q: Does `cleanUp()` return any information about processed items? → A: No, it is void. It triggers OmniFocus's built-in cleanup behavior (archiving completed items, etc.) and returns nothing.
 
 ## Out of Scope
 
