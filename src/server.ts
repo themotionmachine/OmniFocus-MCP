@@ -23,6 +23,8 @@ import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as editProjectTool from './tools/definitions/editProject.js';
 import * as editTagTool from './tools/definitions/editTag.js';
+import * as getForecastDayTool from './tools/definitions/getForecastDay.js';
+import * as getForecastRangeTool from './tools/definitions/getForecastRange.js';
 import * as getNextTaskTool from './tools/definitions/getNextTask.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
 import * as getProjectTool from './tools/definitions/getProject.js';
@@ -45,6 +47,7 @@ import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as removeNotificationTool from './tools/definitions/removeNotification.js';
 import * as removeTagsTool from './tools/definitions/removeTags.js';
+import * as selectForecastDaysTool from './tools/definitions/selectForecastDays.js';
 import * as setAdvancedRepetitionTool from './tools/definitions/setAdvancedRepetition.js';
 import * as setCommonRepetitionTool from './tools/definitions/setCommonRepetition.js';
 import * as setFloatingTimezoneTool from './tools/definitions/setFloatingTimezone.js';
@@ -415,6 +418,28 @@ server.tool(
   'Postpone an Absolute notification on an OmniFocus task by setting a new fire datetime. Only works on Absolute kind notifications',
   snoozeNotificationTool.schema.shape,
   snoozeNotificationTool.handler
+);
+
+// Phase 15 Forecast Tools
+server.tool(
+  'get_forecast_range',
+  'Get forecast data for a date range. Returns per-day summaries with badge counts, deferred counts, and day classifications. Default range: today + 7 days. Maximum 90 days.',
+  getForecastRangeTool.schema.shape,
+  getForecastRangeTool.handler
+);
+
+server.tool(
+  'get_forecast_day',
+  'Get detailed forecast data for a single date. Returns badge count, deferred count, badge status, and day classification. Default: today.',
+  getForecastDayTool.schema.shape,
+  getForecastDayTool.handler
+);
+
+server.tool(
+  'select_forecast_days',
+  'Navigate the Forecast perspective to show specific dates. WARNING: This changes the visible UI state in OmniFocus. The response includes a warning field to inform the user.',
+  selectForecastDaysTool.schema.shape,
+  selectForecastDaysTool.handler
 );
 
 // Start the MCP server

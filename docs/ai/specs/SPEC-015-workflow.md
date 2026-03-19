@@ -15,7 +15,7 @@
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (124 items), 18 gaps remediated; Timer.once incompatibility found, synchronous IIFE required |
 | Tasks | `/speckit.tasks` | ✅ Complete | 39 tasks, 6 phases, 8 parallel, 3/3 US covered |
 | Analyze | `/speckit.analyze` | ✅ Complete | 8 findings (0C, 1H, 1M, 6L), all remediated; test paths fixed, enum coverage clarified |
-| Implement | `/speckit.implement` | ⏳ Pending | |
+| Implement | `/speckit.implement` | ✅ Complete | 39/39 tasks, 154 new tests (2977 total), 3 tools registered |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -455,23 +455,25 @@ For each task, follow this cycle:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | Shared schemas, contracts, ForecastDay types |
-| 2 - Get Forecast | | | Date range query, ForecastDay array |
-| 3 - Get Forecast Day | | | Single day detail |
-| 4 - Select Forecast Days | | | UI navigation, Forecast perspective |
-| 5 - Integration & Polish | | | Server registration, build, final tests |
+| 1-2 - Setup + Foundation | T001-T006 | 6/6 | Shared schemas (enums, ForecastDayOutput), barrel exports |
+| 3 - Get Forecast Range (US1) | T007-T015 | 9/9 | 26 contract + 24 unit tests, date range + OmniJS |
+| 4 - Get Forecast Day (US2) | T016-T024 | 9/9 | 21 contract + 20 unit tests, single day detail |
+| 5 - Select Forecast Days (US3) | T025-T033 | 9/9 | 24 contract + 20 unit tests, UI navigation |
+| 6 - Polish | T034-T039 | 6/6 | Server registration, lint, typecheck, build, integration scaffold |
+
+**Total: 39/39 tasks complete. 154 new tests. 2977 total tests across 132 files.**
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] Typecheck passes: `pnpm typecheck` (0 errors)
-- [ ] Tests pass: `pnpm test`
-- [ ] Build succeeds: `pnpm build` (ESM + CJS clean)
-- [ ] Lint passes: `pnpm lint`
-- [ ] All 3 tools registered in `src/server.ts`
-- [ ] Manual OmniJS Script Editor verification
+- [x] All tasks marked complete in tasks.md (39/39)
+- [x] Typecheck passes: `pnpm typecheck` (0 errors)
+- [x] Tests pass: `pnpm test` (2977 tests, 132 files)
+- [x] Build succeeds: `pnpm build` (ESM + CJS)
+- [x] Lint passes: `pnpm lint`
+- [x] All 3 tools registered in `src/server.ts`
+- [ ] Manual OmniJS Script Editor verification (deferred — manual step)
 - [ ] PR created targeting `main`
 - [ ] Merged to main branch
 - [ ] Master plan progress tracking updated
