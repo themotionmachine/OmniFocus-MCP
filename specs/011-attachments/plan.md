@@ -112,11 +112,22 @@ No violations. All 10 constitution principles pass. No complexity justifications
 ### AD-001: Base64 Data Flow
 
 Base64 string passes through TypeScript (validation) into OmniJS script (decoding):
-1. TypeScript validates base64 format (regex or `Buffer.from()` roundtrip)
-2. TypeScript checks decoded size (warning >10 MB, reject >50 MB)
-3. Base64 string embedded in OmniJS script as string literal
-4. OmniJS decodes via `Data.fromBase64(base64String)`
-5. OmniJS creates FileWrapper via `FileWrapper.withContents(name, data)`
+1. Zod schema enforces max string length of 67,108,864 characters (~50 MB decoded)
+2. TypeScript strips whitespace from base64 string (`/\s+/g`)
+3. TypeScript validates base64 format (regex `/^[A-Za-z0-9+/]*={0,2}$/`)
+4. TypeScript checks decoded size (warning >10 MB with message template, reject >50 MB with `SIZE_EXCEEDED` code)
+5. Base64 string embedded in OmniJS script as string literal
+6. OmniJS decodes via `Data.fromBase64(base64String)`
+7. OmniJS creates FileWrapper via `FileWrapper.withContents(name, data)`
+
+### AD-006: Error Codes for add_attachment
+
+The `add_attachment` error response includes an optional `code` field with an explicit
+`z.enum(['INVALID_BASE64', 'SIZE_EXCEEDED', 'NOT_FOUND'])`. This follows the precedent
+set by `DisambiguationErrorSchema` in status-tools, which adds a typed `code` field to
+a single-item error response when programmatic differentiation is needed. Other
+single-item tools (repetition-tools) use flat errors because they have fewer distinct
+failure modes.
 
 ### AD-002: Task/Project Resolution
 

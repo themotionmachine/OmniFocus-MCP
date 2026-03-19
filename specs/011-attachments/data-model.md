@@ -42,10 +42,18 @@ Input for adding an embedded attachment.
 
 **Validation rules**:
 - `id`: min 1 character
-- `filename`: min 1 character
-- `data`: min 1 character, valid base64 (validated server-side via `Buffer.from()`)
-- Decoded size > 10 MB: warning in response
-- Decoded size > 50 MB: rejection with validation error
+- `filename`: min 1 character, max 255 characters; must not contain `/`, `\`, or `..` (pure basename only)
+- `data`: min 1 character, max 67,108,864 characters (~50 MB decoded); whitespace is stripped automatically before validation; must match base64 character set (`/^[A-Za-z0-9+/]*={0,2}$/`) after stripping
+- Decoded size > 10 MB: warning in response (template: `"Attachment size ({size} MB) exceeds 10 MB; may impact OmniFocus Sync performance"`)
+- Decoded size > 50 MB: rejection with `SIZE_EXCEEDED` error code
+
+### AddAttachmentError Codes
+
+| Code | Meaning | When |
+|------|---------|------|
+| `INVALID_BASE64` | `data` field contains invalid base64 characters (after whitespace stripping) | Server-side regex validation fails |
+| `SIZE_EXCEEDED` | Decoded payload exceeds the 50 MB hard limit | `Buffer.from(data, 'base64').length > 52,428,800` |
+| `NOT_FOUND` | Provided ID does not match any task or project | `Task.byIdentifier()` and `Project.byIdentifier()` both return null |
 
 ### RemoveAttachmentParams
 

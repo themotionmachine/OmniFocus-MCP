@@ -212,6 +212,19 @@ because it is macOS-only and serves a narrower use case than embedded attachment
   for each entry.
 - What happens when the base64-decoded data size exceeds 10 MB? The operation
   proceeds with a warning in the response about OmniFocus Sync performance.
+- What happens when the base64 `data` string contains whitespace or newlines?
+  The server strips all whitespace characters before validation and decoding.
+  This accommodates multi-line base64 encoding common in MIME and transport-layer
+  line wrapping. Per RFC 4648, implementations MUST NOT add line feeds unless
+  the referring specification explicitly directs it, but tolerant decoding is
+  standard practice in Node.js (`Buffer.from()` silently ignores whitespace).
+- What happens when `add_attachment` is called with a filename containing path
+  separators (`/`, `\`) or directory traversal sequences (`..`)? Validation
+  rejects it -- filenames must be pure basenames without path components to
+  prevent unexpected behavior in OmniFocus's internal FileWrapper storage.
+- What happens when `add_attachment` is called with a filename longer than 255
+  characters? Validation rejects it -- the 255-character limit aligns with
+  macOS APFS/HFS+ filesystem constraints (255 UTF-8 characters per filename).
 
 ## Requirements *(mandatory)*
 
@@ -271,6 +284,34 @@ because it is macOS-only and serves a narrower use case than embedded attachment
 
 - **FR-010**: The `remove_attachment` tool MUST include the valid index range in
   its error message when an out-of-bounds index is provided.
+
+- **FR-011**: The `add_attachment` error response MUST include an optional `code`
+  field with one of these enumerated values for programmatic error handling:
+  - `INVALID_BASE64` -- the `data` field contains characters that are not valid
+    base64 (after whitespace stripping)
+  - `SIZE_EXCEEDED` -- the decoded payload exceeds the 50 MB hard limit
+  - `NOT_FOUND` -- the provided ID does not match any task or project
+
+- **FR-012**: The `add_attachment` size warning (FR-007) MUST use the following
+  message template in the `warning` field: `"Attachment size ({size} MB) exceeds
+  10 MB; may impact OmniFocus Sync performance"` where `{size}` is the decoded
+  size rounded to one decimal place.
+
+### Non-Functional Requirements
+
+- **NFR-001**: The `add_attachment` tool MUST enforce a maximum base64 string
+  length of 67,108,864 characters (approximately 50 MB decoded) at the Zod
+  schema level via `z.string().max(67108864)`. This prevents the payload from
+  reaching the OmniJS execution environment, where embedding a large string
+  literal in the `app.evaluateJavascript()` call would cause excessive memory
+  pressure in the OmniFocus JavaScript context. The Zod-level check rejects
+  oversized payloads early, before any `Buffer.from()` allocation occurs.
+
+- **NFR-002**: Base64 payloads between 10 MB and 50 MB (decoded) are accepted
+  but may cause noticeable latency in OmniJS script execution due to string
+  interpolation into the script template. The warning message (FR-012) informs
+  the caller of this trade-off. No hard performance SLA is defined for
+  attachment operations.
 
 ### Key Entities
 
@@ -395,3 +436,12 @@ because it is macOS-only and serves a narrower use case than embedded attachment
 - Q: What is the maximum base64 payload size the MCP server should accept for `add_attachment`? --> A: Add a hard rejection limit at 50 MB (decoded size) in addition to the existing 10 MB sync warning. This prevents catastrophic memory allocation from enormous base64 payloads in the JSON-RPC stdio message. Validation is server-side via `Buffer.from(data, 'base64').length`. Source: Constitution Principle V (Defensive Error Handling); MCP stdio transport constraints.
 - Q: Should `list_attachments` return `preferredFilename` or `filename` from FileWrapper? --> A: Use `preferredFilename` as primary with `filename` as fallback: `wrapper.preferredFilename || wrapper.filename || 'unnamed'`. Return a single `filename` field in the response (KISS). `preferredFilename` is what OmniFocus uses for display and is the more useful value; `filename` is the actual last-read name which may differ. Source: https://omni-automation.com/omnifocus/filewrapper.html; Constitution Principle VII (KISS).
 - Q: How should base64 data flow between TypeScript and OmniJS for `add_attachment`? --> A: Pass the base64 string directly into the OmniJS script as a string literal and decode via `Data.fromBase64(base64String)` inside OmniJS. Server-side TypeScript validates the string is valid base64 (regex or `Buffer.from()` roundtrip) before generating the script. The actual `Data` object construction must happen in OmniJS since `FileWrapper.withContents()` requires an OmniJS `Data` instance. Source: https://omni-automation.com/omnifocus/OF-API.html (`Data.fromBase64()`); https://omni-automation.com/omnifocus/task-attachment.html.
+
+### Session 2026-03-18 (API Contracts Checklist)
+
+- Q: Should `add_attachment` error responses include a `code` field for programmatic error handling, or follow the flat error pattern used by single-item tools (repetition-tools)? --> A: Include an optional `code` field with an explicit enum of values (`INVALID_BASE64`, `SIZE_EXCEEDED`, `NOT_FOUND`). Although single-item tools typically use flat `{ success: false, error: string }`, `add_attachment` requires programmatic differentiation between input validation errors, size threshold errors, and resolution errors. This follows the precedent set by `DisambiguationErrorSchema` in status-tools, which also adds a `code` field to a single-item error response. Source: `src/contracts/status-tools/shared/disambiguation.ts`; Constitution Principle V (Defensive Error Handling).
+- Q: Should `add_attachment` accept or reject base64 strings containing whitespace or newlines? --> A: Accept permissively. The server strips all whitespace characters (`/\s+/g`) from the `data` field before validation and decoding. This accommodates multi-line base64 encoding from MIME (RFC 2045 wraps at 76 characters) and transport-layer line wrapping. After stripping, the string is validated against the base64 character set (`/^[A-Za-z0-9+/]*={0,2}$/`). Node.js `Buffer.from(str, 'base64')` already ignores whitespace, but explicit stripping ensures the regex validation also passes. Source: RFC 4648 Section 3.1 (line feed handling); RFC 2045 (MIME base64 line wrapping).
+- Q: What is the exact format of the `warning` field in the `add_attachment` success response for large attachments? --> A: The warning uses a template: `"Attachment size ({size} MB) exceeds 10 MB; may impact OmniFocus Sync performance"` where `{size}` is the decoded byte count divided by 1,048,576, rounded to one decimal place. The `warning` field is `z.string().optional()` and is only present when the decoded size exceeds 10 MB. Source: FR-007; Constitution Principle IV (Structured Data Contracts).
+- Q: Should filenames be validated for path separators or directory traversal sequences? --> A: Yes. The `filename` field must be a pure basename. Reject filenames containing `/`, `\`, or `..` at the Zod validation layer. This prevents unexpected behavior in OmniFocus's internal FileWrapper storage and follows defensive input validation. Source: Constitution Principle V (Defensive Error Handling); macOS APFS filename constraints.
+- Q: What is the maximum filename length for `add_attachment`? --> A: 255 characters, matching the macOS APFS/HFS+ filesystem limit (255 UTF-8 characters per filename component). Enforced at the Zod schema level via `z.string().max(255)`. Source: macOS APFS specification; https://superuser.com/questions/1561484/what-is-the-maximum-length-of-a-filename-apfs.
+- Q: Are there performance or memory concerns with large base64 payloads in OmniJS script execution? --> A: Yes. The base64 string is embedded as a JavaScript string literal in the OmniJS script template passed to `app.evaluateJavascript()`. A 50 MB decoded file produces approximately 67 MB of base64 text, which becomes a string literal in the JavaScript source. The 50 MB hard limit (FR-007a) is enforced at the Zod schema level (`z.string().max(67108864)`) to reject oversized payloads before any buffer allocation or script generation occurs. Between 10 MB and 50 MB, payloads are accepted with a warning (FR-007, FR-012). Source: NFR-001; Constitution Principle V (Defensive Error Handling).
