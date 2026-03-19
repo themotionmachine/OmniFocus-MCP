@@ -207,6 +207,7 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - You've tested OmniJS scripts independently
 
 ## Recent Changes
+- 010-bulk-operations: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+
 - 007-repetition-rules: TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
 
 - **Phase 7 Repetition Rules (Implementation Complete)**: Repetition Rule Management fully implemented (2026-03-17)
@@ -329,6 +330,7 @@ See [MCP logging spec](https://modelcontextprotocol.io/specification/2025-06-18/
 ## Active Technologies
 - TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+ (005-review-system)
 - N/A (OmniFocus internal database via OmniJS) (005-review-system)
+- TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+ (010-bulk-operations)
 
 - TypeScript 5.9+ with strict mode (`ES2024` target) (003-tasks)
 - N/A (interfaces with OmniFocus via OmniJS execution) (003-tasks)
