@@ -50,8 +50,9 @@ The remaining work is decomposed into **15 specifications** across **5 dependenc
 
 ```text
 ═══════════════════════════════════════════════════════════════════
-  FOUNDATION (Complete: Phases 0-5 + 7 + 13, 39 tools)
+  FOUNDATION (Complete: Phases 0-5 + 6-7 + 10-11 + 13-14, 62 tools)
   Folders │ Tags │ Tasks │ Projects │ Review │ Repetition │ Status
+  Notifications │ Bulk Ops │ Attachments │ Window/UI
 ═══════════════════════════════════════════════════════════════════
     │
     ├──► TIER 1 (All parallel — Task/Project Property Extensions)
@@ -103,7 +104,7 @@ The remaining work is decomposed into **15 specifications** across **5 dependenc
 | SPEC-011 | Attachments & Linked Files | 5 | ✅ Complete | `specs/011-attachments/` | Merged ([PR #43](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/43)) |
 | SPEC-010 | Bulk Operations | 6 | ✅ Complete | `specs/010-bulk-operations/` | Merged ([PR #44](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/44)) |
 | SPEC-012 | TaskPaper Import/Export | 3 | ⏳ Pending | `specs/012-taskpaper/` | Specify |
-| SPEC-014 | Window & UI Control | 8 | 🔄 In Progress | `specs/014-window-ui/` | PR Review ([PR #45](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/45)) |
+| SPEC-014 | Window & UI Control | 8 | ✅ Complete | `specs/014-window-ui/` | Merged ([PR #45](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/45)) |
 | SPEC-015 | Forecast | 3 | ⏳ Pending | `specs/015-forecast/` | Specify |
 | SPEC-016-017 | Settings & Deep Links | 5 | ⏳ Pending | `specs/016-settings-deeplinks/` | Specify |
 | SPEC-018-019 | Pasteboard & Document/Sync | 7 | ⏳ Pending | `specs/018-pasteboard-sync/` | Specify |
