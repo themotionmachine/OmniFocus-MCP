@@ -12,7 +12,7 @@
 | Specify | `/speckit.specify` | ✅ Complete | 10 FRs, 3 user stories, 14 scenarios, 7 edge cases |
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; null param, moveTasks placement, parsed validator, status filter, sync-only confirmed |
 | Plan | `/speckit.plan` | ✅ Complete | 8 ADs, 8 RTs, 8 contract files, 10/10 constitution pass |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (88 items), 16 gaps remediated |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
