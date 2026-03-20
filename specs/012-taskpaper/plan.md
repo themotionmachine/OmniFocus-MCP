@@ -119,6 +119,27 @@ tests/
 
 **Structure Decision**: Follows the established single-project pattern with contracts/definitions/primitives separation. Mirrors search-tools (closest in complexity: multiple tools with shared schemas and mixed OmniJS/non-OmniJS primitives).
 
+## Schema Design Decisions
+
+### Zod 4.x Patterns
+
+All response schemas use `z.discriminatedUnion('success', [SuccessSchema, ErrorSchema])` -- the standard codebase pattern. Each tool has exactly one success variant, so `z.discriminatedUnion()` is correct (unlike `get_repetition` which requires `z.union()` for multiple success variants).
+
+ParsedItem uses `z.lazy()` with an explicit `z.ZodType<ParsedItem>` type annotation for the recursive `children` field. This is required for correct Zod 4.x type inference with recursive schemas (per https://zod.dev/v4/changelog and GitHub issue #4783).
+
+### Null Convention
+
+Output schemas: `.nullable()` for all "can be unset" fields (dueDate, deferDate, doneDate, estimate, note). Follows `TaskFullSchema` pattern.
+Input schemas: `.optional()` for omittable fields (targetProjectId), `.nullable().optional()` NOT used (no patch/clear semantics in this domain).
+
+### Shared Token Mapping
+
+The TaskPaper token-to-OmniJS-property mapping is shared between the validator primitive and the export OmniJS script generator. It is defined as TypeScript types and constants (not Zod runtime schemas) to avoid duplication. Location: within the primitives layer, co-located with the parser/serializer logic.
+
+### Export Warnings
+
+The export response includes a `warnings: ValidationWarning[]` field (reusing the same schema from validation) for non-fatal issues like empty task names. The array is empty when no issues are encountered.
+
 ## Complexity Tracking
 
 No violations to justify. All 10 constitution gates pass.

@@ -115,6 +115,76 @@ The export serializer reads the following OmniJS Task API properties. These are 
 - **Import date parsing**: `byParsingTransportText` accepts dates in multiple formats including `yyyy-MM-dd`, `MM/dd/yy`, and relative dates (`+2w`, `tomorrow`). ISO 8601 `yyyy-MM-dd` is the canonical format used by this feature for programmatic reliability.
 - **Validator date parsing**: The pure TypeScript validator recognizes ISO 8601 `yyyy-MM-dd` format and common relative date expressions. Unrecognized date formats produce a warning but do not prevent parsing of the rest of the line.
 
+## Type Safety Conventions
+
+### Null vs Undefined Convention
+
+All optional task properties that can be "not set" in OmniFocus MUST use `.nullable()` (value is `null`) in Zod schemas, NOT `.optional()` (value is `undefined`). This follows the established codebase convention (see `TaskFullSchema` in `src/contracts/task-tools/shared/task.ts`) where OmniJS returns `null` for unset properties, creating a seamless chain: OmniJS `null` -> JSON `null` -> Zod `.nullable()`.
+
+Affected fields in ParsedItem (validation output) and export serializer:
+- `dueDate`: `z.string().nullable()` -- null when not set
+- `deferDate`: `z.string().nullable()` -- null when not set
+- `doneDate`: `z.string().nullable()` -- null when not set (only non-null for completed items)
+- `estimate`: `z.string().nullable()` -- null when not set
+- `note`: `z.string().nullable()` -- null when not set; empty string `""` from OmniJS is normalized to `null` by the export serializer (empty notes are semantically "not set")
+
+For import_taskpaper input, `targetProjectId` uses `.optional()` (field omitted = no target project). This is correct because omission means "do not move" rather than "value is null."
+
+### Input Schema Constraints
+
+The `text` input parameter for both `import_taskpaper` and `validate_transport_text` MUST use identical Zod constraints for consistency:
+- `z.string().min(1, 'Transport text must not be empty')` -- rejects empty strings (FR-008)
+- No `.trim()` -- whitespace-only strings are caught by a `.refine()` check, not by trimming (preserving the original text for accurate line-number reporting in validation warnings)
+- No `.max()` -- per Assumptions, maximum size is bounded by OmniFocus memory limits, not by a tool-level limit (YAGNI)
+
+The `.refine()` check: `.refine((s) => s.trim().length > 0, 'Transport text must contain non-whitespace content')` satisfies FR-008 (reject whitespace-only input).
+
+### Response Schema Patterns (Zod 4.x)
+
+All three tools use `z.discriminatedUnion('success', [...])` for their top-level response schemas, following the codebase convention established by search-tools, status-tools, and other domains. Each response has exactly two variants:
+- Success: `z.object({ success: z.literal(true), ... })`
+- Error: `z.object({ success: z.literal(false), error: z.string() })`
+
+This is the correct pattern because each tool has a single success shape (unlike `get_repetition` which has two success variants requiring `z.union()`).
+
+The ParsedItem schema uses `z.lazy()` for its recursive `children` field, following the Zod 4.x pattern for recursive types:
+```typescript
+const ParsedItemSchema: z.ZodType<ParsedItem> = z.lazy(() =>
+  z.object({
+    name: z.string(),
+    type: z.enum(['task', 'project']),
+    depth: z.number().int().min(0),
+    // ... other fields ...
+    children: z.array(ParsedItemSchema),
+  })
+);
+```
+
+### Zod 4.x Compatibility Notes
+
+The schema design accounts for these Zod 4.x changes (per https://zod.dev/v4/changelog):
+- Error customization uses the `error` parameter (not `errorMap` / `required_error` / `invalid_type_error` from Zod 3)
+- `z.discriminatedUnion()` in Zod 4.x supports nested discriminated unions and union discriminators, but we use the simple single-key pattern
+- `.describe()` remains available in Zod 4.x (no breaking change for our usage)
+- Recursive schemas use `z.lazy()` with explicit `z.ZodType<T>` annotation to ensure correct type inference (Zod 4.x has known issues with recursive type inference without explicit annotations)
+
+### Shared Token-to-Property Mapping
+
+The mapping between TaskPaper tokens and OmniJS task properties is used by both the validator (pure TypeScript) and the export serializer (OmniJS script generation). To avoid duplication, this mapping is defined as **TypeScript types and constants** (not runtime Zod schemas):
+
+```typescript
+// In src/tools/primitives/taskpaper/token-map.ts (or equivalent shared location)
+interface TaskPaperTokenMapping {
+  readonly token: string;       // e.g., '@due', '@defer', '@flagged'
+  readonly omnijsProperty: string;  // e.g., 'dueDate', 'deferDate', 'flagged'
+  readonly valueType: 'date' | 'duration' | 'boolean' | 'string-list' | 'string';
+}
+```
+
+The full set of recognized tokens (validator scope): `@defer`, `@due`, `@done`, `@estimate`, `@flagged`, `@tags`, `@autodone`, `@parallel`, `@repeat-method`, `@repeat-rule`.
+
+The export-emitted subset: `@defer`, `@due`, `@done`, `@estimate`, `@flagged`, `@tags` (plus task name and `//` notes). Structural tokens (`@autodone`, `@parallel`, `@repeat-*`) are recognized by the validator but not emitted by the export serializer.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -134,7 +204,7 @@ The export serializer reads the following OmniJS Task API properties. These are 
 
 - **Transport Text**: A plaintext string in OmniFocus transport text format representing tasks, projects, tags, and metadata using a concise line-based syntax with indentation for hierarchy.
 - **Import Result**: A structured response containing the identifiers of all items created during import, along with a summary count of tasks, projects, and tags created.
-- **Export Result**: A structured response containing the generated transport text string and a summary of what was exported (item counts, hierarchy depth).
+- **Export Result**: A structured response containing the generated transport text string, a summary of what was exported (item counts, hierarchy depth), and a `warnings` array (same `ValidationWarning` schema as the validator) for non-fatal issues encountered during export (e.g., tasks with empty names, properties that could not be serialized). The warnings array is empty (`[]`) when export completes without issues.
 - **Validation Report**: A structured response containing: (1) `items` -- an array of parsed item objects (each with name, type, depth, tags, dates, flagged, estimate, notes); (2) `summary` -- aggregate counts (tasks, projects, tags, maxDepth); (3) `warnings` -- an array of syntax warnings with line numbers and descriptions. This parsed structure enables AI agents to confirm exactly what will be created before committing an import.
 
 ## Success Criteria *(mandatory)*

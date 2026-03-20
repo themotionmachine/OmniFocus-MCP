@@ -19,8 +19,8 @@ Represents a single parsed item from transport text, used by `validate_transport
 | doneDate | string \| null | ISO 8601 date string for completed items or null |
 | flagged | boolean | Whether item is flagged |
 | estimate | string \| null | Duration string (e.g., "30m", "1h") or null |
-| note | string \| null | Note text or null |
-| children | ParsedItem[] | Nested child items |
+| note | string \| null | Note text or null (OmniJS empty string `""` normalized to `null`) |
+| children | ParsedItem[] | Nested child items (recursive structure via `z.lazy()`) |
 
 ### ValidationSummary
 
@@ -89,7 +89,7 @@ import_taskpaper:
 export_taskpaper:
   Input: projectId? | folderId? | taskIds? (string[]), status? (enum)
   --> OmniJS custom serializer --> recursive task tree walk
-  --> transportText (string) + ExportSummary
+  --> transportText (string) + ExportSummary + ValidationWarning[]
 ```
 
 ## State Transitions
