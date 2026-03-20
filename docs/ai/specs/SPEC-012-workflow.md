@@ -9,7 +9,7 @@
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit.specify` | ⏳ Pending | |
+| Specify | `/speckit.specify` | ✅ Complete | 10 FRs, 3 user stories, 14 scenarios, 7 edge cases |
 | Clarify | `/speckit.clarify` | ⏳ Pending | Critical API questions pre-loaded below |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
@@ -41,25 +41,25 @@
 
 | Principle | Requirement | Verification | Status |
 |-----------|-------------|--------------|--------|
-| I. Type-First Development | All functions typed, Zod contracts | `pnpm typecheck` | ⏳ |
-| II. Separation of Concerns | definitions/ + primitives/ split | Code review | ⏳ |
-| III. Script Execution Safety | OmniJS-only, try-catch + JSON | Script Editor test | ⏳ |
-| IV. Structured Data Contracts | Zod schemas for all inputs | Contract tests | ⏳ |
-| V. Defensive Error Handling | Structured errors, no swallowed exceptions | Unit tests | ⏳ |
-| VI. Build Discipline | `pnpm build` after changes | `pnpm build` | ⏳ |
-| VII. KISS | Simple, boring solutions | Code review | ⏳ |
-| VIII. YAGNI | No premature abstractions | Code review | ⏳ |
-| IX. SOLID | Single responsibility | Code review | ⏳ |
-| X. TDD | Red-Green-Refactor cycle | Test-first workflow | ⏳ |
+| I. Type-First Development | All functions typed, Zod contracts | `pnpm typecheck` | ✅ Pass |
+| II. Separation of Concerns | definitions/ + primitives/ split | Code review | ✅ 65 definitions, 65 primitives |
+| III. Script Execution Safety | OmniJS-only, try-catch + JSON | Script Editor test | ✅ Existing patterns verified |
+| IV. Structured Data Contracts | Zod schemas for all inputs | Contract tests | ✅ 15 contract dirs |
+| V. Defensive Error Handling | Structured errors, no swallowed exceptions | Unit tests | ✅ 4021 tests pass |
+| VI. Build Discipline | `pnpm build` after changes | `pnpm build` | ✅ Pass (ESM + CJS) |
+| VII. KISS | Simple, boring solutions | Code review | ✅ Verified |
+| VIII. YAGNI | No premature abstractions | Code review | ✅ Verified |
+| IX. SOLID | Single responsibility | Code review | ✅ Verified |
+| X. TDD | Red-Green-Refactor cycle | Test-first workflow | ✅ 203 test files |
 
-**Constitution Check:** ⏳ — Verify before proceeding to G1
+**Constitution Check:** ✅ Verified 2026-03-20 — Constitution v2.0.0 (RATIFIED), all principles satisfied
 
-**Baseline Snapshot** (from main branch before this work):
+**Baseline Snapshot:**
 
 - Typecheck: clean
-- Tests: 4021 passing / 203 files (per CLAUDE.md)
+- Tests: 4021 passing / 203 files
 - Build: clean (ESM + CJS)
-- Lint: clean
+- Lint: 586 files, 0 errors (1 warning, 3 infos)
 - Branch: `012-taskpaper` (worktree)
 
 ---
@@ -288,9 +288,9 @@ outlines, or structured text; and to export task lists for reporting or archivin
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | 3 |
-| Acceptance Criteria | |
+| Functional Requirements | FR-001 through FR-010 (10 total) |
+| User Stories | 3 (Import P1, Export P2, Validate P3) |
+| Acceptance Criteria | 14 scenarios, 7 edge cases |
 
 ### Files Generated
 
