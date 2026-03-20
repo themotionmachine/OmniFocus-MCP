@@ -100,7 +100,7 @@ The remaining work is decomposed into **15 specifications** across **5 dependenc
 | SPEC-007 | Repetition | 5 | ✅ Complete | `specs/007-repetition-rules/` | Merged ([PR #38](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/38)) |
 | SPEC-013 | Task Status & Completion | 6 | ✅ Complete | `specs/013-task-status/` | Merged ([PR #39](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/39)) |
 | SPEC-008 | Perspectives | 5 | ✅ Complete | `specs/008-perspectives/` | Merged ([PR #42](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/42)) |
-| SPEC-009 | Search & Database | 10 | ⏳ Pending | `specs/009-search-database/` | Specify |
+| SPEC-009 | Search & Database | 10 | ✅ Complete | `specs/009-search-database/` | Merged ([PR #41](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/41)) |
 | SPEC-011 | Attachments & Linked Files | 5 | ✅ Complete | `specs/011-attachments/` | Merged ([PR #43](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/43)) |
 | SPEC-010 | Bulk Operations | 6 | ✅ Complete | `specs/010-bulk-operations/` | Merged ([PR #44](https://github.com/fgabelmannjr/omnifocus-mcp-pro/pull/44)) |
 | SPEC-012 | TaskPaper Import/Export | 3 | ⏳ Pending | `specs/012-taskpaper/` | Specify |
@@ -268,7 +268,7 @@ Alternatives considered: Wrapping old implementations in new contracts was rejec
 
 ---
 
-### SPEC-009: Search & Database
+### SPEC-009: Search & Database ✅ COMPLETE
 
 **Priority:** P1 | **Depends On:** None (Phases 0-5 complete) | **Enables:** None
 
