@@ -66,16 +66,26 @@ As a GTD practitioner, I want to validate a transport text string before importi
 - What happens when transport text contains special characters (Unicode, emoji, quotes, backslashes) in task names or notes?
 - What happens when export encounters a task with properties that have no transport text representation (repetition rules, review intervals, custom perspectives)? (These properties are silently omitted from export output.)
 - What happens when the transport text string is extremely large (thousands of lines)? (The system should handle it within reasonable memory limits or return a size-exceeded error.)
-- What happens when importing transport text that defines a project name matching an existing project? (OmniFocus creates a new project; it does not merge into the existing one.)
+- What happens when importing transport text with a `::ProjectName` reference that does not match any existing project? (The task is created in the inbox with no project assignment; OmniFocus does NOT auto-create projects from unmatched `::` references. If the project name matches an existing project, the task is placed into that project.)
 - What happens when exporting a task that has been completed or dropped? (Completed/dropped tasks are included in export with their status reflected if the transport text format supports it.)
 - What happens when the validator encounters mixed indentation (tabs vs. spaces)? (The validator should flag this as a warning since OmniFocus transport text uses tabs for indentation.)
+
+## Clarifications
+
+### Session 2026-03-20
+
+- Q: Should `singleTask` parameter be `false` or `null` when calling `Task.byParsingTransportText()`? → A: Use `null`. Official Omni Automation docs (omni-automation.com/omnifocus/task.html) exclusively use `null` in examples; `false` is never shown in official documentation.
+- Q: How should the optional target project parameter work for `import_taskpaper`? → A: Two-phase approach: (1) call `Task.byParsingTransportText(text, null)` which creates tasks in the inbox, then (2) call `moveTasks(createdTasks, targetProject)` to relocate them into the specified project. This reuses the existing `moveTasks` OmniJS function (already used in the bulk-tools domain) and avoids fragile text manipulation of the transport text string. The target project is resolved by identifier using `Project.byIdentifier()`.
+- Q: What happens when `byParsingTransportText` encounters invalid or unparseable transport text? → A: It returns an empty array (no tasks created) rather than throwing an exception. The OmniJS API is lenient; unrecognized syntax is silently ignored. Our implementation must check for an empty result array and return a structured error indicating no items were created from the provided text.
+- Q: Should the returned task IDs include both top-level tasks AND subtasks, or only root-level tasks? → A: Return both top-level and all nested subtask IDs. The OmniJS `byParsingTransportText` returns only top-level Task objects, so the implementation must recursively walk each returned task's `children` (via `flattenedTasks` on each top-level task) to collect all created item identifiers. This maximizes utility for callers who need to reference or modify specific subtasks.
+- Q: If transport text contains a `::ProjectName` that does not match any existing project, does `byParsingTransportText` create a new project? → A: No. The `::` syntax matches existing projects "exactly as if it was entered in a project cell in OmniFocus" (per Omni Automation docs). If no match is found, the task is created in the inbox with no project assignment. OmniFocus does NOT auto-create projects from `::` references.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST accept a transport text string and create all tasks, projects, and metadata described in that string within OmniFocus, returning the identifiers of every created item.
-- **FR-002**: System MUST support optional placement of imported items into a specified target project when a target project identifier is provided.
+- **FR-001**: System MUST accept a transport text string and create all tasks, projects, and metadata described in that string within OmniFocus, returning the identifiers of every created item (both top-level tasks and all nested subtasks). The implementation recursively walks the `children` of each top-level task returned by `byParsingTransportText` to collect all identifiers.
+- **FR-002**: System MUST support optional placement of imported items into a specified target project when a target project identifier is provided. Implementation uses a two-phase approach: (1) parse transport text via `byParsingTransportText` (creates in inbox), then (2) move created tasks into the target project via the OmniJS `moveTasks()` function, resolving the project by identifier with `Project.byIdentifier()`.
 - **FR-003**: System MUST export a specified project (by identifier) to a transport text string that includes the project name, all child tasks with hierarchy, and per-task metadata (name, tags, due date, defer date, flagged status, estimated duration, notes).
 - **FR-004**: System MUST export a specified folder (by identifier) to a transport text string containing all projects and tasks within that folder.
 - **FR-005**: System MUST export a specified set of tasks (by identifiers, 1 to 100) to a transport text string containing those tasks with their subtasks and metadata.
@@ -105,7 +115,7 @@ As a GTD practitioner, I want to validate a transport text string before importi
 ## Assumptions
 
 - OmniFocus transport text format uses tab characters (not spaces) for indentation hierarchy.
-- `Task.byParsingTransportText(text, false)` creates items immediately and returns an array of top-level Task objects; there is no dry-run mode in the OmniJS API.
+- `Task.byParsingTransportText(text, null)` creates items immediately and returns an array of top-level Task objects; there is no dry-run mode in the OmniJS API. The `singleTask` parameter is `null` (not `false`) per official Omni Automation documentation conventions. When given invalid or unparseable text, it returns an empty array rather than throwing.
 - Tags referenced in transport text that do not exist in OmniFocus will be auto-created by OmniFocus during import.
 - The validator (validate_transport_text) is a pure TypeScript implementation with no OmniJS dependency, making it testable without OmniFocus running.
 - Export is a custom OmniJS implementation that reads task properties and builds the transport text string manually, since OmniJS provides no built-in per-item serialization method.
