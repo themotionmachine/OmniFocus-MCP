@@ -8,7 +8,7 @@
 > roadmap below for current progress.
 
 A professional-grade Model Context Protocol (MCP) server that provides
-comprehensive OmniFocus integration with 86 automation tools. Built for
+comprehensive OmniFocus integration with 85 automation tools. Built for
 power users who need advanced features like Perspectives management,
 Review system, TaskPaper import/export, Forecast, Window/UI control,
 and bulk operations.
@@ -19,7 +19,7 @@ and bulk operations.
 
 ## Development Roadmap
 
-This project is being expanded from 22 to 86 tools across 20
+This project is being expanded from 22 to 85 tools across 20
 implementation phases.
 
 ### Current Progress
@@ -35,14 +35,14 @@ implementation phases.
 | 5     | **Review System**              | 3     | Complete |
 | 6     | **Notifications**              | 5     | Complete |
 | 7     | **Repetition**                 | 5     | Complete |
-| 8     | **Perspectives**               | 5     | Pending  |
-| 9     | **Search & Database**          | 10    | Pending  |
-| 10    | **Bulk Operations**            | 6     | Pending  |
-| 11    | Attachments & Linked Files     | 5     | Pending  |
+| 8     | **Perspectives**               | 5     | Complete |
+| 9     | **Search & Database**          | 10    | Complete |
+| 10    | **Bulk Operations**            | 6     | Complete |
+| 11    | Attachments & Linked Files     | 5     | Complete |
 | 12    | **TaskPaper Import/Export**    | 3     | Pending  |
 | 13    | **Task Status & Completion**   | 6     | Complete |
-| 14    | **Window & UI Control** (OF4)  | 8     | Pending  |
-| 15    | **Forecast**                   | 3     | Pending  |
+| 14    | **Window & UI Control** (OF4)  | 8     | Complete |
+| 15    | **Forecast**                   | 3     | Complete |
 | 16    | **Settings**                   | 2     | Pending  |
 | 17    | **Deep Links & URLs** (OF4.5)  | 3     | Pending  |
 | 18    | **Pasteboard & Clipboard**     | 3     | Pending  |
@@ -896,29 +896,33 @@ pnpm start
 ```text
 src/
 ├── server.ts              # Entry point, MCP server setup
+├── contracts/             # Zod schemas per tool domain (15 dirs)
 ├── tools/
 │   ├── definitions/       # Tool schemas and MCP handlers
-│   └── primitives/        # Core business logic
+│   └── primitives/        # Core business logic (OmniJS generation + execution)
 ├── utils/
-│   ├── omnifocusScripts/  # JXA scripts (copied to dist on build)
-│   └── scriptExecution.ts # JXA execution utilities
+│   ├── escapeForJS.ts     # Shared string escaping for OmniJS
+│   ├── executeOmniFocusScript.ts  # OmniJS execution via osascript
+│   └── logger.ts          # MCP-compliant structured logging
 └── omnifocustypes.ts      # TypeScript types for OmniFocus
 
-tests/                     # Test files
+tests/
+├── contract/              # Zod schema validation tests
+├── unit/                  # Primitive business logic tests
+└── integration/           # OmniFocus round-trip tests
 dist/                      # Build output (gitignored)
 ```
 
-### Testing JXA Scripts
+### Testing OmniJS Scripts
 
-JXA (JavaScript for Automation) scripts cannot be tested in CI as they require
-macOS with OmniFocus. Test JXA changes manually:
+OmniJS (Omni Automation JavaScript) scripts cannot be tested in CI as they
+require macOS with OmniFocus. Test OmniJS changes manually:
 
-1. Open Script Editor.app on macOS
-2. Set language to JavaScript (View → Show Log, then choose JavaScript)
-3. Copy your JXA code and run it
-4. Verify output before integrating
+1. Open OmniFocus Automation Console (Automation → Show Console)
+2. Paste your OmniJS script and run it
+3. Verify JSON output before integrating
 
-See `CLAUDE.md` for detailed JXA development guidelines.
+See `CLAUDE.md` for detailed OmniJS development guidelines.
 
 ### Specification Documentation
 

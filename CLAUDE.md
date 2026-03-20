@@ -6,9 +6,10 @@ This file provides guidance to Claude Code when working with this repository.
 
 OmniFocus MCP Server bridges AI assistants with OmniFocus task management on
 macOS. It uses pure **Omni Automation JavaScript** (OmniJS) to interact with
-OmniFocus, providing tools to view, create, edit, and remove tasks, projects,
-and folders. All operations use OmniJS execution for consistency and
-reliability.
+OmniFocus, providing 85 tools across 15 domains: tasks, projects, folders, tags,
+reviews, notifications, repetition, task status/completion, search, database,
+perspectives, forecast, window/UI control, attachments, and bulk operations, all
+using OmniJS execution for consistency and reliability.
 
 ## Development Philosophy
 
@@ -53,12 +54,16 @@ reliability.
 | Command | Description |
 |---------|-------------|
 | `pnpm install` | Install dependencies |
-| `pnpm build` | Compile TypeScript and copy OmniJS scripts |
-| `pnpm dev` | Watch mode (auto-recompile) |
+| `pnpm build` | Compile TypeScript to `dist/` |
+| `pnpm start` | Run the compiled server |
+| `pnpm dev` | Watch mode (auto-recompile via tsx) |
 | `pnpm test` | Run tests |
+| `pnpm test:watch` | Run tests in watch mode |
 | `pnpm test:coverage` | Tests with V8 coverage |
+| `pnpm test:integration` | Integration tests (requires OmniFocus running) |
 | `pnpm lint` | Check code (Biome) |
 | `pnpm lint:fix` | Fix lint issues |
+| `pnpm format` | Format code (Biome) |
 | `pnpm typecheck` | TypeScript checking |
 
 ## Key Directories
@@ -66,11 +71,13 @@ reliability.
 | Directory | Purpose |
 |-----------|---------|
 | `src/server.ts` | MCP server entry point |
+| `src/contracts/` | Zod schemas per tool domain (15 dirs: attachment, bulk, database, folder, forecast, notification, perspective, project, repetition, review, search, status, tag, task, window) |
 | `src/tools/definitions/` | Tool schemas and MCP handlers |
-| `src/tools/primitives/` | Core business logic |
-| `src/utils/omnifocusScripts/` | Pre-built OmniJS scripts |
+| `src/tools/primitives/` | Core business logic (OmniJS script generation + execution) |
+| `src/utils/` | Shared utilities (logger, OmniJS execution, temp files) |
+| `tests/` | Contract, unit, and integration tests |
 | `specs/` | Feature specifications |
-| `.claude/rules/` | Modular Claude rules (including RepoPrompt MCP guide) |
+| `.claude/rules/` | Modular Claude rules |
 
 ## Technology Stack
 
@@ -80,9 +87,9 @@ reliability.
 | Language | TypeScript | 5.9+ |
 | Build | tsup | 8.5+ |
 | Test | Vitest | 4.0+ |
-| Lint/Format | Biome | 2.3+ |
+| Lint/Format | Biome | 2.4+ |
 | MCP SDK | @modelcontextprotocol/sdk | 1.27.1 |
-| Validation | Zod | 4.1.x |
+| Validation | Zod | 4.2.x |
 
 ## Common Gotchas
 
@@ -154,10 +161,6 @@ Domain-specific rules in `.claude/rules/` load automatically:
 
 **Always loaded:**
 
-- `security.md` - Security policies, input validation
-- `error-handling.md` - Error patterns, partial failures
-- `git-workflow.md` - Commit conventions, PR rules
-- `research-workflow.md` - Research patterns and tools
 - `repoprompt-mcp.md` - RepoPrompt MCP context management and editing
 
 **Path-scoped (load when working with matching files):**
@@ -214,7 +217,29 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - 008-perspectives: Added TypeScript 5.9+ (strict mode, ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
 - 007-repetition-rules: TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
 
-- **Phase 7 Repetition Rules (Implementation Complete)**: Repetition Rule Management fully implemented (2026-03-17)
+## Implemented Tool Domains
+
+| Domain | Tools | Contracts | Key Patterns |
+|--------|-------|-----------|--------------|
+| Folders | 5 | `folder-tools/` | OmniJS-first CRUD |
+| Tags | 6 | `tag-tools/` | Hierarchy, batch assign/remove |
+| Tasks | 4+ | `task-tools/` | Server-side OmniJS filtering, disambiguation |
+| Projects | 6 | `project-tools/` | Review status filtering, type mutual exclusion |
+| Reviews | 3 | `review-tools/` | Calendar/DateComponents API, no `markReviewed()` method |
+| Notifications | 5 | `notification-tools/` | Relative offsets in seconds, kind-conditional fields |
+| Repetition | 5 | `repetition-tools/` | ICS pass-through, v4.7+ version gating |
+| Status | 6 | `status-tools/` | Batch with idempotent no-op codes, v3.8+ drop API |
+| Perspectives | 5 | `perspective-tools/` | Smart Match lookup, switch/export/icon, v4.5.2+ color |
+| Search | 4 | `search-tools/` | Smart Match for projects/folders/tags, flattenedTasks.filter() for tasks, shared result schemas |
+| Database | 6 | `database-tools/` | Top-level DB functions (save/cleanUp/undo/redo), canUndo/canRedo pre-check, inbox.length |
+| Bulk Operations | 6 | `bulk-tools/` | Move/duplicate/convert/batch-update tasks, move/duplicate sections |
+| Attachments | 5 | `attachment-tools/` | Embedded file attachments + linked file URL references |
+| Window & UI | 8 | `window-tools/` | Reveal/expand/collapse/focus/select items, notes toggle |
+| Forecast | 3 | `forecast-tools/` | Badge counts, day classification, date range queries |
+
+**Current baseline:** 4021 tests across 203 files. See workflow files in `docs/ai/specs/` for detailed implementation notes per spec.
+
+- Phase 7 Repetition Rules (Implementation Complete): Repetition Rule Management fully implemented (2026-03-17)
   - 5 new tools: `get_repetition`, `set_repetition`, `clear_repetition`, `set_common_repetition`, `set_advanced_repetition`
   - `get_repetition`: Read ICS rule string, schedule type (v4.7+), anchor date (v4.7+), catch-up (v4.7+), deprecated method
   - `set_repetition`: Set repetition via raw ICS string using legacy 2-param constructor (all versions)
@@ -336,5 +361,6 @@ See [MCP logging spec](https://modelcontextprotocol.io/specification/2025-06-18/
 - TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+ (010-bulk-operations)
 - TypeScript 5.9+ (strict mode, ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+ (008-perspectives)
 
-- TypeScript 5.9+ with strict mode (`ES2024` target) (003-tasks)
-- N/A (interfaces with OmniFocus via OmniJS execution) (003-tasks)
+- TypeScript 5.9+ with strict mode (ES2024 target)
+- @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+, Biome 2.4+
+- OmniFocus internal database via OmniJS (no external DB)

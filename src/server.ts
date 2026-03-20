@@ -14,6 +14,7 @@ import * as assignTagsTool from './tools/definitions/assignTags.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
 import * as batchUpdateTasksTool from './tools/definitions/batchUpdateTasks.js';
+import * as cleanupDatabaseTool from './tools/definitions/cleanupDatabase.js';
 import * as clearRepetitionTool from './tools/definitions/clearRepetition.js';
 import * as collapseItemsTool from './tools/definitions/collapseItems.js';
 import * as collapseNotesTool from './tools/definitions/collapseNotes.js';
@@ -35,8 +36,10 @@ import * as expandItemsTool from './tools/definitions/expandItems.js';
 import * as expandNotesTool from './tools/definitions/expandNotes.js';
 import * as exportPerspectiveTool from './tools/definitions/exportPerspective.js';
 import * as focusItemsTool from './tools/definitions/focusItems.js';
+import * as getDatabaseStatsTool from './tools/definitions/getDatabaseStats.js';
 import * as getForecastDayTool from './tools/definitions/getForecastDay.js';
 import * as getForecastRangeTool from './tools/definitions/getForecastRange.js';
+import * as getInboxCountTool from './tools/definitions/getInboxCount.js';
 import * as getNextTaskTool from './tools/definitions/getNextTask.js';
 import * as getPerspectiveTool from './tools/definitions/getPerspective.js';
 import * as getProjectTool from './tools/definitions/getProject.js';
@@ -59,12 +62,18 @@ import * as moveProjectTool from './tools/definitions/moveProject.js';
 import * as moveSectionsTool from './tools/definitions/moveSections.js';
 import * as moveTasksTool from './tools/definitions/moveTasks.js';
 import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
+import * as redoOperationTool from './tools/definitions/redoOperation.js';
 import * as removeAttachmentTool from './tools/definitions/removeAttachment.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as removeNotificationTool from './tools/definitions/removeNotification.js';
 import * as removeTagsTool from './tools/definitions/removeTags.js';
 import * as revealItemsTool from './tools/definitions/revealItems.js';
+import * as saveDatabaseTool from './tools/definitions/saveDatabase.js';
+import * as searchFoldersTool from './tools/definitions/searchFolders.js';
+import * as searchProjectsTool from './tools/definitions/searchProjects.js';
+import * as searchTagsTool from './tools/definitions/searchTags.js';
+import * as searchTasksTool from './tools/definitions/searchTasks.js';
 import * as selectForecastDaysTool from './tools/definitions/selectForecastDays.js';
 import * as selectItemsTool from './tools/definitions/selectItems.js';
 import * as setAdvancedRepetitionTool from './tools/definitions/setAdvancedRepetition.js';
@@ -77,6 +86,7 @@ import * as setRepetitionTool from './tools/definitions/setRepetition.js';
 import * as setReviewIntervalTool from './tools/definitions/setReviewInterval.js';
 import * as snoozeNotificationTool from './tools/definitions/snoozeNotification.js';
 import * as switchPerspectiveTool from './tools/definitions/switchPerspective.js';
+import * as undoOperationTool from './tools/definitions/undoOperation.js';
 import * as unfocusTool from './tools/definitions/unfocus.js';
 import { logger } from './utils/logger.js';
 
@@ -461,6 +471,78 @@ server.tool(
   'Postpone an Absolute notification on an OmniFocus task by setting a new fire datetime. Only works on Absolute kind notifications',
   snoozeNotificationTool.schema.shape,
   snoozeNotificationTool.handler
+);
+
+// Phase 9 Search Tools
+server.tool(
+  'search_tasks',
+  'Search tasks by name using case-insensitive substring matching. Returns matching tasks with IDs, names, project context, and status. Defaults to active tasks only; use status filter for completed/dropped. Results are in database order, not relevance-ranked.',
+  searchTasksTool.schema.shape,
+  searchTasksTool.handler
+);
+
+server.tool(
+  'search_projects',
+  'Search projects by name using Smart Match (Quick Open relevance ranking). Returns matching projects with IDs, names, folder context, and status.',
+  searchProjectsTool.schema.shape,
+  searchProjectsTool.handler
+);
+
+server.tool(
+  'search_folders',
+  'Search folders by name using Smart Match (Quick Open relevance ranking). Returns matching folders with IDs, names, and parent folder context.',
+  searchFoldersTool.schema.shape,
+  searchFoldersTool.handler
+);
+
+server.tool(
+  'search_tags',
+  'Search tags by name using Smart Match (Quick Open relevance ranking). Returns matching tags with IDs, names, and parent tag context.',
+  searchTagsTool.schema.shape,
+  searchTagsTool.handler
+);
+
+// Phase 9 Database Tools
+server.tool(
+  'get_database_stats',
+  'Get aggregate database statistics: task counts by status, project counts by status, folder/tag totals, and inbox count. Read-only, no side effects.',
+  getDatabaseStatsTool.schema.shape,
+  getDatabaseStatsTool.handler
+);
+
+server.tool(
+  'get_inbox_count',
+  'Get the number of items in the OmniFocus inbox. Lightweight operation for quick inbox status checks. Read-only, no side effects.',
+  getInboxCountTool.schema.shape,
+  getInboxCountTool.handler
+);
+
+server.tool(
+  'save_database',
+  'Save the database to disk and trigger sync if enabled. OmniFocus auto-saves periodically; use this to force immediate save after batch changes.',
+  saveDatabaseTool.schema.shape,
+  saveDatabaseTool.handler
+);
+
+server.tool(
+  'cleanup_database',
+  'Trigger the OmniFocus Clean Up operation: processes inbox items with assigned projects, performs delayed filtering, and deletes empty items.',
+  cleanupDatabaseTool.schema.shape,
+  cleanupDatabaseTool.handler
+);
+
+server.tool(
+  'undo',
+  'WARNING: DESTRUCTIVE -- Reverses the most recent database change. Affects the entire OmniFocus database, not just MCP operations. Pre-checks availability before attempting.',
+  undoOperationTool.schema.shape,
+  undoOperationTool.handler
+);
+
+server.tool(
+  'redo',
+  'WARNING: DESTRUCTIVE -- Reapplies the most recently undone database change. Affects the entire OmniFocus database, not just MCP operations. Pre-checks availability before attempting.',
+  redoOperationTool.schema.shape,
+  redoOperationTool.handler
 );
 
 // Phase 15 Forecast Tools
