@@ -1,8 +1,8 @@
-import { ListPerspectivesInputSchema } from '../../contracts/perspective-tools/list-perspectives.js';
+import { SetPerspectiveIconInputSchema } from '../../contracts/perspective-tools/set-perspective-icon.js';
 import { logger } from '../../utils/logger.js';
-import { listPerspectives } from '../primitives/listPerspectives.js';
+import { setPerspectiveIcon } from '../primitives/setPerspectiveIcon.js';
 
-export const schema = ListPerspectivesInputSchema;
+export const schema = SetPerspectiveIconInputSchema;
 
 export async function handler(params: unknown) {
   const parsed = schema.safeParse(params);
@@ -23,7 +23,7 @@ export async function handler(params: unknown) {
   }
 
   try {
-    const result = await listPerspectives(parsed.data);
+    const result = await setPerspectiveIcon(parsed.data);
 
     if (!result.success) {
       return {
@@ -37,9 +37,9 @@ export async function handler(params: unknown) {
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    logger.error('Tool execution error', 'list_perspectives', { message });
+    logger.error('Tool execution error', 'set_perspective_icon', { message });
     return {
-      content: [{ type: 'text' as const, text: `Error listing perspectives: ${message}` }],
+      content: [{ type: 'text' as const, text: `Error setting perspective icon: ${message}` }],
       isError: true
     };
   }

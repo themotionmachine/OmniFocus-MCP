@@ -211,6 +211,7 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - 014-window-ui: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+
 - 011-attachments: Added TypeScript 5.9+ strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+
 - 010-bulk-operations: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+
+- 008-perspectives: Added TypeScript 5.9+ (strict mode, ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
 - 007-repetition-rules: TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
 
 - **Phase 7 Repetition Rules (Implementation Complete)**: Repetition Rule Management fully implemented (2026-03-17)
@@ -333,6 +334,7 @@ See [MCP logging spec](https://modelcontextprotocol.io/specification/2025-06-18/
 - TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+ (014-window-ui)
 - TypeScript 5.9+ strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+ (011-attachments)
 - TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+ (010-bulk-operations)
+- TypeScript 5.9+ (strict mode, ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+ (008-perspectives)
 
 - TypeScript 5.9+ with strict mode (`ES2024` target) (003-tasks)
 - N/A (interfaces with OmniFocus via OmniJS execution) (003-tasks)
