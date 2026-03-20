@@ -133,12 +133,21 @@ For import_taskpaper input, `targetProjectId` uses `.optional()` (field omitted 
 
 ### Input Schema Constraints
 
-The `text` input parameter for both `import_taskpaper` and `validate_transport_text` MUST use identical Zod constraints for consistency:
+The `text` input parameter uses tool-appropriate Zod constraints based on each tool's semantics:
+
+**`import_taskpaper`** (write operation -- creates items in OmniFocus):
 - `z.string().min(1, 'Transport text must not be empty')` -- rejects empty strings (FR-008)
-- No `.trim()` -- whitespace-only strings are caught by a `.refine()` check, not by trimming (preserving the original text for accurate line-number reporting in validation warnings)
+- `.refine((s) => s.trim().length > 0, 'Transport text must contain non-whitespace content')` -- rejects whitespace-only input (FR-008)
+- No `.trim()` -- preserves original text for OmniJS processing
 - No `.max()` -- per Assumptions, maximum size is bounded by OmniFocus memory limits, not by a tool-level limit (YAGNI)
 
-The `.refine()` check: `.refine((s) => s.trim().length > 0, 'Transport text must contain non-whitespace content')` satisfies FR-008 (reject whitespace-only input).
+**`validate_transport_text`** (read-only operation -- pure TypeScript, no database mutation):
+- `z.string()` -- accepts any string including empty and whitespace-only input
+- Empty or whitespace-only input returns a zero-item success report (per US3 acceptance scenario 3), not an error
+- No `.min(1)` -- validation of "nothing" is a valid operation that returns "zero items would be created"
+- No `.max()` -- same YAGNI rationale as import
+
+**Rationale for divergence**: `import_taskpaper` is a write operation where empty input would trigger an avoidable no-op against OmniJS with undocumented behavior. Rejecting empty input early (FR-008) prevents this. `validate_transport_text` is a pure read operation where "validate empty text" has a well-defined, deterministic answer: zero items, no warnings. This follows the principle that validators should accept all inputs and report findings, while mutating operations should guard against degenerate inputs.
 
 ### Response Schema Patterns (Zod 4.x)
 
@@ -197,7 +206,7 @@ The export-emitted subset: `@defer`, `@due`, `@done`, `@estimate`, `@flagged`, `
 - **FR-005**: System MUST export a specified set of tasks (by identifiers, 1 to 100) to a transport text string containing those tasks with their subtasks and metadata. The output does NOT include `::ProjectName` directives; the `::` syntax is an import directive not present in standard TaskPaper export output.
 - **FR-006**: System MUST validate a transport text string without modifying the OmniFocus database, returning a structured report containing: (1) an array of parsed item objects, each with name, type (task/project), depth, tags, dates, flagged, estimate, notes, and optional projectName (populated when a `::ProjectName` inline reference is detected) fields; (2) a summary object with counts (tasks, projects, tags, maxDepth); (3) a warnings array. The validator recognizes the full set of officially-supported TaskPaper parameters (`@autodone`, `@parallel`, `@repeat-method`, `@repeat-rule`, `@defer`, `@due`, `@done`, `@estimate`, `@flagged`) to avoid false-positive warnings.
 - **FR-007**: System MUST return structured warnings from validation when the transport text contains unrecognized or malformed syntax, identifying the problematic line numbers and content.
-- **FR-008**: System MUST reject empty or whitespace-only input for both import and validation with a clear error message.
+- **FR-008**: System MUST reject empty or whitespace-only input for `import_taskpaper` with a clear error message. For `validate_transport_text`, empty or whitespace-only input returns a zero-item success report (per US3 acceptance scenario 3) rather than an error, since validation of "nothing" has a well-defined answer.
 - **FR-009**: System MUST handle transport text containing the full set of supported metadata: task names, project headers, tags (@tag), due dates, defer dates, flagged status (!), estimated durations, notes (//), and nested hierarchy (tab indentation).
 - **FR-010**: System MUST document which OmniFocus properties are not representable in transport text format so users understand round-trip fidelity limitations. Properties lost in round-trip: repetition rules (`@repeat-method`, `@repeat-rule`), review intervals, perspective assignments, attachments, and structural parameters (`@autodone`, `@parallel`). The validator recognizes these tokens to avoid false warnings, but the export serializer does not emit them.
 - **FR-011**: The `import_taskpaper` MCP tool description MUST warn that import is non-atomic with respect to undo -- each created item is a separate undo step in OmniFocus history, meaning a large import cannot be reversed with a single undo action. This follows the WARNING: prefix convention used by other tools in this server (e.g., `switch_perspective`, `undo`, `redo`).

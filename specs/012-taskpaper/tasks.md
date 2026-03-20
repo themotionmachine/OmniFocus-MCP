@@ -75,8 +75,8 @@
 
 ### Implementation for US2
 
-- [ ] T017 [US2] Create shared token-to-property mapping constants in src/tools/primitives/taskpaper/token-map.ts -- define TaskPaperTokenMapping interface and TASKPAPER_TOKENS constant array covering all recognized tokens (@defer, @due, @done, @estimate, @flagged, @tags, @autodone, @parallel, @repeat-method, @repeat-rule) with valueType metadata (FR-009, FR-010)
-- [ ] T018 [US2] Implement exportTaskpaper primitive in src/tools/primitives/exportTaskpaper.ts -- generate OmniJS script with custom serializer: resolve scope (Project.byIdentifier / Folder.byIdentifier / Task.byIdentifier for each ID), recursive traversal via task.tasks preserving hierarchy (FR-003, FR-004), input-order for taskIds (FR-005), status filtering (FR-003), date formatting yyyy-MM-dd with getFullYear/getMonth/getDate (local timezone), estimate conversion, @done(date) for completed, @tags(), // notes, tab indentation, ExportSummary computation, warnings array for edge cases
+- [ ] T017 [US2] Create shared token-to-property mapping constants in src/tools/primitives/taskpaper/token-map.ts -- define TaskPaperTokenMapping interface and TASKPAPER_TOKENS constant array covering all recognized tokens (@defer, @due, @done, @estimate, @flagged, @tags, @autodone, @parallel, @repeat-method, @repeat-rule) with valueType metadata (FR-006, FR-009, FR-010). NOTE: Also consumed by US3 (validate_transport_text) for token recognition.
+- [ ] T018 [US2] Implement exportTaskpaper primitive in src/tools/primitives/exportTaskpaper.ts -- generate OmniJS script with custom serializer: resolve scope (Project.byIdentifier / Folder.byIdentifier / Task.byIdentifier for each ID), recursive traversal via task.tasks preserving hierarchy (FR-003, FR-004), input-order for taskIds (FR-005), status filtering (FR-003), date formatting yyyy-MM-dd with getFullYear/getMonth/getDate (local timezone), estimate conversion, @done(date) for completed, @tags(), // notes, tab indentation, ExportSummary computation, warnings array for edge cases. CONSTRAINT: Must NOT use document.makeFileWrapper (async/Promise-based, exports entire database, not scoped -- per spec Assumptions).
 - [ ] T019 [US2] Implement exportTaskpaper definition in src/tools/definitions/exportTaskpaper.ts -- MCP handler using ExportTaskpaperInputSchema for validation (including .refine() mutual exclusion), calls exportTaskpaper primitive, formats response as MCP content
 - [ ] T020 [US2] Run tests for US2: pnpm test tests/contract/taskpaper-tools/export-taskpaper.test.ts tests/unit/taskpaper-tools/exportTaskpaper.test.ts and verify all pass
 
@@ -208,9 +208,9 @@ Stream B (US2): T015 → T016 → T017 → T018 → T019 → T020
 | FR-003 | Export by project ID with metadata | T015, T016, T018, T019 |
 | FR-004 | Export by folder ID (recursive) | T016, T018 |
 | FR-005 | Export by task IDs (1-100, input order) | T015, T016, T018 |
-| FR-006 | Validate returns parsed items, summary, warnings | T021, T022, T023, T024 |
+| FR-006 | Validate returns parsed items, summary, warnings | T017, T021, T022, T023, T024 |
 | FR-007 | Warnings for unrecognized/malformed syntax | T022, T023 |
-| FR-008 | Reject empty/whitespace-only input | T010, T011, T012, T022, T023 |
+| FR-008 | Reject empty/whitespace-only input (import only; validate returns zero-item report) | T010, T011, T012 |
 | FR-009 | Handle full metadata set | T011, T012, T016, T017, T018 |
 | FR-010 | Document non-representable properties | T017 |
 | FR-011 | WARNING: prefix for non-atomic undo | T013, T026 |

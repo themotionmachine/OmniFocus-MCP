@@ -13,7 +13,7 @@
 | Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; null param, moveTasks placement, parsed validator, status filter, sync-only confirmed |
 | Plan | `/speckit.plan` | ✅ Complete | 8 ADs, 8 RTs, 8 contract files, 10/10 constitution pass |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains (88 items), 16 gaps remediated |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
+| Tasks | `/speckit.tasks` | ✅ Complete | 33 tasks, 5 phases, 12 parallel, 3/3 US covered |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 

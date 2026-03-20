@@ -101,7 +101,9 @@ src/
 │   └── primitives/
 │       ├── importTaskpaper.ts   # NEW: OmniJS script gen + execution
 │       ├── exportTaskpaper.ts   # NEW: OmniJS script gen + execution
-│       └── validateTransportText.ts  # NEW: Pure TypeScript parser
+│       ├── validateTransportText.ts  # NEW: Pure TypeScript parser
+│       └── taskpaper/
+│           └── token-map.ts     # NEW: Shared token-to-property mapping (used by export + validate)
 └── server.ts                    # MODIFIED: Register 3 new tools
 
 tests/
