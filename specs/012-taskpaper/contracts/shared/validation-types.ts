@@ -18,6 +18,10 @@ export const ParsedItemSchema: z.ZodType<ParsedItem> = z.lazy(() =>
     flagged: z.boolean().describe('Whether item is flagged'),
     estimate: z.string().nullable().describe('Duration string or null'),
     note: z.string().nullable().describe('Note text or null'),
+    projectName: z
+      .string()
+      .nullable()
+      .describe('Project name from ::ProjectName reference, or null if none'),
     children: z.array(ParsedItemSchema).describe('Nested child items')
   })
 );
@@ -33,6 +37,7 @@ export interface ParsedItem {
   flagged: boolean;
   estimate: string | null;
   note: string | null;
+  projectName: string | null;
   children: ParsedItem[];
 }
 

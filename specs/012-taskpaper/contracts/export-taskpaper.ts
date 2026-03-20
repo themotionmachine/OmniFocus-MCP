@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ExportSummarySchema, TaskpaperStatusFilterSchema } from './shared/index.js';
+import { ValidationWarningSchema } from './shared/validation-types.js';
 
 export const ExportTaskpaperInputSchema = z
   .object({
@@ -32,7 +33,12 @@ export type ExportTaskpaperInput = z.infer<typeof ExportTaskpaperInputSchema>;
 export const ExportTaskpaperSuccessSchema = z.object({
   success: z.literal(true),
   transportText: z.string().describe('Generated transport text'),
-  summary: ExportSummarySchema
+  summary: ExportSummarySchema,
+  warnings: z
+    .array(ValidationWarningSchema)
+    .describe(
+      'Non-fatal warnings encountered during export (e.g., tasks with empty names, unserializable properties). Empty array when no issues.'
+    )
 });
 
 export type ExportTaskpaperSuccess = z.infer<typeof ExportTaskpaperSuccessSchema>;

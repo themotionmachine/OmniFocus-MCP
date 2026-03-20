@@ -20,6 +20,7 @@ Represents a single parsed item from transport text, used by `validate_transport
 | flagged | boolean | Whether item is flagged |
 | estimate | string \| null | Duration string (e.g., "30m", "1h") or null |
 | note | string \| null | Note text or null (OmniJS empty string `""` normalized to `null`) |
+| projectName | string \| null | Project name from `::ProjectName` reference, or null if none |
 | children | ParsedItem[] | Nested child items (recursive structure via `z.lazy()`) |
 
 ### ValidationSummary

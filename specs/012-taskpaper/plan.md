@@ -140,6 +140,10 @@ The TaskPaper token-to-OmniJS-property mapping is shared between the validator p
 
 The export response includes a `warnings: ValidationWarning[]` field (reusing the same schema from validation) for non-fatal issues like empty task names. The array is empty when no issues are encountered.
 
+### Tool Description Warning (FR-011)
+
+The `import_taskpaper` tool description in `server.ts` MUST include a `WARNING:` prefix alerting that import is non-atomic with respect to undo -- each created item is a separate undo step in OmniFocus history. This follows the established codebase convention used by `switch_perspective`, `undo`, `redo`, and all window/UI tools. Example: `'WARNING: Non-atomic undo -- each created item is a separate undo step. Import TaskPaper transport text...'`
+
 ## Complexity Tracking
 
 No violations to justify. All 10 constitution gates pass.
