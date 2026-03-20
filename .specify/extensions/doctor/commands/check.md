@@ -1,0 +1,42 @@
+---
+description: "Run a full project health diagnostic — checks structure, agents, features, scripts, extensions, and git status."
+scripts:
+  sh: scripts/bash/doctor.sh
+  ps: scripts/powershell/doctor.ps1
+---
+
+# Project Health Check
+
+Run a diagnostic scan of the current Spec Kit project to identify setup issues, missing artifacts, and configuration problems.
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Outline
+
+1. **Run diagnostic script**: Execute `{SCRIPT}` from the project root and review the output.
+
+2. **Analyze results**: The script checks 6 areas:
+   - **Project structure** — `.specify/`, `specs/`, `scripts/`, `templates/`, `memory/`, `constitution.md`
+   - **AI agent configuration** — detects which agent folder is present, verifies commands exist
+   - **Feature specifications** — lists features in `specs/`, checks for spec.md/plan.md/tasks.md
+   - **Scripts health** — verifies all bash and PowerShell scripts are present and executable
+   - **Extensions health** — validates extensions.yml and extension registry
+   - **Git status** — checks if inside a git repo, shows current branch
+
+3. **Report findings**: Present the diagnostic results to the user:
+   - **Errors** — things that are broken and need fixing
+   - **Warnings** — things that could cause problems
+   - **Notes** — informational items about the project state
+
+4. **Suggest fixes**: For each error or warning found, suggest the specific command or action needed to resolve it. Common fixes include:
+   - Missing directories → `specify init --here`
+   - Missing constitution → copy from `templates/constitution-template.md`
+   - Missing feature artifacts → run `/speckit.plan` or `/speckit.tasks`
+   - Non-executable scripts → `chmod +x scripts/bash/*.sh`
+   - Empty agent commands → `specify init --here --ai <agent>`

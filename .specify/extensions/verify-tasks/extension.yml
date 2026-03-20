@@ -1,0 +1,41 @@
+schema_version: "1.0"
+
+extension:
+  id: "verify-tasks"
+  name: "Verify Tasks Extension"
+  version: "1.0.0"
+  description: "Detects phantom completions — tasks marked [X] in tasks.md with no real implementation."
+  author: "dave.sharpe@datastone.ca"
+  repository: "https://github.com/datastone-inc/spec-kit-verify-tasks"
+  license: "MIT"
+  homepage: "https://github.com/datastone-inc/spec-kit-verify-tasks"
+
+requires:
+  speckit_version: ">=0.1.0"
+  commands:
+    - "speckit.specify"
+    - "speckit.plan"
+    - "speckit.tasks"
+    - "speckit.implement"
+
+provides:
+  commands:
+    - name: "speckit.verify-tasks.run"
+      file: "commands/speckit.verify-tasks.md"
+      description: "Detect phantom completions by running a five-layer verification cascade against every completed task"
+      aliases: ["speckit.verify-tasks"]
+
+hooks:
+  after_implement:
+    enabled: true
+    command: "speckit.verify-tasks.run"
+    optional: true
+    prompt: "Run verify-tasks in a fresh session to check for phantom completions"
+    description: "Post-implementation phantom completion detector"
+
+tags:
+  - "verification"
+  - "quality"
+  - "phantom-completion"
+  - "tasks"
+  - "spec-adherence"

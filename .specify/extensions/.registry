@@ -1,0 +1,152 @@
+{
+  "schema_version": "1.0",
+  "extensions": {
+    "verify": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:4baa329349fffb5598a7bd41f958cf193aac77dd624c1c64799de052995ca29a",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.verify.run",
+          "speckit.verify"
+        ],
+        "gemini": [
+          "speckit.verify.run",
+          "speckit.verify"
+        ],
+        "copilot": [
+          "speckit.verify.run",
+          "speckit.verify"
+        ]
+      },
+      "installed_at": "2026-03-20T02:25:31.337320+00:00"
+    },
+    "verify-tasks": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:3569acbd5169af390b3c504caec3b90e9b10ea515664053c1d8070e4b22fa0cc",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.verify-tasks.run",
+          "speckit.verify-tasks"
+        ],
+        "gemini": [
+          "speckit.verify-tasks.run",
+          "speckit.verify-tasks"
+        ],
+        "copilot": [
+          "speckit.verify-tasks.run",
+          "speckit.verify-tasks"
+        ]
+      },
+      "installed_at": "2026-03-20T02:25:46.140600+00:00"
+    },
+    "review": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:0cbd39c71fbf9274e2d313d2ec8470c758759dea9e15ca162be2ae94612fc3f8",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.review.run",
+          "speckit.review",
+          "speckit.review.code",
+          "speckit.review.comments",
+          "speckit.review.tests",
+          "speckit.review.errors",
+          "speckit.review.types",
+          "speckit.review.simplify"
+        ],
+        "gemini": [
+          "speckit.review.run",
+          "speckit.review",
+          "speckit.review.code",
+          "speckit.review.comments",
+          "speckit.review.tests",
+          "speckit.review.errors",
+          "speckit.review.types",
+          "speckit.review.simplify"
+        ],
+        "copilot": [
+          "speckit.review.run",
+          "speckit.review",
+          "speckit.review.code",
+          "speckit.review.comments",
+          "speckit.review.tests",
+          "speckit.review.errors",
+          "speckit.review.types",
+          "speckit.review.simplify"
+        ]
+      },
+      "installed_at": "2026-03-20T02:25:47.451166+00:00"
+    },
+    "retrospective": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:43dbaba249c6e7322de1130446632197bbcb21c3c9f08fbe16654e86f6d5d922",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.retrospective.analyze"
+        ],
+        "gemini": [
+          "speckit.retrospective.analyze"
+        ],
+        "copilot": [
+          "speckit.retrospective.analyze"
+        ]
+      },
+      "installed_at": "2026-03-20T02:25:54.098195+00:00"
+    },
+    "cleanup": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:b15a5e3b4e5b43f867c093d962492f502b01503d0ec174611d0797854b017578",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.cleanup.run",
+          "speckit.cleanup"
+        ],
+        "gemini": [
+          "speckit.cleanup.run",
+          "speckit.cleanup"
+        ],
+        "copilot": [
+          "speckit.cleanup.run",
+          "speckit.cleanup"
+        ]
+      },
+      "installed_at": "2026-03-20T02:25:55.352693+00:00"
+    },
+    "doctor": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:45150c8ac10b6b002ebea9de34a203911951fe3a89cb8635a2a149082c02eeed",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.doctor.check",
+          "speckit.doctor"
+        ],
+        "gemini": [
+          "speckit.doctor.check",
+          "speckit.doctor"
+        ],
+        "copilot": [
+          "speckit.doctor.check",
+          "speckit.doctor"
+        ]
+      },
+      "installed_at": "2026-03-20T02:25:56.537312+00:00"
+    }
+  }
+}

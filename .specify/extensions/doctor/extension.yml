@@ -1,0 +1,27 @@
+schema_version: "1.0"
+
+extension:
+  id: "doctor"
+  name: "Project Health Check"
+  version: "1.0.0"
+  description: "Diagnose a Spec Kit project and report health issues across structure, agents, features, scripts, extensions, and git."
+  author: "KhawarHabibKhan"
+  repository: "https://github.com/KhawarHabibKhan/spec-kit-doctor"
+  license: "MIT"
+  homepage: "https://github.com/KhawarHabibKhan/spec-kit-doctor"
+
+requires:
+  speckit_version: ">=0.1.0"
+
+provides:
+  commands:
+    - name: "speckit.doctor.check"
+      file: "commands/check.md"
+      description: "Run a full project health diagnostic"
+      aliases: ["speckit.doctor"]
+
+tags:
+  - "diagnostics"
+  - "health-check"
+  - "validation"
+  - "project-structure"

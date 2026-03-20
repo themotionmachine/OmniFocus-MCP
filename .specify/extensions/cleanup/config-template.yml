@@ -1,0 +1,34 @@
+# Cleanup Extension Configuration
+# Copy this file to cleanup-config.yml and customize as needed
+
+# Severity thresholds for issue detection
+severity_thresholds:
+  # Functions longer than this (in lines) are flagged
+  long_function_lines: 50
+  # Nesting deeper than this is flagged
+  deep_nesting_levels: 4
+
+# Auto-fix settings (which SMALL issues to fix automatically)
+auto_fix:
+  # Remove console.log, print(), debugger, etc.
+  debug_statements: true
+  # Remove unused imports
+  unused_imports: true
+  # Remove dead/unreachable code (more aggressive, disabled by default)
+  dead_code: false
+
+# Patterns to exclude from scanning
+exclude_patterns:
+  - "node_modules/"
+  - "venv/"
+  - "dist/"
+  - "build/"
+  - "*.lock"
+  - "*.min.js"
+  - "*.min.css"
+
+# Custom patterns to detect (in addition to built-in patterns)
+# custom_patterns:
+#   - pattern: "CUSTOM_DEBUG"
+#     severity: "SMALL"
+#     action: "Remove custom debug markers"

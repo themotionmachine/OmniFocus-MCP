@@ -67,6 +67,13 @@ if [ -z "$FEATURE_DESCRIPTION" ]; then
     exit 1
 fi
 
+# Trim whitespace and validate description is not empty (e.g., user passed only whitespace)
+FEATURE_DESCRIPTION=$(echo "$FEATURE_DESCRIPTION" | xargs)
+if [ -z "$FEATURE_DESCRIPTION" ]; then
+    echo "Error: Feature description cannot be empty or contain only whitespace" >&2
+    exit 1
+fi
+
 # Function to find the repository root by searching for existing project markers
 find_repo_root() {
     local dir="$1"
@@ -131,7 +138,7 @@ check_existing_branches() {
     local specs_dir="$1"
 
     # Fetch all remotes to get latest branch info (suppress errors if no remotes)
-    git fetch --all --prune 2>/dev/null || true
+    git fetch --all --prune >/dev/null 2>&1 || true
 
     # Get highest number from ALL branches (not just matching short name)
     local highest_branch=$(get_highest_from_branches)
@@ -159,6 +166,7 @@ clean_branch_name() {
 # to searching for repository markers so the workflow still functions in repositories that
 # were initialised with --no-git.
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 if git rev-parse --show-toplevel >/dev/null 2>&1; then
     REPO_ROOT=$(git rev-parse --show-toplevel)
@@ -272,7 +280,16 @@ if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
 fi
 
 if [ "$HAS_GIT" = true ]; then
-    git checkout -b "$BRANCH_NAME"
+    if ! git checkout -b "$BRANCH_NAME" 2>/dev/null; then
+        # Check if branch already exists
+        if git branch --list "$BRANCH_NAME" | grep -q .; then
+            >&2 echo "Error: Branch '$BRANCH_NAME' already exists. Please use a different feature name or specify a different number with --number."
+            exit 1
+        else
+            >&2 echo "Error: Failed to create git branch '$BRANCH_NAME'. Please check your git configuration and try again."
+            exit 1
+        fi
+    fi
 else
     >&2 echo "[specify] Warning: Git repository not detected; skipped branch creation for $BRANCH_NAME"
 fi
@@ -280,18 +297,31 @@ fi
 FEATURE_DIR="$SPECS_DIR/$BRANCH_NAME"
 mkdir -p "$FEATURE_DIR"
 
-TEMPLATE="$REPO_ROOT/.specify/templates/spec-template.md"
+TEMPLATE=$(resolve_template "spec-template" "$REPO_ROOT") || true
 SPEC_FILE="$FEATURE_DIR/spec.md"
-if [ -f "$TEMPLATE" ]; then cp "$TEMPLATE" "$SPEC_FILE"; else touch "$SPEC_FILE"; fi
+if [ -n "$TEMPLATE" ] && [ -f "$TEMPLATE" ]; then
+    cp "$TEMPLATE" "$SPEC_FILE"
+else
+    echo "Warning: Spec template not found; created empty spec file" >&2
+    touch "$SPEC_FILE"
+fi
 
-# Set the SPECIFY_FEATURE environment variable for the current session
-export SPECIFY_FEATURE="$BRANCH_NAME"
+# Inform the user how to persist the feature variable in their own shell
+printf '# To persist: export SPECIFY_FEATURE=%q\n' "$BRANCH_NAME" >&2
 
 if $JSON_MODE; then
-    printf '{"BRANCH_NAME":"%s","SPEC_FILE":"%s","FEATURE_NUM":"%s"}\n' "$BRANCH_NAME" "$SPEC_FILE" "$FEATURE_NUM"
+    if command -v jq >/dev/null 2>&1; then
+        jq -cn \
+            --arg branch_name "$BRANCH_NAME" \
+            --arg spec_file "$SPEC_FILE" \
+            --arg feature_num "$FEATURE_NUM" \
+            '{BRANCH_NAME:$branch_name,SPEC_FILE:$spec_file,FEATURE_NUM:$feature_num}'
+    else
+        printf '{"BRANCH_NAME":"%s","SPEC_FILE":"%s","FEATURE_NUM":"%s"}\n' "$(json_escape "$BRANCH_NAME")" "$(json_escape "$SPEC_FILE")" "$(json_escape "$FEATURE_NUM")"
+    fi
 else
     echo "BRANCH_NAME: $BRANCH_NAME"
     echo "SPEC_FILE: $SPEC_FILE"
     echo "FEATURE_NUM: $FEATURE_NUM"
-    echo "SPECIFY_FEATURE environment variable set to: $BRANCH_NAME"
+    printf '# To persist in your shell: export SPECIFY_FEATURE=%q\n' "$BRANCH_NAME"
 fi

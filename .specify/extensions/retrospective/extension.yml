@@ -1,0 +1,39 @@
+schema_version: "1.0"
+
+extension:
+  id: "retrospective"
+  name: "Retrospective Extension"
+  version: "1.0.0"
+  description: "Post-implementation spec adherence and drift analysis for Spec-Driven Development."
+  author: "emi-dm"
+  repository: "https://github.com/emi-dm/spec-kit-retrospective"
+  homepage: "https://github.com/emi-dm/spec-kit-retrospective"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=0.1.0"
+  commands:
+    - "speckit.tasks"
+    - "speckit.implement"
+    - "speckit.constitution"
+    - "speckit.specify"
+    - "speckit.checklist"
+
+provides:
+  commands:
+    - name: "speckit.retrospective.analyze"
+      file: "commands/retrospective.md"
+      description: "Generate retrospective.md with spec adherence and drift analysis."
+
+hooks:
+  after_implement:
+    command: "speckit.retrospective.analyze"
+    optional: true
+    prompt: "Run retrospective analysis now? (spec changes require explicit confirmation)"
+    description: "Offer a retrospective after implementation without modifying spec unless approved."
+
+tags:
+  - "retrospective"
+  - "spec-drift"
+  - "quality"
+  - "analysis"

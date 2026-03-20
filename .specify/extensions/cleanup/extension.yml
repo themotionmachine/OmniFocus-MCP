@@ -1,0 +1,54 @@
+schema_version: "1.0"
+
+extension:
+  id: "cleanup"
+  name: "Cleanup Extension"
+  version: "1.0.0"
+  description: "Post-implementation quality gate that reviews changes, fixes small issues (scout rule), creates tasks for medium issues, and generates analysis for large issues."
+  author: "dsrednicki"
+  repository: "https://github.com/dsrednicki/spec-kit-cleanup"
+  license: "MIT"
+  homepage: "https://github.com/dsrednicki/spec-kit-cleanup"
+
+requires:
+  speckit_version: ">=0.1.0"
+
+  commands:
+    - "speckit.implement"
+    - "speckit.tasks"
+
+provides:
+  commands:
+    - name: "speckit.cleanup.run"
+      file: "commands/cleanup.md"
+      description: "Review implementation, fix small issues, identify tech debt"
+      aliases: ["speckit.cleanup"]
+
+  config:
+    - name: "cleanup-config.yml"
+      template: "config-template.yml"
+      description: "Cleanup extension configuration"
+      required: false
+
+hooks:
+  after_implement:
+    command: "speckit.cleanup.run"
+    optional: true
+    prompt: "Run cleanup to review implementation changes and identify tech debt?"
+    description: "Post-implementation quality gate"
+
+tags:
+  - "quality"
+  - "tech-debt"
+  - "review"
+  - "cleanup"
+  - "scout-rule"
+
+defaults:
+  severity_thresholds:
+    long_function_lines: 50
+    deep_nesting_levels: 4
+  auto_fix:
+    debug_statements: true
+    unused_imports: true
+    dead_code: false

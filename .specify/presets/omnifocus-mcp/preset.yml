@@ -1,0 +1,29 @@
+schema_version: "1.0"
+
+preset:
+  id: "omnifocus-mcp"
+  name: "OmniFocus MCP Project Preset"
+  version: "1.0.0"
+  description: >
+    Enforces TDD red-green-refactor, mandatory integration tests,
+    no placeholder tests, definitions/primitives architecture,
+    and OmniJS script conventions for the OmniFocus MCP project.
+  author: "racecraft"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=0.3.0"
+
+provides:
+  templates:
+    - type: "template"
+      name: "tasks-template"
+      file: "templates/tasks-template.md"
+      description: "Tasks template with mandatory TDD, integration tests, and OmniJS conventions"
+      replaces: "tasks-template"
+
+tags:
+  - "tdd"
+  - "omnifocus"
+  - "mcp"
+  - "integration-tests"

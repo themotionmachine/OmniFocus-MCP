@@ -1,0 +1,23 @@
+# Prevent recursive installation
+.specify/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.tmp
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*

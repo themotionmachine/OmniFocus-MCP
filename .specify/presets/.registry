@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "presets": {
+    "omnifocus-mcp": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:1efff55901d04cdc33a9576e139a1618e65532640e4aa83a5ca4e2990c356a1d",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {},
+      "registered_skills": [],
+      "installed_at": "2026-03-20T02:42:22.689926+00:00"
+    }
+  }
+}
