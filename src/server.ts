@@ -35,6 +35,7 @@ import * as editTagTool from './tools/definitions/editTag.js';
 import * as expandItemsTool from './tools/definitions/expandItems.js';
 import * as expandNotesTool from './tools/definitions/expandNotes.js';
 import * as exportPerspectiveTool from './tools/definitions/exportPerspective.js';
+import * as exportTaskpaperTool from './tools/definitions/exportTaskpaper.js';
 import * as focusItemsTool from './tools/definitions/focusItems.js';
 import * as getDatabaseStatsTool from './tools/definitions/getDatabaseStats.js';
 import * as getForecastDayTool from './tools/definitions/getForecastDay.js';
@@ -46,6 +47,7 @@ import * as getProjectTool from './tools/definitions/getProject.js';
 import * as getProjectsForReviewTool from './tools/definitions/getProjectsForReview.js';
 import * as getRepetitionTool from './tools/definitions/getRepetition.js';
 import * as getTaskTool from './tools/definitions/getTask.js';
+import * as importTaskpaperTool from './tools/definitions/importTaskpaper.js';
 import * as listAttachmentsTool from './tools/definitions/listAttachments.js';
 import * as listFoldersTool from './tools/definitions/listFolders.js';
 import * as listLinkedFilesTool from './tools/definitions/listLinkedFiles.js';
@@ -88,6 +90,7 @@ import * as snoozeNotificationTool from './tools/definitions/snoozeNotification.
 import * as switchPerspectiveTool from './tools/definitions/switchPerspective.js';
 import * as undoOperationTool from './tools/definitions/undoOperation.js';
 import * as unfocusTool from './tools/definitions/unfocus.js';
+import * as validateTransportTextTool from './tools/definitions/validateTransportText.js';
 import { logger } from './utils/logger.js';
 
 // Create an MCP server
@@ -701,6 +704,27 @@ server.tool(
   'Duplicate 1-100 sections (folders and/or projects) to a new location. Copies preserve all contents including child projects, tasks, and settings. Returns new section IDs and names. Per-item results for partial failures.',
   duplicateSectionsTool.schema.shape,
   duplicateSectionsTool.handler
+);
+
+server.tool(
+  'import_taskpaper',
+  'WARNING: Non-atomic undo -- each created item is a separate undo step. Import TaskPaper transport text into OmniFocus, creating tasks and projects from the text. Supports optional placement into a target project. Returns identifiers for all created items including nested subtasks.',
+  importTaskpaperTool.schema.shape,
+  importTaskpaperTool.handler
+);
+
+server.tool(
+  'export_taskpaper',
+  'Export tasks, projects, or folders from OmniFocus to TaskPaper transport text format. Supports scoping by project ID, folder ID, or specific task IDs (1-100). Includes status filtering and full metadata serialization (tags, dates, flags, estimates, notes).',
+  exportTaskpaperTool.schema.shape,
+  exportTaskpaperTool.handler
+);
+
+server.tool(
+  'validate_transport_text',
+  'Validate TaskPaper transport text without modifying OmniFocus. Returns a structured dry-run report with parsed items, hierarchy, metadata extraction, summary statistics, and warnings for unrecognized syntax. Pure client-side validation with zero OmniFocus side effects.',
+  validateTransportTextTool.schema.shape,
+  validateTransportTextTool.handler
 );
 
 // Start the MCP server

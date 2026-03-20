@@ -1,0 +1,60 @@
+import { z } from 'zod';
+import { ExportSummarySchema, TaskpaperStatusFilterSchema } from './shared/index.js';
+import { ValidationWarningSchema } from './shared/validation-types.js';
+
+/** Base object schema (used for server.tool() registration via .shape) */
+export const ExportTaskpaperInputBaseSchema = z.object({
+  projectId: z.string().optional().describe('Export all tasks within a project'),
+  folderId: z.string().optional().describe('Export all projects and tasks within a folder'),
+  taskIds: z
+    .array(z.string())
+    .min(1)
+    .max(100)
+    .optional()
+    .describe('Export specific tasks by ID (1-100)'),
+  status: TaskpaperStatusFilterSchema.default('active').describe(
+    'Status filter: "active" (default), "completed", "dropped", or "all"'
+  )
+});
+
+/** Full input schema with mutual exclusion refinement (used for validation) */
+export const ExportTaskpaperInputSchema = ExportTaskpaperInputBaseSchema.refine(
+  (data) => {
+    const scopeCount = [data.projectId, data.folderId, data.taskIds].filter(
+      (v) => v !== undefined
+    ).length;
+    return scopeCount === 1;
+  },
+  {
+    message: 'Exactly one export scope must be provided: projectId, folderId, or taskIds'
+  }
+);
+
+export type ExportTaskpaperInput = z.infer<typeof ExportTaskpaperInputSchema>;
+
+export const ExportTaskpaperSuccessSchema = z.object({
+  success: z.literal(true),
+  transportText: z.string().describe('Generated transport text'),
+  summary: ExportSummarySchema,
+  warnings: z
+    .array(ValidationWarningSchema)
+    .describe(
+      'Non-fatal warnings encountered during export (e.g., tasks with empty names, unserializable properties). Empty array when no issues.'
+    )
+});
+
+export type ExportTaskpaperSuccess = z.infer<typeof ExportTaskpaperSuccessSchema>;
+
+export const ExportTaskpaperErrorSchema = z.object({
+  success: z.literal(false),
+  error: z.string()
+});
+
+export type ExportTaskpaperError = z.infer<typeof ExportTaskpaperErrorSchema>;
+
+export const ExportTaskpaperResponseSchema = z.discriminatedUnion('success', [
+  ExportTaskpaperSuccessSchema,
+  ExportTaskpaperErrorSchema
+]);
+
+export type ExportTaskpaperResponse = z.infer<typeof ExportTaskpaperResponseSchema>;
