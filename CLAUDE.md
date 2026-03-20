@@ -210,12 +210,9 @@ Domain-specific rules in `.claude/rules/` load automatically:
 - You've tested OmniJS scripts independently
 
 ## Recent Changes
+- 012-taskpaper: Added TypeScript 5.9+ (strict mode, ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+, Biome 2.4+
 - 015-forecast: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+
 - 014-window-ui: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+
-- 011-attachments: Added TypeScript 5.9+ strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+
-- 010-bulk-operations: Added TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+
-- 008-perspectives: Added TypeScript 5.9+ (strict mode, ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
-- 007-repetition-rules: TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+
 
 ## Implemented Tool Domains
 
@@ -360,6 +357,7 @@ See [MCP logging spec](https://modelcontextprotocol.io/specification/2025-06-18/
 - TypeScript 5.9+ strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+ (011-attachments)
 - TypeScript 5.9+ with strict mode (ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+ (010-bulk-operations)
 - TypeScript 5.9+ (strict mode, ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.x, tsup 8.5+ (008-perspectives)
+- TypeScript 5.9+ (strict mode, ES2024 target) + @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+, Biome 2.4+ (012-taskpaper)
 
 - TypeScript 5.9+ with strict mode (ES2024 target)
 - @modelcontextprotocol/sdk 1.27.x, Zod 4.2.x, tsup 8.5+, Biome 2.4+

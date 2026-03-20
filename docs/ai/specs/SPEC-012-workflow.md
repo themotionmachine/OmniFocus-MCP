@@ -10,7 +10,7 @@
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 10 FRs, 3 user stories, 14 scenarios, 7 edge cases |
-| Clarify | `/speckit.clarify` | ⏳ Pending | Critical API questions pre-loaded below |
+| Clarify | `/speckit.clarify` | ✅ Complete | 2 sessions, 10 questions answered; null param, moveTasks placement, parsed validator, status filter, sync-only confirmed |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
