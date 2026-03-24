@@ -18,6 +18,7 @@ export const schema = z.object({
 
   // Task-specific fields
   newStatus: z.enum(['incomplete', 'completed', 'dropped']).optional().describe("New status for tasks (incomplete, completed, dropped)"),
+  newProjectName: z.string().optional().describe("New project to move the task to (tasks only)"),
   addTags: z.array(z.string()).optional().describe("Tags to add to the task"),
   removeTags: z.array(z.string()).optional().describe("Tags to remove from the task"),
   replaceTags: z.array(z.string()).optional().describe("Tags to replace all existing tags with"),

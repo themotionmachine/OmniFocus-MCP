@@ -31,6 +31,9 @@ export interface EditItemParams {
   removeTags?: string[];        // Tags to remove from the task
   replaceTags?: string[];       // Tags to replace all existing tags with
   
+  // Task-specific: move to project
+  newProjectName?: string;      // New project to move the task to
+
   // Project-specific fields
   newSequential?: boolean;      // Whether the project should be sequential
   newFolderName?: string;       // New folder to move the project to
@@ -364,8 +367,27 @@ function generateAppleScript(params: EditItemParams): string {
 `;
       }
     }
+
+    // Move task to a new project
+    if (params.newProjectName !== undefined) {
+      const projectName = params.newProjectName.replace(/["\\]/g, '\\$&');
+      script += `
+        -- Move to new project
+        set destProject to missing value
+        try
+          set destProject to first flattened project where name = "${projectName}"
+        end try
+
+        if destProject is not missing value then
+          move foundItem to end of tasks of destProject
+          set end of changedProperties to "project"
+        else
+          error "Project '${projectName}' not found"
+        end if
+`;
+    }
   }
-  
+
   // Project-specific updates
   if (itemType === 'project') {
     // Update sequential status
