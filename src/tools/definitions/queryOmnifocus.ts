@@ -19,7 +19,9 @@ export const schema = z.object({
     inbox: z.boolean().optional().describe("Filter tasks by inbox status. true = only inbox tasks (no project), false = only tasks in a project"),
     dueOn: z.number().optional().describe("Returns items due on exactly this day. 0 = today, 1 = tomorrow, etc."),
     deferOn: z.number().optional().describe("Returns items with defer date on exactly this day. 0 = today, 1 = tomorrow, etc."),
-    plannedOn: z.number().optional().describe("Returns tasks with planned date on exactly this day. 0 = today, 1 = tomorrow, etc.")
+    plannedOn: z.number().optional().describe("Returns tasks with planned date on exactly this day. 0 = today, 1 = tomorrow, etc."),
+    addedWithin: z.number().optional().describe("Returns items added (created) within the last N days. Example: 7 = items added in the last week"),
+    addedOn: z.number().optional().describe("Returns items added (created) on exactly this day. 0 = today, 1 = tomorrow, -1 = yesterday. Negative values look backward")
   }).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies"),
   
   fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
@@ -132,6 +134,8 @@ function formatFilters(filters: any): string {
   if (filters.dueOn !== undefined) parts.push(`due on day +${filters.dueOn}`);
   if (filters.deferOn !== undefined) parts.push(`defer on day +${filters.deferOn}`);
   if (filters.plannedOn !== undefined) parts.push(`planned on day +${filters.plannedOn}`);
+  if (filters.addedWithin !== undefined) parts.push(`added within ${filters.addedWithin} days`);
+  if (filters.addedOn !== undefined) parts.push(`added on day ${filters.addedOn}`);
   return parts.join(', ');
 }
 

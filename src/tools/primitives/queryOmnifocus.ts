@@ -17,6 +17,8 @@ export interface QueryOmnifocusParams {
     dueOn?: number;
     deferOn?: number;
     plannedOn?: number;
+    addedWithin?: number;
+    addedOn?: number;
   };
   fields?: string[];
   limit?: number;
@@ -90,6 +92,15 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
         const futureDate = new Date();
         futureDate.setDate(futureDate.getDate() + daysFromNow);
         return itemDate <= futureDate;
+      }
+
+      // Helper to check if date is within last N days (backward-looking)
+      function checkDateWithinPast(itemDate, daysAgo) {
+        if (!itemDate) return false;
+        const pastDate = new Date();
+        pastDate.setDate(pastDate.getDate() - daysAgo);
+        pastDate.setHours(0, 0, 0, 0);
+        return itemDate >= pastDate;
       }
 
       // Helper to check exact day match
@@ -260,6 +271,18 @@ function generateFilterConditions(entity: string, filters: any): string {
       conditions.push(`if (!checkSameDay(item.plannedDate, ${filters.plannedOn})) return false;`);
     }
 
+    if (filters.addedWithin !== undefined) {
+      conditions.push(`
+        if (!item.added || !checkDateWithinPast(item.added, ${filters.addedWithin})) {
+          return false;
+        }
+      `);
+    }
+
+    if (filters.addedOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.added, ${filters.addedOn})) return false;`);
+    }
+
     if (filters.hasNote !== undefined) {
       conditions.push(`
         const hasNote = item.note && item.note.trim().length > 0;
@@ -287,10 +310,22 @@ function generateFilterConditions(entity: string, filters: any): string {
     }
     
     if (filters.status && filters.status.length > 0) {
-      const statusCondition = filters.status.map((status: string) => 
+      const statusCondition = filters.status.map((status: string) =>
         `projectStatusMap[item.status] === "${status}"`
       ).join(' || ');
       conditions.push(`if (!(${statusCondition})) return false;`);
+    }
+
+    if (filters.addedWithin !== undefined) {
+      conditions.push(`
+        if (!item.added || !checkDateWithinPast(item.added, ${filters.addedWithin})) {
+          return false;
+        }
+      `);
+    }
+
+    if (filters.addedOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.added, ${filters.addedOn})) return false;`);
     }
   }
   
