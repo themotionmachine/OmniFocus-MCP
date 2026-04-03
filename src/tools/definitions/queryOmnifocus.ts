@@ -22,7 +22,7 @@ export const schema = z.object({
     plannedOn: z.number().optional().describe("Returns tasks with planned date on exactly this day. 0 = today, 1 = tomorrow, etc.")
   }).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies"),
   
-  fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
+  fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
   
   limit: z.number().optional().describe("Maximum number of items to return. Useful for large result sets. Default: no limit"),
   
@@ -181,7 +181,17 @@ function formatTasks(tasks: any[]): string {
     if (task.taskStatus) {
       parts.push(`#${task.taskStatus.toLowerCase()}`);
     }
+
+    // Repeating
+    if (task.isRepeating !== undefined) {
+      parts.push(task.isRepeating ? '[repeating]' : '[not repeating]');
+    }
     
+    // Repetition rule
+    if (task.repetitionRule) {
+      parts.push(`[rule: ${task.repetitionRule}]`);
+    }
+
     // Metadata dates if requested
     if (task.creationDate) {
       parts.push(`[created: ${formatDate(task.creationDate)}]`);
