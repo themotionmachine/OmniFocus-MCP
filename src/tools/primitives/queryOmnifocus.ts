@@ -19,6 +19,8 @@ export interface QueryOmnifocusParams {
     plannedOn?: number;
     addedWithin?: number;
     addedOn?: number;
+    completedWithin?: number;
+    completedOn?: number;
   };
   fields?: string[];
   limit?: number;
@@ -283,6 +285,18 @@ function generateFilterConditions(entity: string, filters: any): string {
       conditions.push(`if (!checkSameDay(item.added, ${filters.addedOn})) return false;`);
     }
 
+    if (filters.completedWithin !== undefined) {
+      conditions.push(`
+        if (!item.completionDate || !checkDateWithinPast(item.completionDate, ${filters.completedWithin})) {
+          return false;
+        }
+      `);
+    }
+
+    if (filters.completedOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.completionDate, ${filters.completedOn})) return false;`);
+    }
+
     if (filters.hasNote !== undefined) {
       conditions.push(`
         const hasNote = item.note && item.note.trim().length > 0;
@@ -327,8 +341,20 @@ function generateFilterConditions(entity: string, filters: any): string {
     if (filters.addedOn !== undefined) {
       conditions.push(`if (!checkSameDay(item.added, ${filters.addedOn})) return false;`);
     }
+
+    if (filters.completedWithin !== undefined) {
+      conditions.push(`
+        if (!item.completionDate || !checkDateWithinPast(item.completionDate, ${filters.completedWithin})) {
+          return false;
+        }
+      `);
+    }
+
+    if (filters.completedOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.completionDate, ${filters.completedOn})) return false;`);
+    }
   }
-  
+
   return conditions.join('\n');
 }
 
