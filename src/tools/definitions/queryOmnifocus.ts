@@ -22,6 +22,7 @@ export const schema = z.object({
     plannedOn: z.number().optional().describe("Returns tasks with planned date on exactly this day. 0 = today, 1 = tomorrow, etc."),
     addedWithin: z.number().optional().describe("Returns items added (created) within the last N days. Example: 7 = items added in the last week"),
     addedOn: z.number().optional().describe("Returns items added (created) on exactly this day. 0 = today, 1 = tomorrow, -1 = yesterday. Negative values look backward"),
+    isRepeating: z.boolean().optional().describe("Filter by repeating status. true = only repeating tasks, false = only non-repeating tasks"),
     completedWithin: z.number().optional().describe("Returns items completed or dropped within the last N days (uses completionDate which OmniFocus sets for both). Example: 7 = items completed in the last week. Combine with status: ['Dropped'] to find only dropped items. Note: use with includeCompleted: true"),
     completedOn: z.number().optional().describe("Returns items completed or dropped on exactly this day (uses completionDate which OmniFocus sets for both). 0 = today, -1 = yesterday. Negative values look backward. Combine with status: ['Dropped'] to find only dropped items. Note: use with includeCompleted: true")
   }).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies"),
@@ -138,6 +139,7 @@ function formatFilters(filters: any): string {
   if (filters.plannedOn !== undefined) parts.push(`planned on day +${filters.plannedOn}`);
   if (filters.addedWithin !== undefined) parts.push(`added within ${filters.addedWithin} days`);
   if (filters.addedOn !== undefined) parts.push(`added on day ${filters.addedOn}`);
+  if (filters.isRepeating !== undefined) parts.push(`repeating: ${filters.isRepeating}`);
   if (filters.completedWithin !== undefined) parts.push(`completed within ${filters.completedWithin} days`);
   if (filters.completedOn !== undefined) parts.push(`completed on day ${filters.completedOn}`);
   return parts.join(', ');

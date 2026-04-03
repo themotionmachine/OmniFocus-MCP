@@ -19,6 +19,7 @@ export interface QueryOmnifocusParams {
     plannedOn?: number;
     addedWithin?: number;
     addedOn?: number;
+    isRepeating?: boolean;
     completedWithin?: number;
     completedOn?: number;
   };
@@ -283,6 +284,14 @@ function generateFilterConditions(entity: string, filters: any): string {
 
     if (filters.addedOn !== undefined) {
       conditions.push(`if (!checkSameDay(item.added, ${filters.addedOn})) return false;`);
+    }
+
+    if (filters.isRepeating !== undefined) {
+      if (filters.isRepeating) {
+        conditions.push(`if (item.repetitionRule === null) return false;`);
+      } else {
+        conditions.push(`if (item.repetitionRule !== null) return false;`);
+      }
     }
 
     if (filters.completedWithin !== undefined) {
