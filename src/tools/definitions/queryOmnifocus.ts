@@ -8,7 +8,7 @@ export const schema = z.object({
   filters: z.object({
     projectId: z.string().optional().describe("Filter tasks by exact project ID (use when you know the specific project ID)"),
     projectName: z.string().optional().describe("Filter tasks by project name. CASE-INSENSITIVE PARTIAL MATCHING - 'review' matches 'Weekly Review', 'Review Documents', etc. Special value: 'inbox' returns inbox tasks"),
-    folderId: z.string().optional().describe("Filter projects by exact folder ID (use when you know the specific folder ID)"),
+    folderId: z.string().optional().describe("Filter by folder ID. For tasks, returns tasks whose containing project is in this folder (or a subfolder). For projects, returns projects in this folder (or a subfolder)"),
     tags: z.array(z.string()).optional().describe("Filter by tag names. EXACT MATCH, CASE-SENSITIVE. OR logic - items must have at least ONE of the specified tags. Example: ['Work'] and ['work'] are different"),
     status: z.array(z.string()).optional().describe("Filter by status (OR logic - matches any). TASKS: 'Next' (next action), 'Available' (ready to work), 'Blocked' (waiting), 'DueSoon' (due <24h), 'Overdue' (past due), 'Completed', 'Dropped'. PROJECTS: 'Active', 'OnHold', 'Done', 'Dropped'"),
     flagged: z.boolean().optional().describe("Filter by flagged status. true = only flagged items, false = only unflagged items"),

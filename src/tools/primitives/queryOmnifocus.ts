@@ -72,7 +72,7 @@ export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<Quer
 
 function generateQueryScript(params: QueryOmnifocusParams): string {
   const { entity, filters = {}, fields, limit, sortBy, sortOrder, includeCompleted = false, summary = false } = params;
-  
+
   // Build the JXA script based on the entity type and filters
   return `(() => {
     try {
@@ -214,8 +214,28 @@ function generateFilterConditions(entity: string, filters: any): string {
       `);
     }
     
+    if (filters.folderId) {
+      conditions.push(`
+        {
+          const targetFolderId = "${filters.folderId}";
+          let matchesFolder = false;
+          if (item.containingProject && item.containingProject.parentFolder) {
+            let folder = item.containingProject.parentFolder;
+            while (folder) {
+              if (folder.id.primaryKey === targetFolderId) {
+                matchesFolder = true;
+                break;
+              }
+              folder = folder.parentFolder;
+            }
+          }
+          if (!matchesFolder) return false;
+        }
+      `);
+    }
+
     if (filters.tags && filters.tags.length > 0) {
-      const tagCondition = filters.tags.map((tag: string) => 
+      const tagCondition = filters.tags.map((tag: string) =>
         `item.tags.some(t => t.name === "${tag}")`
       ).join(' || ');
       conditions.push(`if (!(${tagCondition})) return false;`);
@@ -279,13 +299,24 @@ function generateFilterConditions(entity: string, filters: any): string {
   if (entity === 'projects') {
     if (filters.folderId) {
       conditions.push(`
-        if (!item.parentFolder || 
-            item.parentFolder.id.primaryKey !== "${filters.folderId}") {
-          return false;
+        {
+          const targetFolderId = "${filters.folderId}";
+          let matchesFolder = false;
+          if (item.parentFolder) {
+            let folder = item.parentFolder;
+            while (folder) {
+              if (folder.id.primaryKey === targetFolderId) {
+                matchesFolder = true;
+                break;
+              }
+              folder = folder.parentFolder;
+            }
+          }
+          if (!matchesFolder) return false;
         }
       `);
     }
-    
+
     if (filters.status && filters.status.length > 0) {
       const statusCondition = filters.status.map((status: string) => 
         `projectStatusMap[item.status] === "${status}"`
