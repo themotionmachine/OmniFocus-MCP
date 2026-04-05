@@ -98,37 +98,28 @@ function generateAppleScript(params: EditItemParams): string {
       set foundItem to missing value
 `;
   
-  // Add ID search if provided
+  // Add ID search if provided — use 'whose' clause for fast indexed lookup
   if (id) {
     if (itemType === 'task') {
       script += `
-      -- Try to find task by ID
-      repeat with aTask in (flattened tasks)
-        if (id of aTask as string) = "${id}" then
-          set foundItem to aTask
-          exit repeat
-        end if
-      end repeat
-      
+      -- Try to find task by ID (using whose clause for fast lookup)
+      try
+        set foundItem to first flattened task whose id is "${id}"
+      end try
+
       -- If not found in projects, search in inbox
       if foundItem is missing value then
-        repeat with aTask in (inbox tasks)
-          if (id of aTask as string) = "${id}" then
-            set foundItem to aTask
-            exit repeat
-          end if
-        end repeat
+        try
+          set foundItem to first inbox task whose id is "${id}"
+        end try
       end if
 `;
     } else {
       script += `
-      -- Try to find project by ID
-      repeat with aProject in (flattened projects)
-        if (id of aProject as string) = "${id}" then
-          set foundItem to aProject
-          exit repeat
-        end if
-      end repeat
+      -- Try to find project by ID (using whose clause for fast lookup)
+      try
+        set foundItem to first flattened project whose id is "${id}"
+      end try
 `;
     }
   }
@@ -137,33 +128,24 @@ function generateAppleScript(params: EditItemParams): string {
   if (!id && name) {
     if (itemType === 'task') {
       script += `
-      -- Find task by name (search in projects first, then inbox)
-      repeat with aTask in (flattened tasks)
-        if (name of aTask) = "${name}" then
-          set foundItem to aTask
-          exit repeat
-        end if
-      end repeat
-      
+      -- Find task by name (using whose clause for fast lookup)
+      try
+        set foundItem to first flattened task whose name is "${name}"
+      end try
+
       -- If not found in projects, search in inbox
       if foundItem is missing value then
-        repeat with aTask in (inbox tasks)
-          if (name of aTask) = "${name}" then
-            set foundItem to aTask
-            exit repeat
-          end if
-        end repeat
+        try
+          set foundItem to first inbox task whose name is "${name}"
+        end try
       end if
 `;
     } else {
       script += `
-      -- Find project by name
-      repeat with aProject in (flattened projects)
-        if (name of aProject) = "${name}" then
-          set foundItem to aProject
-          exit repeat
-        end if
-      end repeat
+      -- Find project by name (using whose clause for fast lookup)
+      try
+        set foundItem to first flattened project whose name is "${name}"
+      end try
 `;
     }
   } else if (id && name) {
@@ -171,34 +153,25 @@ function generateAppleScript(params: EditItemParams): string {
       script += `
       -- If ID search failed, try to find by name as fallback
       if foundItem is missing value then
-        repeat with aTask in (flattened tasks)
-          if (name of aTask) = "${name}" then
-            set foundItem to aTask
-            exit repeat
-          end if
-        end repeat
+        try
+          set foundItem to first flattened task whose name is "${name}"
+        end try
       end if
-      
+
       -- If still not found, search in inbox
       if foundItem is missing value then
-        repeat with aTask in (inbox tasks)
-          if (name of aTask) = "${name}" then
-            set foundItem to aTask
-            exit repeat
-          end if
-        end repeat
+        try
+          set foundItem to first inbox task whose name is "${name}"
+        end try
       end if
 `;
     } else {
       script += `
       -- If ID search failed, try to find project by name as fallback
       if foundItem is missing value then
-        repeat with aProject in (flattened projects)
-          if (name of aProject) = "${name}" then
-            set foundItem to aProject
-            exit repeat
-          end if
-        end repeat
+        try
+          set foundItem to first flattened project whose name is "${name}"
+        end try
       end if
 `;
     }
