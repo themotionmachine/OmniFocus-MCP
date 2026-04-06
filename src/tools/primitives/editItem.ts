@@ -7,7 +7,7 @@ import { generateDateAssignmentV2 } from '../../utils/dateFormatting.js';
 const execAsync = promisify(exec);
 
 // Status options for tasks and projects
-type TaskStatus = 'incomplete' | 'completed' | 'dropped';
+type TaskStatus = 'incomplete' | 'completed' | 'dropped' | 'skipped';
 type ProjectStatus = 'active' | 'completed' | 'dropped' | 'onHold';
 
 // Interface for item edit parameters
@@ -26,7 +26,7 @@ export interface EditItemParams {
   newEstimatedMinutes?: number; // New estimated minutes
   
   // Task-specific fields
-  newStatus?: TaskStatus;       // New status for tasks (incomplete, completed, dropped)
+  newStatus?: TaskStatus;       // New status for tasks (incomplete, completed, dropped, skipped - skipped requires repeating task)
   addTags?: string[];           // Tags to add to the task
   removeTags?: string[];        // Tags to remove from the task
   replaceTags?: string[];       // Tags to replace all existing tags with
@@ -259,6 +259,29 @@ function generateAppleScript(params: EditItemParams): string {
         -- Mark task as dropped
         set dropped of foundItem to true
         set end of changedProperties to "status (dropped)"
+`;
+      } else if (params.newStatus === 'skipped') {
+        script += `
+        -- Skip repeating task: complete it to fire the next repeat, then drop the completed instance
+        if repetition rule of foundItem is missing value then
+          return "{\\\"success\\\":false,\\\"error\\\":\\\"Cannot skip a non-repeating task. The task must have a repetition rule.\\\"}"
+        end if
+
+        -- Store the ID of the current instance before completing
+        set skippedTaskId to id of foundItem as string
+
+        -- Complete the task to trigger the next repetition
+        mark complete foundItem
+
+        -- Now find and drop the completed instance by its original ID
+        try
+          set completedTask to first flattened task whose id is skippedTaskId
+          set dropped of completedTask to true
+          set end of changedProperties to "status (skipped)"
+        on error
+          -- The completed instance may have moved; still report success since repeat was triggered
+          set end of changedProperties to "status (skipped - completed instance not found to drop)"
+        end try
 `;
       } else if (params.newStatus === 'incomplete') {
         script += `
