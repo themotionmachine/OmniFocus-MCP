@@ -178,7 +178,9 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
         return isWithinHierarchy(task.containingProject);
       }
 
-      return value.includes(task.id.primaryKey);
+      // Task has no containing project — don't match the task's own ID
+      // against the focus list, as the list contains project/folder IDs
+      return false;
     };
 
     var evaluateActionMatchingSearch = (task, value) => {
@@ -252,6 +254,11 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
 
         // Add other date conditions as needed
         return false;
+      }
+
+      // Skip disabled rules — they are toggled off in the perspective editor
+      if (rule.disabledRule !== undefined) {
+        return true;
       }
 
       // Handle standard rules
