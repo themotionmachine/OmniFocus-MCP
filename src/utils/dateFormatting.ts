@@ -10,15 +10,21 @@
  * @returns AppleScript code to construct the date
  */
 export function createDateOutsideTellBlock(isoDateString: string, varName: string): string {
-  // Parse the ISO date string
-  const date = new Date(isoDateString);
-  
+  // Date-only strings (YYYY-MM-DD) are interpreted as UTC by new Date(),
+  // which shifts the calendar day in timezones behind UTC. Append T00:00:00
+  // to force local-time interpretation so "2026-04-10" means April 10th local.
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(isoDateString)
+    ? isoDateString + 'T00:00:00'
+    : isoDateString;
+
+  const date = new Date(normalized);
+
   // Check if the date is valid
   if (isNaN(date.getTime())) {
     throw new Error(`Invalid date string: ${isoDateString}`);
   }
-  
-  // Extract date components
+
+  // Extract date components (always local time after normalization)
   const year = date.getFullYear();
   const month = date.getMonth() + 1; // JavaScript months are 0-indexed
   const day = date.getDate();

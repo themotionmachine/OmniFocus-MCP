@@ -196,4 +196,31 @@ describe('formatFilters', () => {
     const result = formatFilters({});
     expect(result).toBe('');
   });
+
+  it('displays string date filter values naturally', () => {
+    const result = formatFilters({ dueWithin: 'this week' });
+    expect(result).toBe('due within this week');
+    expect(result).not.toContain('days');
+  });
+
+  it('displays numeric date filter values with "days" unit', () => {
+    const result = formatFilters({ dueWithin: 7 });
+    expect(result).toBe('due within 7 days');
+  });
+
+  it('displays string dueOn naturally', () => {
+    const result = formatFilters({ dueOn: 'today' });
+    expect(result).toBe('due on today');
+    expect(result).not.toContain('+');
+  });
+
+  it('displays numeric dueOn with +N format', () => {
+    const result = formatFilters({ dueOn: 2 });
+    expect(result).toBe('due on day +2');
+  });
+
+  it('displays ISO date dueOn naturally', () => {
+    const result = formatFilters({ dueOn: '2026-04-15' });
+    expect(result).toBe('due on 2026-04-15');
+  });
 });

@@ -146,13 +146,13 @@ function formatFilters(filters: any): string {
   if (filters.tags) parts.push(`tags: [${filters.tags.join(', ')}]`);
   if (filters.status) parts.push(`status: [${filters.status.join(', ')}]`);
   if (filters.flagged !== undefined) parts.push(`flagged: ${filters.flagged}`);
-  if (filters.dueWithin) parts.push(`due within ${filters.dueWithin} days`);
-  if (filters.deferredUntil) parts.push(`deferred becoming available within ${filters.deferredUntil} days`);
+  if (filters.dueWithin) parts.push(typeof filters.dueWithin === 'string' ? `due within ${filters.dueWithin}` : `due within ${filters.dueWithin} days`);
+  if (filters.deferredUntil) parts.push(typeof filters.deferredUntil === 'string' ? `deferred within ${filters.deferredUntil}` : `deferred becoming available within ${filters.deferredUntil} days`);
   if (filters.hasNote !== undefined) parts.push(`has note: ${filters.hasNote}`);
   if (filters.inbox !== undefined) parts.push(`inbox: ${filters.inbox}`);
-  if (filters.dueOn !== undefined) parts.push(`due on day +${filters.dueOn}`);
-  if (filters.deferOn !== undefined) parts.push(`defer on day +${filters.deferOn}`);
-  if (filters.plannedOn !== undefined) parts.push(`planned on day +${filters.plannedOn}`);
+  if (filters.dueOn !== undefined) parts.push(typeof filters.dueOn === 'string' ? `due on ${filters.dueOn}` : `due on day +${filters.dueOn}`);
+  if (filters.deferOn !== undefined) parts.push(typeof filters.deferOn === 'string' ? `defer on ${filters.deferOn}` : `defer on day +${filters.deferOn}`);
+  if (filters.plannedOn !== undefined) parts.push(typeof filters.plannedOn === 'string' ? `planned on ${filters.plannedOn}` : `planned on day +${filters.plannedOn}`);
   if (filters.addedWithin !== undefined) parts.push(`added within ${filters.addedWithin} days`);
   if (filters.addedOn !== undefined) parts.push(`added on day ${filters.addedOn}`);
   if (filters.isRepeating !== undefined) parts.push(`repeating: ${filters.isRepeating}`);
