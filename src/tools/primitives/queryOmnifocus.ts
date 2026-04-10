@@ -427,6 +427,10 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `subfolders: item.folders ? item.folders.map(f => f.id.primaryKey) : []`;
     } else if (field === 'path') {
       return `path: item.container ? item.container.name + "/" + item.name : item.name`;
+    } else if (field === 'isRepeating') {
+      return `isRepeating: item.repetitionRule !== null`;
+    } else if (field === 'repetitionRule') {
+      return `repetitionRule: item.repetitionRule ? item.repetitionRule.toString() : null`;
     } else if (field === 'estimatedMinutes') {
       return `estimatedMinutes: item.estimatedMinutes || null`;
     } else if (field === 'note') {
