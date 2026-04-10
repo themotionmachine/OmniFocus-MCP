@@ -17,7 +17,7 @@ export const schema = z.object({
   newEstimatedMinutes: z.number().optional().describe("New estimated minutes"),
 
   // Task-specific fields
-  newStatus: z.enum(['incomplete', 'completed', 'dropped']).optional().describe("New status for tasks (incomplete, completed, dropped)"),
+  newStatus: z.enum(['incomplete', 'completed', 'dropped', 'skipped']).optional().describe("New status for tasks (incomplete, completed, dropped, skipped). 'skipped' only works on repeating tasks — it completes the current occurrence to trigger the next repeat, then drops the completed instance."),
   addTags: z.array(z.string()).optional().describe("Tags to add to the task"),
   removeTags: z.array(z.string()).optional().describe("Tags to remove from the task"),
   replaceTags: z.array(z.string()).optional().describe("Tags to replace all existing tags with"),

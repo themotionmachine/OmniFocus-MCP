@@ -103,6 +103,20 @@ describe('editItem generateAppleScript', () => {
       }));
       expect(script).toContain('mark complete foundItem');
     });
+
+    it('generates skip logic for repeating tasks', () => {
+      const script = generateAppleScript(makeParams({
+        newStatus: 'skipped',
+      }));
+      // Should check for repetition rule first
+      expect(script).toContain('repetition rule of foundItem is missing value');
+      // Should error on non-repeating tasks
+      expect(script).toContain('Cannot skip a non-repeating task');
+      // Should complete the task to fire the next repeat
+      expect(script).toContain('mark complete foundItem');
+      // Should drop the completed instance
+      expect(script).toContain('set dropped of');
+    });
   });
 
   describe('newFolderName — project folder move with paths', () => {
