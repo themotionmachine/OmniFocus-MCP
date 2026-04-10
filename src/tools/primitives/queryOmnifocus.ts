@@ -303,6 +303,14 @@ function generateFilterConditions(entity: string, filters: any): string {
       `);
     }
 
+    if (filters.deferredUntil !== undefined) {
+      conditions.push(`
+        if (!item.deferDate || !checkDateFilter(item.deferDate, ${filters.deferredUntil})) {
+          return false;
+        }
+      `);
+    }
+
     if (filters.dueOn !== undefined) {
       conditions.push(`if (!checkSameDay(item.dueDate, ${filters.dueOn})) return false;`);
     }

@@ -1,7 +1,7 @@
 {
   "name": "omnifocus-mcp",
   "type": "module",
-  "version": "1.6.3",
+  "version": "1.7.0",
   "description": "Model Context Protocol (MCP) server that integrates with OmniFocus for AI assistant interaction",
   "main": "dist/server.js",
   "bin": {
@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:integration:cleanup": "npx tsx src/tests/integration/cleanup.ts",
-    "prepare": "npm run build"
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
@@ -24,7 +24,7 @@
   "devDependencies": {
     "@types/node": "^20.11.19",
     "typescript": "^5.3.3",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.2"
   },
   "repository": {
     "type": "git",

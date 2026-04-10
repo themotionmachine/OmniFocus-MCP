@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { queryOmnifocus, QueryOmnifocusParams } from '../primitives/queryOmnifocus.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { resolveDateFilter } from '../../utils/dateFilter.js';
 
 export const schema = z.object({
   entity: z.enum(['tasks', 'projects', 'folders']).describe("Type of entity to query. Choose 'tasks' for individual tasks, 'projects' for projects, or 'folders' for folder organization"),
@@ -13,14 +14,14 @@ export const schema = z.object({
     tags: z.array(z.string()).optional().describe("Filter by tag names. EXACT MATCH, CASE-SENSITIVE. OR logic - items must have at least ONE of the specified tags. Example: ['Work'] and ['work'] are different"),
     status: z.array(z.string()).optional().describe("Filter by status (OR logic - matches any). TASKS: 'Next' (next action), 'Available' (ready to work), 'Blocked' (waiting), 'DueSoon' (due <24h), 'Overdue' (past due), 'Completed', 'Dropped'. PROJECTS: 'Active', 'OnHold', 'Done', 'Dropped'"),
     flagged: z.boolean().optional().describe("Filter by flagged status. true = only flagged items, false = only unflagged items"),
-    dueWithin: z.number().optional().describe("Returns items due from TODAY through N days in future. Example: 7 = items due within next week (today + 6 days)"),
-    deferredUntil: z.number().optional().describe("Returns items CURRENTLY DEFERRED that will become available within N days. Example: 3 = items becoming available in next 3 days"),
-    plannedWithin: z.number().optional().describe("Returns tasks planned from TODAY through N days in future. Example: 7 = tasks planned within next week (today + 6 days)"),
+    dueWithin: z.union([z.number(), z.string()]).optional().describe("Returns items due from TODAY through N days in future. Accepts: number (days), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
+    deferredUntil: z.union([z.number(), z.string()]).optional().describe("Returns items CURRENTLY DEFERRED that will become available within N days. Accepts: number (days), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
+    plannedWithin: z.union([z.number(), z.string()]).optional().describe("Returns tasks planned from TODAY through N days in future. Accepts: number (days), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
     hasNote: z.boolean().optional().describe("Filter by note presence. true = items with non-empty notes (whitespace ignored), false = items with no notes or only whitespace"),
     inbox: z.boolean().optional().describe("Filter tasks by inbox status. true = only inbox tasks (no project), false = only tasks in a project"),
-    dueOn: z.number().optional().describe("Returns items due on exactly this day. 0 = today, 1 = tomorrow, etc."),
-    deferOn: z.number().optional().describe("Returns items with defer date on exactly this day. 0 = today, 1 = tomorrow, etc."),
-    plannedOn: z.number().optional().describe("Returns tasks with planned date on exactly this day. 0 = today, 1 = tomorrow, etc."),
+    dueOn: z.union([z.number(), z.string()]).optional().describe("Returns items due on exactly this day. Accepts: number (0 = today, 1 = tomorrow), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
+    deferOn: z.union([z.number(), z.string()]).optional().describe("Returns items with defer date on exactly this day. Accepts: number (0 = today, 1 = tomorrow), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
+    plannedOn: z.union([z.number(), z.string()]).optional().describe("Returns tasks with planned date on exactly this day. Accepts: number (0 = today, 1 = tomorrow), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
     addedWithin: z.number().optional().describe("Returns items added (created) within the last N days. Example: 7 = items added in the last week"),
     addedOn: z.number().optional().describe("Returns items added (created) on exactly this day. 0 = today, 1 = tomorrow, -1 = yesterday. Negative values look backward"),
     isRepeating: z.boolean().optional().describe("Filter by repeating status. true = only repeating tasks, false = only non-repeating tasks"),
@@ -43,8 +44,21 @@ export const schema = z.object({
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
   try {
+    // Normalize date filter strings to numbers
+    const normalizedArgs = { ...args };
+    if (normalizedArgs.filters) {
+      const f = { ...normalizedArgs.filters };
+      const dateFields = ['dueWithin', 'deferredUntil', 'plannedWithin', 'dueOn', 'deferOn', 'plannedOn'] as const;
+      for (const field of dateFields) {
+        if (f[field] !== undefined) {
+          (f as any)[field] = resolveDateFilter(f[field]!);
+        }
+      }
+      normalizedArgs.filters = f;
+    }
+
     // Call the queryOmniFocus function
-    const result = await queryOmnifocus(args as QueryOmnifocusParams);
+    const result = await queryOmnifocus(normalizedArgs as QueryOmnifocusParams);
     
     if (result.success) {
       // Format response based on whether it's a summary or full results
@@ -264,7 +278,7 @@ function formatFolders(folders: any[]): string {
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return `${date.getMonth() + 1}/${date.getDate()}`;
+  return date.toISOString().slice(0, 10);
 }
 
 // Exported for testing only - not part of the public API
