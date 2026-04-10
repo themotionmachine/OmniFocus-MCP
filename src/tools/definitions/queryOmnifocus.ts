@@ -8,6 +8,7 @@ export const schema = z.object({
   filters: z.object({
     projectId: z.string().optional().describe("Filter tasks by exact project ID (use when you know the specific project ID)"),
     projectName: z.string().optional().describe("Filter tasks by project name. CASE-INSENSITIVE PARTIAL MATCHING - 'review' matches 'Weekly Review', 'Review Documents', etc. Special value: 'inbox' returns inbox tasks"),
+    taskName: z.string().optional().describe("Filter tasks by task name. CASE-INSENSITIVE PARTIAL MATCHING - 'email' matches 'Send email to IT', 'Confirm email' etc. Useful for fuzzy searching specific tasks across all projects"),
     folderId: z.string().optional().describe("Filter projects by exact folder ID (use when you know the specific folder ID)"),
     tags: z.array(z.string()).optional().describe("Filter by tag names. EXACT MATCH, CASE-SENSITIVE. OR logic - items must have at least ONE of the specified tags. Example: ['Work'] and ['work'] are different"),
     status: z.array(z.string()).optional().describe("Filter by status (OR logic - matches any). TASKS: 'Next' (next action), 'Available' (ready to work), 'Blocked' (waiting), 'DueSoon' (due <24h), 'Overdue' (past due), 'Completed', 'Dropped'. PROJECTS: 'Active', 'OnHold', 'Done', 'Dropped'"),
@@ -121,6 +122,7 @@ function formatFilters(filters: any): string {
   const parts = [];
   if (filters.projectId) parts.push(`projectId: "${filters.projectId}"`);
   if (filters.projectName) parts.push(`project: "${filters.projectName}"`);
+  if (filters.taskName) parts.push(`taskName: "${filters.taskName}"`);
   if (filters.folderId) parts.push(`folderId: "${filters.folderId}"`);
   if (filters.tags) parts.push(`tags: [${filters.tags.join(', ')}]`);
   if (filters.status) parts.push(`status: [${filters.status.join(', ')}]`);
@@ -193,6 +195,14 @@ function formatTasks(tasks: any[]): string {
       parts.push(`[completed: ${formatDate(task.completionDate)}]`);
     }
 
+    // Hierarchy info
+    if (task.parentId) {
+      parts.push(`[parent: ${task.parentId}]`);
+    }
+    if (task.hasChildren && task.childIds?.length > 0) {
+      parts.push(`[children: ${task.childIds.join(', ')}]`);
+    }
+
     let result = parts.join(' ');
 
     // Add note on a new line if present
@@ -236,3 +246,12 @@ function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
+
+// Exported for testing only - not part of the public API
+export const _testExports = {
+  formatTasks,
+  formatProjects,
+  formatFolders,
+  formatQueryResults,
+  formatFilters,
+};

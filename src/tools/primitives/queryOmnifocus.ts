@@ -1,10 +1,21 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 
+// Escape user-provided strings before embedding in JXA script template literals.
+// Prevents syntax errors and code injection from characters like " \ newlines.
+function escapeJXA(str: string): string {
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+}
+
 export interface QueryOmnifocusParams {
   entity: 'tasks' | 'projects' | 'folders';
   filters?: {
     projectId?: string;
     projectName?: string;
+    taskName?: string;
     folderId?: string;
     tags?: string[];
     status?: string[];
@@ -195,35 +206,45 @@ function generateFilterConditions(entity: string, filters: any): string {
   
   if (entity === 'tasks') {
     if (filters.projectName) {
+      const safeName = escapeJXA(filters.projectName.toLowerCase());
       conditions.push(`
         if (item.containingProject) {
           const projectName = item.containingProject.name.toLowerCase();
-          if (!projectName.includes("${filters.projectName.toLowerCase()}")) return false;
-        } else if ("${filters.projectName.toLowerCase()}" !== "inbox") {
+          if (!projectName.includes("${safeName}")) return false;
+        } else if ("${safeName}" !== "inbox") {
           return false;
         }
       `);
     }
+
+    if (filters.taskName) {
+      const safeName = escapeJXA(filters.taskName.toLowerCase());
+      conditions.push(`
+        const taskName = (item.name || "").toLowerCase();
+        if (!taskName.includes("${safeName}")) return false;
+      `);
+    }
     
     if (filters.projectId) {
+      const safeId = escapeJXA(filters.projectId);
       conditions.push(`
-        if (!item.containingProject || 
-            item.containingProject.id.primaryKey !== "${filters.projectId}") {
+        if (!item.containingProject ||
+            item.containingProject.id.primaryKey !== "${safeId}") {
           return false;
         }
       `);
     }
     
     if (filters.tags && filters.tags.length > 0) {
-      const tagCondition = filters.tags.map((tag: string) => 
-        `item.tags.some(t => t.name === "${tag}")`
+      const tagCondition = filters.tags.map((tag: string) =>
+        `item.tags.some(t => t.name === "${escapeJXA(tag)}")`
       ).join(' || ');
       conditions.push(`if (!(${tagCondition})) return false;`);
     }
-    
+
     if (filters.status && filters.status.length > 0) {
-      const statusCondition = filters.status.map((status: string) => 
-        `taskStatusMap[item.taskStatus] === "${status}"`
+      const statusCondition = filters.status.map((status: string) =>
+        `taskStatusMap[item.taskStatus] === "${escapeJXA(status)}"`
       ).join(' || ');
       conditions.push(`if (!(${statusCondition})) return false;`);
     }
@@ -278,17 +299,18 @@ function generateFilterConditions(entity: string, filters: any): string {
   
   if (entity === 'projects') {
     if (filters.folderId) {
+      const safeId = escapeJXA(filters.folderId);
       conditions.push(`
-        if (!item.parentFolder || 
-            item.parentFolder.id.primaryKey !== "${filters.folderId}") {
+        if (!item.parentFolder ||
+            item.parentFolder.id.primaryKey !== "${safeId}") {
           return false;
         }
       `);
     }
-    
+
     if (filters.status && filters.status.length > 0) {
-      const statusCondition = filters.status.map((status: string) => 
-        `projectStatusMap[item.status] === "${status}"`
+      const statusCondition = filters.status.map((status: string) =>
+        `projectStatusMap[item.status] === "${escapeJXA(status)}"`
       ).join(' || ');
       conditions.push(`if (!(${statusCondition})) return false;`);
     }
@@ -443,3 +465,10 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
     };
   `;
 }
+
+// Exported for testing only - not part of the public API
+export const _testExports = {
+  escapeJXA,
+  generateFilterConditions,
+  generateFieldMapping,
+};
