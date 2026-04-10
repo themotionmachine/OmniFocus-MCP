@@ -26,19 +26,19 @@ export interface AddOmniFocusTaskParams {
 /**
  * Generate pure AppleScript for task creation
  */
-function generateAppleScript(params: AddOmniFocusTaskParams): string {
+export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/["\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/["\\]/g, '\\$&') || '';
+  const name = params.name.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' '); // Escape quotes and backslashes
+  const note = params.note?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const plannedDate = params.plannedDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/["\\]/g, '\\$&') || '';
-  const parentTaskId = params.parentTaskId?.replace(/["\\]/g, '\\$&') || '';
-  const parentTaskName = params.parentTaskName?.replace(/["\\]/g, '\\$&') || '';
+  const projectName = params.projectName?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
+  const parentTaskId = params.parentTaskId?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
+  const parentTaskName = params.parentTaskName?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
 
   // Generate date constructions outside tell blocks
   let datePreScript = '';
@@ -182,7 +182,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/["\\]/g, '\\$&');
+          const sanitizedTag = tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ');
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
@@ -224,7 +224,7 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     writeFileSync(tempFile, script, { encoding: 'utf8' });
 
     // Execute AppleScript from file
-    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
+    const { stdout, stderr } = await execAsync(`osascript "${tempFile}"`);
 
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
