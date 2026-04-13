@@ -145,10 +145,20 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
         [Project.Status.OnHold]: "OnHold"
       };
       
+      // Helper to collect all descendant folder IDs by walking down from a folder.
+      // parentFolder is unreliable on flattenedFolders, so we walk children instead.
+      function collectDescendantFolderIds(folder, idSet) {
+        idSet.add(folder.id.primaryKey);
+        var children = folder.folders;
+        for (var i = 0; i < children.length; i++) {
+          collectDescendantFolderIds(children[i], idSet);
+        }
+      }
+
       // Get the appropriate collection based on entity type
       let items = [];
       const entityType = "${entity}";
-      
+
       if (entityType === "tasks") {
         items = flattenedTasks;
       } else if (entityType === "projects") {
@@ -156,6 +166,18 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
       } else if (entityType === "folders") {
         items = flattenedFolders;
       }
+
+      ${filters.folderId ? `
+      // Pre-compute the set of folder IDs that are the target or descendants of target
+      const _folderIdSet = new Set();
+      const _targetFolderId = "${escapeJXA(filters.folderId)}";
+      for (var _fi = 0; _fi < flattenedFolders.length; _fi++) {
+        if (flattenedFolders[_fi].id.primaryKey === _targetFolderId) {
+          collectDescendantFolderIds(flattenedFolders[_fi], _folderIdSet);
+          break;
+        }
+      }
+      ` : ''}
       
       // Apply filters
       let filtered = items.filter(item => {
@@ -252,17 +274,9 @@ function generateFilterConditions(entity: string, filters: any): string {
     if (filters.folderId) {
       conditions.push(`
         {
-          const targetFolderId = "${escapeJXA(filters.folderId)}";
           let matchesFolder = false;
           if (item.containingProject && item.containingProject.parentFolder) {
-            let folder = item.containingProject.parentFolder;
-            while (folder) {
-              if (folder.id.primaryKey === targetFolderId) {
-                matchesFolder = true;
-                break;
-              }
-              folder = folder.parentFolder;
-            }
+            matchesFolder = _folderIdSet.has(item.containingProject.parentFolder.id.primaryKey);
           }
           if (!matchesFolder) return false;
         }
@@ -375,17 +389,9 @@ function generateFilterConditions(entity: string, filters: any): string {
     if (filters.folderId) {
       conditions.push(`
         {
-          const targetFolderId = "${escapeJXA(filters.folderId)}";
           let matchesFolder = false;
           if (item.parentFolder) {
-            let folder = item.parentFolder;
-            while (folder) {
-              if (folder.id.primaryKey === targetFolderId) {
-                matchesFolder = true;
-                break;
-              }
-              folder = folder.parentFolder;
-            }
+            matchesFolder = _folderIdSet.has(item.parentFolder.id.primaryKey);
           }
           if (!matchesFolder) return false;
         }
