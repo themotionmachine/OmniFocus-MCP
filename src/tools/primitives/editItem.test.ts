@@ -244,7 +244,7 @@ describe('editItem generateAppleScript', () => {
       expect(script).toContain('set sequential of foundItem to true');
     });
 
-    it('generates project status update', () => {
+    it('generates project status update for onHold', () => {
       const script = generateAppleScript({
         itemType: 'project',
         name: 'P',
