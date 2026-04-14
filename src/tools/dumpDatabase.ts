@@ -37,6 +37,8 @@ interface OmnifocusDumpProject {
   containsSingletonActions: boolean;
   note: string;
   tasks: string[];
+  nextReviewDate: string | null;
+  reviewInterval: string | null;
 }
 
 interface OmnifocusDumpFolder {
@@ -154,7 +156,9 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
           note: String(project.note || ""),
           tasks: project.tasks || [],
           flagged: false, // Default value
-          estimatedMinutes: null // Default value
+          estimatedMinutes: null, // Default value
+          nextReviewDate: project.nextReviewDate || null,
+          reviewInterval: project.reviewInterval || null
         };
       }
     }

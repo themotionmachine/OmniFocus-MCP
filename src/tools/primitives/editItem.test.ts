@@ -252,5 +252,36 @@ describe('editItem generateAppleScript', () => {
       });
       expect(script).toContain('set status of foundItem to on hold status');
     });
+
+    it('generates markReviewed script for projects', () => {
+      const script = generateAppleScript({
+        itemType: 'project',
+        name: 'P',
+        markReviewed: true,
+      });
+      expect(script).toContain('set ri to review interval of foundItem');
+      expect(script).toContain('set next review date of foundItem to newReviewDate');
+      expect(script).toContain('marked reviewed');
+    });
+
+    it('does not generate markReviewed when false', () => {
+      const script = generateAppleScript({
+        itemType: 'project',
+        name: 'P',
+        markReviewed: false,
+      });
+      expect(script).not.toContain('review interval');
+      expect(script).not.toContain('next review date');
+    });
+
+    it('does not generate markReviewed for tasks', () => {
+      const script = generateAppleScript({
+        itemType: 'task',
+        name: 'T',
+        markReviewed: true,
+      });
+      expect(script).not.toContain('review interval');
+      expect(script).not.toContain('next review date');
+    });
   });
 });
