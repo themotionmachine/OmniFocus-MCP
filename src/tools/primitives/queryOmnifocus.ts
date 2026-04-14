@@ -145,6 +145,27 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
         [Project.Status.OnHold]: "OnHold"
       };
       
+      // Helper to collect all descendant folder IDs by walking down from a folder.
+      // parentFolder is unreliable on flattenedFolders, so we walk children instead.
+      function collectDescendantFolderIds(folder, idSet) {
+        idSet.add(folder.id.primaryKey);
+        var children = folder.folders;
+        for (var i = 0; i < children.length; i++) {
+          collectDescendantFolderIds(children[i], idSet);
+        }
+      }
+
+      // Check if any ancestor folder is dropped.
+      // OmniJS doesn't expose effectivelyDropped on projects, so we walk up manually.
+      function isAncestorFolderDropped(project) {
+        var folder = project.parentFolder;
+        while (folder) {
+          if (folder.status === Folder.Status.Dropped) return true;
+          folder = folder.parentFolder;
+        }
+        return false;
+      }
+
       // Get the appropriate collection based on entity type
       let items = [];
       const entityType = "${entity}";
@@ -167,8 +188,9 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
               return false;
             }
           } else if (entityType === "projects") {
-            if (item.status === Project.Status.Done || 
-                item.status === Project.Status.Dropped) {
+            if (item.status === Project.Status.Done ||
+                item.status === Project.Status.Dropped ||
+                isAncestorFolderDropped(item)) {
               return false;
             }
           }
