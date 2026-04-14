@@ -31,4 +31,24 @@ describe('queryOmnifocus schema', () => {
       expect(result.success).toBe(false);
     });
   });
+
+  describe('reviewDue filter', () => {
+    it('accepts boolean true', () => {
+      const input = { entity: 'projects', filters: { reviewDue: true } };
+      const result = schema.safeParse(input);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts boolean false', () => {
+      const input = { entity: 'projects', filters: { reviewDue: false } };
+      const result = schema.safeParse(input);
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects non-boolean types', () => {
+      const input = { entity: 'projects', filters: { reviewDue: 'yes' } };
+      const result = schema.safeParse(input);
+      expect(result.success).toBe(false);
+    });
+  });
 });
