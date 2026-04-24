@@ -178,6 +178,74 @@ describe('formatTasks - hierarchy fields display', () => {
 });
 
 // ============================================================
+// generateFilterConditions - droppedOn / droppedWithin filters
+// ============================================================
+describe('generateFilterConditions - dropped date filters (tasks)', () => {
+  it('generates dropDate check for droppedOn', () => {
+    const result = generateFilterConditions('tasks', { droppedOn: 0 });
+    expect(result).toContain('checkSameDay(item.dropDate, 0)');
+  });
+
+  it('generates dropDate check for droppedOn with negative values', () => {
+    const result = generateFilterConditions('tasks', { droppedOn: -3 });
+    expect(result).toContain('checkSameDay(item.dropDate, -3)');
+  });
+
+  it('generates dropDate check for droppedWithin', () => {
+    const result = generateFilterConditions('tasks', { droppedWithin: 7 });
+    expect(result).toContain('item.dropDate');
+    expect(result).toContain('checkDateWithinPast(item.dropDate, 7)');
+  });
+
+  it('does NOT reference completionDate for dropped filters', () => {
+    const result = generateFilterConditions('tasks', { droppedOn: 0, droppedWithin: 7 });
+    expect(result).not.toContain('completionDate');
+  });
+});
+
+describe('generateFilterConditions - dropped date filters (projects)', () => {
+  it('generates dropDate check for droppedOn on projects', () => {
+    const result = generateFilterConditions('projects', { droppedOn: 0 });
+    expect(result).toContain('checkSameDay(item.dropDate, 0)');
+  });
+
+  it('generates dropDate check for droppedWithin on projects', () => {
+    const result = generateFilterConditions('projects', { droppedWithin: 14 });
+    expect(result).toContain('item.dropDate');
+    expect(result).toContain('checkDateWithinPast(item.dropDate, 14)');
+  });
+});
+
+// ============================================================
+// generateFieldMapping - dropDate field
+// ============================================================
+describe('generateFieldMapping - dropDate', () => {
+  it('includes dropDate mapping when requested (tasks)', () => {
+    const result = generateFieldMapping('tasks', ['dropDate']);
+    expect(result).toContain('dropDate');
+    expect(result).toContain('item.dropDate');
+    expect(result).toContain('formatDate');
+  });
+
+  it('includes effectiveDropDate mapping when requested', () => {
+    const result = generateFieldMapping('tasks', ['effectiveDropDate']);
+    expect(result).toContain('effectiveDropDate');
+    expect(result).toContain('item.effectiveDropDate');
+  });
+
+  it('returns null (not error) when dropDate is missing', () => {
+    const result = generateFieldMapping('tasks', ['dropDate']);
+    expect(result).toContain('item.dropDate ? formatDate(item.dropDate) : null');
+  });
+
+  it('includes dropDate mapping for projects', () => {
+    const result = generateFieldMapping('projects', ['dropDate']);
+    expect(result).toContain('dropDate');
+    expect(result).toContain('item.dropDate');
+  });
+});
+
+// ============================================================
 // generateFilterConditions - reviewDue filter (projects)
 // ============================================================
 describe('generateFilterConditions - reviewDue', () => {
@@ -273,5 +341,31 @@ describe('formatFilters', () => {
   it('displays reviewDue filter', () => {
     const result = formatFilters({ reviewDue: true });
     expect(result).toBe('review due: true');
+  });
+
+  it('displays droppedOn filter', () => {
+    const result = formatFilters({ droppedOn: 0 });
+    expect(result).toBe('dropped on day 0');
+  });
+
+  it('displays droppedWithin filter', () => {
+    const result = formatFilters({ droppedWithin: 7 });
+    expect(result).toBe('dropped within 7 days');
+  });
+});
+
+describe('formatTasks - dropDate display', () => {
+  it('shows dropDate when present', () => {
+    const result = formatTasks([
+      { name: 'Abandoned task', id: 't1', dropDate: '2026-04-20T12:00:00.000Z' },
+    ]);
+    expect(result).toContain('[dropped: 2026-04-20]');
+  });
+
+  it('does NOT show dropped section when dropDate is absent', () => {
+    const result = formatTasks([
+      { name: 'Plain task', id: 't1' },
+    ]);
+    expect(result).not.toContain('[dropped');
   });
 });

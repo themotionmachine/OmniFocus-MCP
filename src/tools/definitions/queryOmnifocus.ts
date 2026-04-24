@@ -25,12 +25,14 @@ export const schema = z.object({
     addedWithin: z.number().optional().describe("Returns items added (created) within the last N days. Example: 7 = items added in the last week"),
     addedOn: z.number().optional().describe("Returns items added (created) on exactly this day. 0 = today, 1 = tomorrow, -1 = yesterday. Negative values look backward"),
     isRepeating: z.boolean().optional().describe("Filter by repeating status. true = only repeating tasks, false = only non-repeating tasks"),
-    completedWithin: z.number().optional().describe("Returns items completed or dropped within the last N days (uses completionDate which OmniFocus sets for both). Example: 7 = items completed in the last week. Combine with status: ['Dropped'] to find only dropped items. Note: use with includeCompleted: true"),
-    completedOn: z.number().optional().describe("Returns items completed or dropped on exactly this day (uses completionDate which OmniFocus sets for both). 0 = today, -1 = yesterday. Negative values look backward. Combine with status: ['Dropped'] to find only dropped items. Note: use with includeCompleted: true"),
+    completedWithin: z.number().optional().describe("Returns items completed within the last N days (uses completionDate, which OmniFocus only sets for truly completed items, not dropped ones). Example: 7 = items completed in the last week. For dropped items, use droppedWithin. Note: use with includeCompleted: true"),
+    completedOn: z.number().optional().describe("Returns items completed on exactly this day (uses completionDate, which OmniFocus only sets for truly completed items, not dropped ones). 0 = today, -1 = yesterday. Negative values look backward. For dropped items, use droppedOn. Note: use with includeCompleted: true"),
+    droppedWithin: z.number().optional().describe("Returns items dropped within the last N days (uses dropDate). Example: 7 = items dropped in the last week. Typically combined with status: ['Dropped']. Note: use with includeCompleted: true"),
+    droppedOn: z.number().optional().describe("Returns items dropped on exactly this day (uses dropDate). 0 = today, -1 = yesterday. Negative values look backward. Typically combined with status: ['Dropped']. Note: use with includeCompleted: true"),
     reviewDue: z.boolean().optional().describe("Filter projects by review status. true = only projects whose next review date is today or in the past (due for review). false = only projects not yet due for review. Only applies to 'projects' entity")
   }).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies"),
   
-  fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, nextReviewDate, reviewInterval, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
+  fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, dropDate, effectiveDropDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completionDate, dropDate, effectiveDropDate, completedByChildren, containsSingletonActions, taskCount, tasks, nextReviewDate, reviewInterval, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
   
   limit: z.number().optional().describe("Maximum number of items to return. Useful for large result sets. Default: no limit"),
   
@@ -159,6 +161,8 @@ function formatFilters(filters: any): string {
   if (filters.isRepeating !== undefined) parts.push(`repeating: ${filters.isRepeating}`);
   if (filters.completedWithin !== undefined) parts.push(`completed within ${filters.completedWithin} days`);
   if (filters.completedOn !== undefined) parts.push(`completed on day ${filters.completedOn}`);
+  if (filters.droppedWithin !== undefined) parts.push(`dropped within ${filters.droppedWithin} days`);
+  if (filters.droppedOn !== undefined) parts.push(`dropped on day ${filters.droppedOn}`);
   if (filters.reviewDue !== undefined) parts.push(`review due: ${filters.reviewDue}`);
   return parts.join(', ');
 }
@@ -237,6 +241,9 @@ function formatTasks(tasks: any[]): string {
     }
     if (task.completionDate) {
       parts.push(`[completed: ${formatDate(task.completionDate)}]`);
+    }
+    if (task.dropDate) {
+      parts.push(`[dropped: ${formatDate(task.dropDate)}]`);
     }
 
     let result = parts.join(' ');
