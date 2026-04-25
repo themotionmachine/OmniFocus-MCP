@@ -3,10 +3,38 @@ import { queryOmnifocus, QueryOmnifocusParams } from '../primitives/queryOmnifoc
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import { resolveDateFilter } from '../../utils/dateFilter.js';
 
+// Some MCP clients (notably Claude Code's tool-invocation harness) cannot send
+// nested JSON objects/arrays/typed primitives — they arrive as strings. These
+// helpers coerce stringified values back to their proper types before zod validation,
+// so the same schema works from Code and from clients that send typed JSON natively.
+const coerceJSON = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(
+  (val) => {
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch { /* fall through, let inner schema reject */ }
+    }
+    return val;
+  },
+  schema
+);
+const flexBoolean = z.preprocess(
+  (val) => {
+    if (typeof val === 'string') {
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+    }
+    return val;
+  },
+  z.boolean()
+);
+const flexNumber = z.preprocess(
+  (val) => (typeof val === 'string' && val.trim() !== '' && !isNaN(Number(val))) ? Number(val) : val,
+  z.number()
+);
+
 export const schema = z.object({
   entity: z.enum(['tasks', 'projects', 'folders']).describe("Type of entity to query. Choose 'tasks' for individual tasks, 'projects' for projects, or 'folders' for folder organization"),
-  
-  filters: z.object({
+
+  filters: coerceJSON(z.object({
     projectId: z.string().optional().describe("Filter tasks by exact project ID (use when you know the specific project ID)"),
     projectName: z.string().optional().describe("Filter tasks by project name. CASE-INSENSITIVE PARTIAL MATCHING - 'review' matches 'Weekly Review', 'Review Documents', etc. Special value: 'inbox' returns inbox tasks"),
     taskName: z.string().optional().describe("Filter tasks by task name. CASE-INSENSITIVE PARTIAL MATCHING - 'email' matches 'Send email to IT', 'Confirm email' etc. Useful for fuzzy searching specific tasks across all projects"),
@@ -27,19 +55,19 @@ export const schema = z.object({
     isRepeating: z.boolean().optional().describe("Filter by repeating status. true = only repeating tasks, false = only non-repeating tasks"),
     completedWithin: z.number().optional().describe("Returns items completed or dropped within the last N days (uses completionDate which OmniFocus sets for both). Example: 7 = items completed in the last week. Combine with status: ['Dropped'] to find only dropped items. Note: use with includeCompleted: true"),
     completedOn: z.number().optional().describe("Returns items completed or dropped on exactly this day (uses completionDate which OmniFocus sets for both). 0 = today, -1 = yesterday. Negative values look backward. Combine with status: ['Dropped'] to find only dropped items. Note: use with includeCompleted: true")
-  }).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies"),
-  
-  fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
-  
-  limit: z.number().optional().describe("Maximum number of items to return. Useful for large result sets. Default: no limit"),
-  
+  })).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies. Accepts either an object or a JSON-stringified object (for clients that can't send nested JSON)."),
+
+  fields: coerceJSON(z.array(z.string())).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
+
+  limit: flexNumber.optional().describe("Maximum number of items to return. Useful for large result sets. Default: no limit"),
+
   sortBy: z.string().optional().describe("Field to sort by. OPTIONS: name (alphabetical), dueDate (earliest first, null last), deferDate (earliest first, null last), modificationDate (most recent first), creationDate (oldest first), estimatedMinutes (shortest first), taskStatus (groups by status)"),
-  
+
   sortOrder: z.enum(['asc', 'desc']).optional().describe("Sort order. 'asc' = ascending (A-Z, old-new, small-large), 'desc' = descending (Z-A, new-old, large-small). Default: 'asc'"),
-  
-  includeCompleted: z.boolean().optional().describe("Include completed and dropped items. Default: false (active items only)"),
-  
-  summary: z.boolean().optional().describe("Return only count of matches, not full details. Efficient for statistics. Default: false")
+
+  includeCompleted: flexBoolean.optional().describe("Include completed and dropped items. Default: false (active items only)"),
+
+  summary: flexBoolean.optional().describe("Return only count of matches, not full details. Efficient for statistics. Default: false")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
