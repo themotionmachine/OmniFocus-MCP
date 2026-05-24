@@ -219,6 +219,33 @@ describe('editItem generateAppleScript', () => {
       expect(script).toContain('set note of foundItem to "A note"');
     });
 
+    it('preserves newlines in note via linefeed concatenation', () => {
+      const script = generateAppleScript(makeParams({
+        newNote: 'Line 1\nLine 2\nLine 3',
+      }));
+      expect(script).toContain(
+        'set note of foundItem to "Line 1" & linefeed & "Line 2" & linefeed & "Line 3"'
+      );
+    });
+
+    it('handles CRLF and bare CR line endings in note', () => {
+      const script = generateAppleScript(makeParams({
+        newNote: 'a\r\nb\rc',
+      }));
+      expect(script).toContain(
+        'set note of foundItem to "a" & linefeed & "b" & linefeed & "c"'
+      );
+    });
+
+    it('still escapes quotes alongside newlines in note', () => {
+      const script = generateAppleScript(makeParams({
+        newNote: 'He said "hi"\nthen left',
+      }));
+      expect(script).toContain(
+        'set note of foundItem to "He said \\"hi\\"" & linefeed & "then left"'
+      );
+    });
+
     it('generates flagged update', () => {
       const script = generateAppleScript(makeParams({
         newFlagged: true,

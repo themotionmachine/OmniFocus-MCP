@@ -16,4 +16,14 @@ describe('addOmniFocusTask generateAppleScript', () => {
     expect(script).toContain('make new task with properties {name:"Write tests"}');
     expect(script).toContain('at end of tasks of theProject');
   });
+
+  it('preserves newlines in note via linefeed concatenation', () => {
+    const script = generateAppleScript({
+      name: 'A task',
+      note: 'Line 1\nLine 2\nLine 3',
+    });
+    expect(script).toContain(
+      'set note of newTask to "Line 1" & linefeed & "Line 2" & linefeed & "Line 3"'
+    );
+  });
 });

@@ -179,7 +179,7 @@ export function generateAppleScript(params: EditItemParams): string {
   if (params.newNote !== undefined) {
     script += `
         -- Update note
-        set note of foundItem to "${params.newNote.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"
+        set note of foundItem to "${params.newNote.replace(/["\\]/g, '\\$&').replace(/\r\n|\r|\n/g, '" & linefeed & "')}"
         set end of changedProperties to "note"
 `;
   }

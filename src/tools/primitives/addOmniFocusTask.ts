@@ -29,7 +29,9 @@ export interface AddOmniFocusTaskParams {
 export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
   const name = params.name.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' '); // Escape quotes and backslashes
-  const note = params.note?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
+  const note = params.note
+    ?.replace(/["\\]/g, '\\$&')
+    .replace(/\r\n|\r|\n/g, '" & linefeed & "') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const plannedDate = params.plannedDate || '';
