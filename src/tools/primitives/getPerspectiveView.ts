@@ -11,6 +11,14 @@ interface PerspectiveViewResult {
   success: boolean;
   items?: any[];
   error?: string;
+  debug?: {
+    rules: any;
+    tasksEvaluated: number;
+    unknownRuleTypes?: string[];
+    isCustomPerspective?: boolean;
+    rulesUsed?: boolean;
+    ruleParseError?: string;
+  };
 }
 
 export async function getPerspectiveView(params: GetPerspectiveViewParams): Promise<PerspectiveViewResult> {
@@ -51,7 +59,13 @@ export async function getPerspectiveView(params: GetPerspectiveViewParams): Prom
     
     return {
       success: true,
-      items: items
+      items: items,
+      debug: result.debug ? {
+        ...result.debug,
+        isCustomPerspective: result.isCustomPerspective,
+        rulesUsed: result.rulesUsed,
+        ruleParseError: result.ruleParseError,
+      } : undefined,
     };
     
   } catch (error) {

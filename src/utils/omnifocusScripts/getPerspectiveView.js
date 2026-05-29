@@ -189,15 +189,25 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       return value.some((term) => searchText.includes(term.toLowerCase()));
     };
 
+    // OmniFocus stores "completed" as the field name but the JS property is completionDate.
+    var normalizeDateFieldName = (dateField) => {
+      const map = { completed: "completion" };
+      return map[dateField] || dateField;
+    };
+
+    var getTaskDateField = (task, dateField) => {
+      return task[normalizeDateFieldName(dateField) + "Date"];
+    };
+
     var evaluateActionDateIsToday = (task, dateField) => {
-      const fieldDate = task[dateField + "Date"]; // e.g., dueDate, deferDate
+      const fieldDate = getTaskDateField(task, dateField);
       if (!fieldDate) return false;
       const today = new Date();
       return fieldDate.toDateString() === today.toDateString();
     };
 
     var evaluateActionDateIsYesterday = (task, dateField) => {
-      const fieldDate = task[dateField + "Date"];
+      const fieldDate = getTaskDateField(task, dateField);
       if (!fieldDate) return false;
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
@@ -205,11 +215,41 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
     };
 
     var evaluateActionDateIsTomorrow = (task, dateField) => {
-      const fieldDate = task[dateField + "Date"];
+      const fieldDate = getTaskDateField(task, dateField);
       if (!fieldDate) return false;
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       return fieldDate.toDateString() === tomorrow.toDateString();
+    };
+
+    var evaluateActionDateIsInThePast = (task, dateField, value) => {
+      const fieldDate = getTaskDateField(task, dateField);
+      if (!fieldDate) return false;
+      const now = new Date();
+
+      // value === true means "any time before now" (no relative window)
+      if (typeof value !== "object" || value === null) {
+        return fieldDate <= now;
+      }
+
+      const { relativeBeforeAmount, relativeComponent } = value;
+      if (relativeBeforeAmount === undefined || relativeComponent === undefined) {
+        return fieldDate <= now;
+      }
+
+      const cutoff = new Date();
+      if (relativeComponent === "day") {
+        cutoff.setDate(cutoff.getDate() - relativeBeforeAmount);
+      } else if (relativeComponent === "week") {
+        cutoff.setDate(cutoff.getDate() - relativeBeforeAmount * 7);
+      } else if (relativeComponent === "month") {
+        cutoff.setMonth(cutoff.getMonth() - relativeBeforeAmount);
+      } else if (relativeComponent === "year") {
+        cutoff.setFullYear(cutoff.getFullYear() - relativeBeforeAmount);
+      } else {
+        return fieldDate <= now;
+      }
+      return fieldDate >= cutoff && fieldDate <= now;
     };
 
     // filter rules and values are defined here: https://omni-automation.com/omnifocus/perspective.html
@@ -251,8 +291,18 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
         if (rule.actionDateIsTomorrow) {
           return evaluateActionDateIsTomorrow(task, dateField);
         }
+        if (rule.actionDateIsInThePast) {
+          return evaluateActionDateIsInThePast(task, dateField, rule.actionDateIsInThePast);
+        }
 
-        // Add other date conditions as needed
+        // Record any unrecognised date conditions so callers can diagnose gaps
+        const knownDateKeys = new Set(["actionDateField", "actionDateIsToday", "actionDateIsYesterday", "actionDateIsTomorrow", "actionDateIsInThePast"]);
+        Object.keys(rule).forEach((k) => {
+          if (!knownDateKeys.has(k)) {
+            const entry = k + "(field=" + dateField + ", value=" + JSON.stringify(rule[k]) + ")";
+            if (!unknownRuleTypes.includes(entry)) unknownRuleTypes.push(entry);
+          }
+        });
         return false;
       }
 
@@ -268,6 +318,11 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
         }
       }
 
+      // Record unrecognised rule types so callers can diagnose gaps
+      Object.keys(rule).forEach((k) => {
+        const entry = "unknown:" + k + "=" + JSON.stringify(rule[k]);
+        if (!unknownRuleTypes.includes(entry)) unknownRuleTypes.push(entry);
+      });
       return false;
     }
 
@@ -370,9 +425,12 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
     }
 
     let filteredTasks = [];
+    let unknownRuleTypes = [];
+    let tasksEvaluated = 0;
 
     if (isCustomPerspective && perspectiveRules) {
       flattenedTasks.forEach((task) => {
+        tasksEvaluated++;
         if (evaluateTask(task, perspectiveRules, perspectiveAggregation)) {
           filteredTasks.push(getTaskDetails(task));
         }
@@ -381,16 +439,19 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       // Use built-in perspective logic for default perspectives
       if (perspectiveName === "Inbox") {
         inbox.forEach((task) => {
+          tasksEvaluated++;
           filteredTasks.push(getTaskDetails(task));
         });
       } else if (perspectiveName === "Flagged") {
         flattenedTasks.forEach((task) => {
+          tasksEvaluated++;
           if (task.flagged && !task.completed) {
             filteredTasks.push(getTaskDetails(task));
           }
         });
       } else if (perspectiveName === "Projects") {
         flattenedProjects.forEach((project) => {
+          tasksEvaluated++;
           if (project.status === Project.Status.Active) {
             const projectTask = project.task;
             if (projectTask) {
@@ -401,6 +462,7 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       } else if (perspectiveName === "Tags") {
         flattenedTags.forEach((tag) => {
           tag.remainingTasks.forEach((task) => {
+            tasksEvaluated++;
             const taskDetail = getTaskDetails(task);
             if (!filteredTasks.some((item) => item.id === taskDetail.id)) {
               filteredTasks.push(taskDetail);
@@ -409,6 +471,7 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
         });
       } else {
         flattenedTasks.forEach((task) => {
+          tasksEvaluated++;
           if (task.taskStatus === Task.Status.Available && !task.completed) {
             filteredTasks.push(getTaskDetails(task));
           }
@@ -423,6 +486,11 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       rulesUsed: perspectiveRules !== null,
       aggregationType: perspectiveAggregation,
       ruleParseError: typeof ruleParseError !== "undefined" ? ruleParseError : undefined,
+      debug: {
+        rules: perspectiveRules,
+        tasksEvaluated: tasksEvaluated,
+        unknownRuleTypes: unknownRuleTypes.length > 0 ? unknownRuleTypes : undefined,
+      },
       items: filteredTasks.slice(0, limit),
     };
 
