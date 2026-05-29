@@ -128,6 +128,16 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
                itemDate.getDate() === target.getDate();
       }
       
+      function formatReviewInterval(ri) {
+        if (!ri) return null;
+        const parts = [];
+        if (ri.years && ri.years > 0) parts.push(ri.years === 1 ? "1 year" : ri.years + " years");
+        if (ri.months && ri.months > 0) parts.push(ri.months === 1 ? "1 month" : ri.months + " months");
+        if (ri.weeks && ri.weeks > 0) parts.push(ri.weeks === 1 ? "1 week" : ri.weeks + " weeks");
+        if (ri.days && ri.days > 0) parts.push(ri.days === 1 ? "1 day" : ri.days + " days");
+        return parts.length > 0 ? parts.join(", ") : null;
+      }
+
       // Status mappings
       const taskStatusMap = {
         [Task.Status.Available]: "Available",
@@ -508,16 +518,6 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
     } else if (entity === 'projects') {
       return `
         const taskArray = item.tasks || [];
-        const ri = item.reviewInterval;
-        let riStr = null;
-        if (ri) {
-          const parts = [];
-          if (ri.years && ri.years > 0) parts.push(ri.years === 1 ? "1 year" : ri.years + " years");
-          if (ri.months && ri.months > 0) parts.push(ri.months === 1 ? "1 month" : ri.months + " months");
-          if (ri.weeks && ri.weeks > 0) parts.push(ri.weeks === 1 ? "1 week" : ri.weeks + " weeks");
-          if (ri.days && ri.days > 0) parts.push(ri.days === 1 ? "1 day" : ri.days + " days");
-          if (parts.length > 0) riStr = parts.join(", ");
-        }
         return {
           id: item.id.primaryKey,
           name: item.name || "",
@@ -529,7 +529,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
           deferDate: formatDate(item.deferDate),
           note: item.note || "",
           nextReviewDate: formatDate(item.nextReviewDate),
-          reviewInterval: riStr
+          reviewInterval: formatReviewInterval(item.reviewInterval)
         };
       `;
     } else if (entity === 'folders') {
@@ -611,16 +611,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
     } else if (field === 'nextReviewDate') {
       return `nextReviewDate: formatDate(item.nextReviewDate)`;
     } else if (field === 'reviewInterval') {
-      return `reviewInterval: (() => {
-          const ri = item.reviewInterval;
-          if (!ri) return null;
-          const parts = [];
-          if (ri.years && ri.years > 0) parts.push(ri.years === 1 ? "1 year" : ri.years + " years");
-          if (ri.months && ri.months > 0) parts.push(ri.months === 1 ? "1 month" : ri.months + " months");
-          if (ri.weeks && ri.weeks > 0) parts.push(ri.weeks === 1 ? "1 week" : ri.weeks + " weeks");
-          if (ri.days && ri.days > 0) parts.push(ri.days === 1 ? "1 day" : ri.days + " days");
-          return parts.length > 0 ? parts.join(", ") : null;
-        })()`;
+      return `reviewInterval: formatReviewInterval(item.reviewInterval)`;
     } else if (field === 'note') {
       return `note: item.note || ""`;
     } else {

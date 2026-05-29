@@ -259,8 +259,8 @@ describe('editItem generateAppleScript', () => {
         name: 'P',
         markReviewed: true,
       });
-      expect(script).toContain('set ri to review interval of foundItem');
-      expect(script).toContain('set next review date of foundItem to newReviewDate');
+      expect(script).toContain('set last review date of foundItem to current date');
+      expect(script).toContain('set next review date of foundItem to missing value');
       expect(script).toContain('marked reviewed');
     });
 
@@ -270,8 +270,8 @@ describe('editItem generateAppleScript', () => {
         name: 'P',
         markReviewed: false,
       });
-      expect(script).not.toContain('review interval');
-      expect(script).not.toContain('next review date');
+      expect(script).not.toContain('last review date');
+      expect(script).not.toContain('marked reviewed');
     });
 
     it('does not generate markReviewed for tasks', () => {
@@ -280,8 +280,8 @@ describe('editItem generateAppleScript', () => {
         name: 'T',
         markReviewed: true,
       });
-      expect(script).not.toContain('review interval');
-      expect(script).not.toContain('next review date');
+      expect(script).not.toContain('last review date');
+      expect(script).not.toContain('marked reviewed');
     });
   });
 });
