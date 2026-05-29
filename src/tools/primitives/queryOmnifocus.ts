@@ -149,8 +149,8 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
       // parentFolder is unreliable on flattenedFolders, so we walk children instead.
       function collectDescendantFolderIds(folder, idSet) {
         idSet.add(folder.id.primaryKey);
-        var children = folder.folders;
-        for (var i = 0; i < children.length; i++) {
+        const children = folder.folders;
+        for (let i = 0; i < children.length; i++) {
           collectDescendantFolderIds(children[i], idSet);
         }
       }
@@ -168,7 +168,8 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
       }
 
       ${filters.folderId ? `
-      // Pre-compute the set of folder IDs that are the target or descendants of target
+      // Pre-compute the set of folder IDs that are the target or descendants of target.
+      // _folderIdSet is referenced by the filter conditions emitted from generateFilterConditions().
       const _folderIdSet = new Set();
       const _targetFolderId = "${escapeJXA(filters.folderId)}";
       for (var _fi = 0; _fi < flattenedFolders.length; _fi++) {
