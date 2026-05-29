@@ -225,7 +225,18 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
     var evaluateActionDateIsInThePast = (task, dateField, value) => {
       const fieldDate = getTaskDateField(task, dateField);
       if (!fieldDate) return false;
+      const now = new Date();
+
+      // value === true means "any time before now" (no relative window)
+      if (typeof value !== "object" || value === null) {
+        return fieldDate <= now;
+      }
+
       const { relativeBeforeAmount, relativeComponent } = value;
+      if (relativeBeforeAmount === undefined || relativeComponent === undefined) {
+        return fieldDate <= now;
+      }
+
       const cutoff = new Date();
       if (relativeComponent === "day") {
         cutoff.setDate(cutoff.getDate() - relativeBeforeAmount);
@@ -236,9 +247,8 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       } else if (relativeComponent === "year") {
         cutoff.setFullYear(cutoff.getFullYear() - relativeBeforeAmount);
       } else {
-        return false;
+        return fieldDate <= now;
       }
-      const now = new Date();
       return fieldDate >= cutoff && fieldDate <= now;
     };
 

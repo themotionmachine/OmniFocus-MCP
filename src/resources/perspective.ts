@@ -11,7 +11,7 @@ export async function readPerspective(uri: URL, variables: Variables, logger: Lo
   const result = await getPerspectiveView({ perspectiveName: name });
 
   const data = result.success
-    ? { items: result.items ?? [], debug: result.debug }
+    ? { items: result.items ?? [] }
     : { error: result.error };
 
   return {
