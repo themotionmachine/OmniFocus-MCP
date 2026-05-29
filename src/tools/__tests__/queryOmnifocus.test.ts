@@ -178,6 +178,52 @@ describe('formatTasks - hierarchy fields display', () => {
 });
 
 // ============================================================
+// generateFilterConditions - reviewDue filter (projects)
+// ============================================================
+describe('generateFilterConditions - reviewDue', () => {
+  it('generates review date check when reviewDue is true', () => {
+    const result = generateFilterConditions('projects', { reviewDue: true });
+    expect(result).toContain('nextReviewDate');
+    expect(result).toContain('return false');
+  });
+
+  it('generates inverse review check when reviewDue is false', () => {
+    const result = generateFilterConditions('projects', { reviewDue: false });
+    expect(result).toContain('nextReviewDate');
+    expect(result).toContain('return false');
+  });
+
+  it('does not generate reviewDue filter for tasks entity', () => {
+    const result = generateFilterConditions('tasks', { reviewDue: true });
+    expect(result).not.toContain('nextReviewDate');
+    expect(result).not.toContain('reviewDate');
+  });
+});
+
+// ============================================================
+// generateFieldMapping - review fields
+// ============================================================
+describe('generateFieldMapping - review fields', () => {
+  it('includes nextReviewDate mapping when requested', () => {
+    const result = generateFieldMapping('projects', ['nextReviewDate']);
+    expect(result).toContain('nextReviewDate');
+    expect(result).toContain('item.nextReviewDate');
+  });
+
+  it('includes reviewInterval mapping when requested', () => {
+    const result = generateFieldMapping('projects', ['reviewInterval']);
+    expect(result).toContain('reviewInterval');
+    expect(result).toContain('item.reviewInterval');
+  });
+
+  it('default project fields include review fields', () => {
+    const result = generateFieldMapping('projects');
+    expect(result).toContain('nextReviewDate');
+    expect(result).toContain('reviewInterval');
+  });
+});
+
+// ============================================================
 // formatFilters - taskName display
 // ============================================================
 describe('formatFilters', () => {
@@ -222,5 +268,10 @@ describe('formatFilters', () => {
   it('displays ISO date dueOn naturally', () => {
     const result = formatFilters({ dueOn: '2026-04-15' });
     expect(result).toBe('due on 2026-04-15');
+  });
+
+  it('displays reviewDue filter', () => {
+    const result = formatFilters({ reviewDue: true });
+    expect(result).toBe('review due: true');
   });
 });

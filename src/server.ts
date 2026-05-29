@@ -45,6 +45,8 @@ QUERY FILTER TIPS:
 - projectName filter is case-insensitive partial match
 - Status values for tasks: Next, Available, Blocked, DueSoon, Overdue
 - Status values for projects: Active, OnHold, Done, Dropped
+- Use reviewDue: true filter on projects to find projects needing review
+- Use edit_item with markReviewed: true to mark a project as reviewed
 - Combine filters with AND logic; within arrays, OR logic applies`
   }
 );

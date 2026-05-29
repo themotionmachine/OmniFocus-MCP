@@ -37,6 +37,7 @@ export interface EditItemParams {
   newSequential?: boolean;      // Whether the project should be sequential
   newFolderName?: string;       // New folder to move the project to
   newProjectStatus?: ProjectStatus; // New status for projects
+  markReviewed?: boolean;       // Mark the project as reviewed (advances next review date)
 }
 
 /**
@@ -388,6 +389,43 @@ export function generateAppleScript(params: EditItemParams): string {
 `;
     }
     
+    // Mark project as reviewed
+    if (params.markReviewed === true) {
+      script += `
+        -- Mark project as reviewed (advances next review date by the project's review interval)
+        -- review interval is a structured record {unit, steps, fixed}, not a simple number
+        set ri to review interval of foundItem
+        set newReviewDate to current date
+        if ri is not missing value then
+          set riUnit to unit of ri
+          set riSteps to steps of ri
+          if riUnit is month then
+            -- Add months by adjusting the month component
+            set curMonth to (month of newReviewDate) as integer
+            set newMonth to curMonth + riSteps
+            set extraYears to (newMonth - 1) div 12
+            set newMonth to ((newMonth - 1) mod 12) + 1
+            set year of newReviewDate to (year of newReviewDate) + extraYears
+            set month of newReviewDate to newMonth
+          else if riUnit is year then
+            set year of newReviewDate to (year of newReviewDate) + riSteps
+          else if riUnit is week then
+            set newReviewDate to newReviewDate + (riSteps * 7 * days)
+          else if riUnit is day then
+            set newReviewDate to newReviewDate + (riSteps * days)
+          else
+            -- Fallback: default to 1 week
+            set newReviewDate to newReviewDate + (7 * days)
+          end if
+        else
+          -- No review interval set, default to 1 week
+          set newReviewDate to newReviewDate + (7 * days)
+        end if
+        set next review date of foundItem to newReviewDate
+        set end of changedProperties to "marked reviewed"
+`;
+    }
+
     // Move to a new folder (supports nested paths like "Work/Engineering")
     if (params.newFolderName !== undefined && params.newFolderName !== '') {
       const escapedFolderName = params.newFolderName.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ');

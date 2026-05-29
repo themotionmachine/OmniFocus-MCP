@@ -69,6 +69,8 @@ export interface OmnifocusProject {
   tasks: string[]; // Task IDs
   flagged?: boolean;
   estimatedMinutes?: number | null;
+  nextReviewDate: string | null;
+  reviewInterval: string | null; // Human-readable review interval (e.g. "1 week", "1 month")
 }
 
 export interface OmnifocusFolder {

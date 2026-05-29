@@ -37,6 +37,17 @@
           return mapObj[enumObj] || "Unknown";
         }
 
+        // Format a DateComponents interval into a human-readable string
+        function formatReviewInterval(interval) {
+          if (!interval) return null;
+          const parts = [];
+          if (interval.years && interval.years > 0) parts.push(interval.years === 1 ? "1 year" : interval.years + " years");
+          if (interval.months && interval.months > 0) parts.push(interval.months === 1 ? "1 month" : interval.months + " months");
+          if (interval.weeks && interval.weeks > 0) parts.push(interval.weeks === 1 ? "1 week" : interval.weeks + " weeks");
+          if (interval.days && interval.days > 0) parts.push(interval.days === 1 ? "1 day" : interval.days + " days");
+          return parts.length > 0 ? parts.join(", ") : null;
+        }
+
         // Create database export object using Maps for faster lookups
         const exportData = {
           exportDate: new Date().toISOString(),
@@ -84,7 +95,9 @@
               completedByChildren: project.completedByChildren,
               containsSingletonActions: project.containsSingletonActions,
               note: project.note || "",
-              tasks: [] // Will be populated in the task loop
+              tasks: [], // Will be populated in the task loop
+              nextReviewDate: formatDate(project.nextReviewDate),
+              reviewInterval: formatReviewInterval(project.reviewInterval)
             };
             projectsMap.set(projectId, projectData);
             exportData.projects[projectId] = projectData;
