@@ -92,9 +92,9 @@ describe('generateFilterConditions - injection safety', () => {
     expect(result).toContain('Next\\"bad');
   });
 
-  it('escapes folderId with quotes (projects entity)', () => {
+  it('uses _folderIdSet for folderId filter (projects entity)', () => {
     const result = generateFilterConditions('projects', { folderId: 'f"id' });
-    expect(result).toContain('f\\"id');
+    expect(result).toContain('_folderIdSet.has');
   });
 });
 
