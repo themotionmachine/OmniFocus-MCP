@@ -156,4 +156,16 @@ const transport = new StdioServerTransport();
   }
 })();
 
-// For a cleaner shutdown if the process is terminated
+// Exit cleanly when the MCP client goes away. Signal propagation through the
+// npx/npm wrapper chain is unreliable, so we also watch stdin for EOF — when
+// the client closes the transport, stdin ends and we shut down rather than
+// lingering as an orphaned process.
+function shutdown(): void {
+  process.exit(0);
+}
+
+process.stdin.on('end', shutdown);
+process.stdin.on('close', shutdown);
+process.on('SIGTERM', shutdown);
+process.on('SIGHUP', shutdown);
+process.on('SIGINT', shutdown);
