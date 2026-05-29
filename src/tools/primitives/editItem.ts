@@ -376,15 +376,16 @@ export function generateAppleScript(params: EditItemParams): string {
 `;
     }
     
-    // Update project status
+    // Update project status. OmniFocus rejects setting status to done/dropped
+    // directly — those transitions require the mark complete/mark dropped verbs.
     if (params.newProjectStatus !== undefined) {
-      const statusValue = params.newProjectStatus === 'active' ? 'active status' : 
-                          params.newProjectStatus === 'completed' ? 'done status' :
-                          params.newProjectStatus === 'dropped' ? 'dropped status' :
-                          'on hold status';
+      const statusAction = params.newProjectStatus === 'completed' ? 'mark complete foundItem' :
+                           params.newProjectStatus === 'dropped' ? 'mark dropped foundItem' :
+                           params.newProjectStatus === 'active' ? 'set status of foundItem to active status' :
+                           'set status of foundItem to on hold status';
       script += `
         -- Update project status
-        set status of foundItem to ${statusValue}
+        ${statusAction}
         set end of changedProperties to "status"
 `;
     }

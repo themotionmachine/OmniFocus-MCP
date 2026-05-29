@@ -253,6 +253,35 @@ describe('editItem generateAppleScript', () => {
       expect(script).toContain('set status of foundItem to on hold status');
     });
 
+    it('uses active status assignment for active project status', () => {
+      const script = generateAppleScript({
+        itemType: 'project',
+        name: 'P',
+        newProjectStatus: 'active',
+      });
+      expect(script).toContain('set status of foundItem to active status');
+    });
+
+    it('uses mark complete verb for completed project status', () => {
+      const script = generateAppleScript({
+        itemType: 'project',
+        name: 'P',
+        newProjectStatus: 'completed',
+      });
+      expect(script).toContain('mark complete foundItem');
+      expect(script).not.toContain('set status of foundItem to done status');
+    });
+
+    it('uses mark dropped verb for dropped project status', () => {
+      const script = generateAppleScript({
+        itemType: 'project',
+        name: 'P',
+        newProjectStatus: 'dropped',
+      });
+      expect(script).toContain('mark dropped foundItem');
+      expect(script).not.toContain('set status of foundItem to dropped status');
+    });
+
     it('generates markReviewed script for projects', () => {
       const script = generateAppleScript({
         itemType: 'project',
