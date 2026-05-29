@@ -19,6 +19,7 @@ import * as queryOmniFocusTool from './tools/definitions/queryOmnifocus.js';
 import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
 import * as listTagsTool from './tools/definitions/listTags.js';
+import * as createTagTool from './tools/definitions/createTag.js';
 
 // Create an MCP server with instructions
 const server = new McpServer(
@@ -142,6 +143,13 @@ server.tool(
   "List all tags in OmniFocus with their hierarchy. Useful for discovering available tags before creating or editing tasks.",
   listTagsTool.schema.shape,
   listTagsTool.handler
+);
+
+server.tool(
+  "create_tag",
+  "Create a new tag in OmniFocus, optionally nested under an existing parent tag",
+  createTagTool.schema.shape,
+  createTagTool.handler
 );
 
 // Start the MCP server
