@@ -76,7 +76,7 @@ server.tool(
 
 server.tool(
   "add_omnifocus_task",
-  "Add a new task to OmniFocus",
+  "Create a NEW task in OmniFocus. Use this ONLY when the task does not already exist. If a matching task already exists (e.g. an item already in the Inbox, or one referenced earlier in the conversation) and the goal is to file/place/move it into a project or the inbox, do NOT create a duplicate here — use edit_item with newProjectName to MOVE the existing task instead. When unsure whether a matching task already exists, search with query_omnifocus first and prefer moving over creating.",
   addOmniFocusTaskTool.schema.shape,
   addOmniFocusTaskTool.handler
 );
@@ -97,7 +97,7 @@ server.tool(
 
 server.tool(
   "edit_item",
-  "Edit a task or project in OmniFocus",
+  "Edit an existing task or project in OmniFocus. This is also how you MOVE/reassign an existing task: set newProjectName to a project name/path to move it into that project, or to \"\" / \"inbox\" to move it to the inbox. Whenever a task already exists, prefer moving it with this tool over creating a new one via add_omnifocus_task, so you never create duplicates.",
   editItemTool.schema.shape,
   editItemTool.handler
 );
