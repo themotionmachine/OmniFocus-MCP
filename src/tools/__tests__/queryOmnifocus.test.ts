@@ -3,7 +3,7 @@ import { _testExports as primitives } from '../primitives/queryOmnifocus.js';
 import { _testExports as definitions } from '../definitions/queryOmnifocus.js';
 
 const { escapeJXA, generateFilterConditions, generateFieldMapping } = primitives;
-const { formatTasks, formatFilters } = definitions;
+const { formatTasks, formatProjects, formatFolders, formatFilters } = definitions;
 
 // ============================================================
 // escapeJXA
@@ -174,6 +174,45 @@ describe('formatTasks - hierarchy fields display', () => {
     ]);
     expect(result).not.toContain('[parent');
     expect(result).not.toContain('[children');
+  });
+});
+
+// ============================================================
+// formatProjects - id display (regression: #63)
+// ============================================================
+describe('formatProjects - id display', () => {
+  it('shows the project id when present', () => {
+    const result = formatProjects([
+      { name: 'Sample Project', id: 'p1a2b3c', status: 'Active' },
+    ]);
+    expect(result).toContain('[p1a2b3c]');
+  });
+
+  it('does NOT show an id section when id is absent', () => {
+    const result = formatProjects([
+      { name: 'No ID Project', status: 'Active' },
+    ]);
+    expect(result).not.toContain('[undefined]');
+    expect(result).not.toMatch(/\[\]/);
+  });
+});
+
+// ============================================================
+// formatFolders - id display (regression: #63)
+// ============================================================
+describe('formatFolders - id display', () => {
+  it('shows the folder id when present', () => {
+    const result = formatFolders([
+      { name: 'Sample Folder', id: 'f9z8y7', projectCount: 2 },
+    ]);
+    expect(result).toContain('[f9z8y7]');
+  });
+
+  it('does NOT show an id section when id is absent', () => {
+    const result = formatFolders([
+      { name: 'No ID Folder', projectCount: 0 },
+    ]);
+    expect(result).not.toContain('[undefined]');
   });
 });
 
