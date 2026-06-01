@@ -261,8 +261,9 @@ function formatProjects(projects: any[]): string {
     const reviewInterval = project.reviewInterval ? ` [review every: ${project.reviewInterval}]` : '';
 
     const id = project.id ? ` [${project.id}]` : '';
+    const tags = project.tagNames?.length > 0 ? ` <${project.tagNames.join(',')}>` : '';
 
-    let result = `P: ${flagged}${project.name}${id}${status}${due}${review}${reviewInterval}${folder}${taskCount}`;
+    let result = `P: ${flagged}${project.name}${id}${status}${due}${review}${reviewInterval}${folder}${taskCount}${tags}`;
 
     // Add note on a new line if present
     if (project.note) {

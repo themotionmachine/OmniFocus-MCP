@@ -195,6 +195,21 @@ describe('formatProjects - id display', () => {
     expect(result).not.toContain('[undefined]');
     expect(result).not.toMatch(/\[\]/);
   });
+
+  // Regression: #65 — project tags were never displayed even when present.
+  it('shows project tags when present', () => {
+    const result = formatProjects([
+      { name: 'Tagged Project', id: 'p1a2b3c', status: 'Active', tagNames: ['Work', 'Home'] },
+    ]);
+    expect(result).toContain('<Work,Home>');
+  });
+
+  it('does NOT show a tag section when there are no tags', () => {
+    const result = formatProjects([
+      { name: 'Untagged Project', id: 'p1a2b3c', status: 'Active', tagNames: [] },
+    ]);
+    expect(result).not.toContain('<');
+  });
 });
 
 // ============================================================
@@ -259,6 +274,14 @@ describe('generateFieldMapping - review fields', () => {
     const result = generateFieldMapping('projects');
     expect(result).toContain('nextReviewDate');
     expect(result).toContain('reviewInterval');
+  });
+
+  // Regression: #65 — default project mapping omitted tagNames, so queries
+  // without explicit fields returned undefined for project tags.
+  it('default project fields include tagNames', () => {
+    const result = generateFieldMapping('projects');
+    expect(result).toContain('tagNames');
+    expect(result).toContain('item.tags');
   });
 });
 
