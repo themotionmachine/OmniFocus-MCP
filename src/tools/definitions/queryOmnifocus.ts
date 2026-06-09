@@ -232,6 +232,11 @@ function formatTasks(tasks: any[]): string {
       parts.push(`[children: ${task.childIds.join(', ')}]`);
     }
 
+    // Sequencing only matters for action groups (tasks with children).
+    if (task.sequential !== undefined && task.hasChildren) {
+      parts.push(task.sequential ? '[sequential]' : '[parallel]');
+    }
+
     // Metadata dates if requested
     if (task.creationDate) {
       parts.push(`[created: ${formatDate(task.creationDate)}]`);
@@ -266,11 +271,14 @@ function formatProjects(projects: any[]): string {
     const due = project.dueDate ? ` [due: ${formatDate(project.dueDate)}]` : '';
     const review = project.nextReviewDate ? ` [review: ${formatDate(project.nextReviewDate)}]` : '';
     const reviewInterval = project.reviewInterval ? ` [review every: ${project.reviewInterval}]` : '';
+    const sequencing = project.sequential !== undefined
+      ? (project.sequential ? ' [sequential]' : ' [parallel]')
+      : '';
 
     const id = project.id ? ` [${project.id}]` : '';
     const tags = project.tagNames?.length > 0 ? ` <${project.tagNames.join(',')}>` : '';
 
-    let result = `P: ${flagged}${project.name}${id}${status}${due}${review}${reviewInterval}${folder}${taskCount}${tags}`;
+    let result = `P: ${flagged}${project.name}${id}${status}${due}${review}${reviewInterval}${sequencing}${folder}${taskCount}${tags}`;
 
     // Add note on a new line if present
     if (project.note) {

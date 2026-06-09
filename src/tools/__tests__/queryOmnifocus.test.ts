@@ -354,6 +354,125 @@ describe('generateFieldMapping - review fields', () => {
 });
 
 // ============================================================
+// generateFilterConditions - projectId filter (projects entity)
+// ============================================================
+describe('generateFilterConditions - projectId (projects)', () => {
+  it('narrows projects by their own id when projectId is set', () => {
+    const result = generateFilterConditions('projects', { projectId: 'kBqqJE3sKPU' });
+    // Must compare the project's OWN primary key, not a containing project.
+    expect(result).toContain('item.id.primaryKey');
+    expect(result).toContain('kBqqJE3sKPU');
+    expect(result).toContain('return false');
+  });
+
+  it('escapes projectId with quotes for projects entity', () => {
+    const result = generateFilterConditions('projects', { projectId: 'id"bad' });
+    expect(result).toContain('id\\"bad');
+  });
+
+  it('still filters tasks by containing project id', () => {
+    const result = generateFilterConditions('tasks', { projectId: 'kBqqJE3sKPU' });
+    expect(result).toContain('item.containingProject');
+    expect(result).toContain('kBqqJE3sKPU');
+  });
+});
+
+// ============================================================
+// generateFilterConditions - projectName filter (projects entity)
+// ============================================================
+describe('generateFilterConditions - projectName (projects)', () => {
+  it('narrows projects by their own name when projectName is set', () => {
+    const result = generateFilterConditions('projects', { projectName: 'Review' });
+    // Must match the project's OWN name (case-insensitive partial), not a containing project.
+    expect(result).toContain('item.name.toLowerCase()');
+    expect(result).toContain('.includes("review")');
+    expect(result).toContain('return false');
+  });
+
+  it('does not reference containingProject for projects entity', () => {
+    const result = generateFilterConditions('projects', { projectName: 'Review' });
+    expect(result).not.toContain('containingProject');
+  });
+
+  it('escapes projectName with quotes for projects entity', () => {
+    const result = generateFilterConditions('projects', { projectName: 'a"b' });
+    expect(result).toContain('a\\"b');
+  });
+
+  it('still filters tasks by containing project name', () => {
+    const result = generateFilterConditions('tasks', { projectName: 'devices' });
+    expect(result).toContain('item.containingProject');
+    expect(result).toContain('devices');
+  });
+});
+
+// ============================================================
+// generateFieldMapping - sequential field
+// ============================================================
+describe('generateFieldMapping - sequential field', () => {
+  it('includes sequential mapping for projects when requested', () => {
+    const result = generateFieldMapping('projects', ['id', 'name', 'sequential']);
+    expect(result).toContain('sequential:');
+    expect(result).toContain('item.sequential');
+    // Coerced to a real boolean so undefined never leaks through.
+    expect(result).toContain('Boolean(item.sequential)');
+  });
+
+  it('includes sequential mapping for tasks when requested', () => {
+    const result = generateFieldMapping('tasks', ['id', 'name', 'sequential']);
+    expect(result).toContain('sequential:');
+    expect(result).toContain('Boolean(item.sequential)');
+  });
+});
+
+// ============================================================
+// formatProjects - sequential display
+// ============================================================
+describe('formatProjects - sequential display', () => {
+  it('shows [sequential] when sequential is true', () => {
+    const result = formatProjects([
+      { name: 'Seq Project', status: 'Active', sequential: true },
+    ]);
+    expect(result).toContain('[sequential]');
+  });
+
+  it('shows [parallel] when sequential is false', () => {
+    const result = formatProjects([
+      { name: 'Par Project', status: 'Active', sequential: false },
+    ]);
+    expect(result).toContain('[parallel]');
+  });
+
+  it('omits sequencing marker when sequential is absent', () => {
+    const result = formatProjects([
+      { name: 'Plain Project', status: 'Active' },
+    ]);
+    expect(result).not.toContain('[sequential]');
+    expect(result).not.toContain('[parallel]');
+  });
+});
+
+// ============================================================
+// formatTasks - sequential display
+// ============================================================
+describe('formatTasks - sequential display', () => {
+  it('shows [sequential] for an action group that is sequential', () => {
+    const result = formatTasks([
+      { name: 'Seq Group', id: 'g1', hasChildren: true, childIds: ['c1'], sequential: true },
+    ]);
+    expect(result).toContain('[sequential]');
+  });
+
+  it('does NOT show sequencing marker for a leaf task without children', () => {
+    const result = formatTasks([
+      { name: 'Leaf', id: 'l1', hasChildren: false, sequential: false },
+    ]);
+    expect(result).not.toContain('[sequential]');
+    expect(result).not.toContain('[parallel]');
+  });
+});
+
+// ============================================================
 // formatFilters - taskName display
 // ============================================================
 describe('formatFilters', () => {
