@@ -46,6 +46,13 @@ describe('addProject generateAppleScript', () => {
       expect(script).toContain('set note of newProject to "A \\"quoted\\" note"');
     });
 
+    it('preserves newlines in note via linefeed concatenation', () => {
+      const script = generateAppleScript(makeParams({ note: 'Line 1\nLine 2' }));
+      expect(script).toContain(
+        'set note of newProject to "Line 1" & linefeed & "Line 2"'
+      );
+    });
+
     it('escapes backslashes in project name', () => {
       const script = generateAppleScript(makeParams({ name: 'Back\\slash' }));
       expect(script).toContain('Back\\\\slash');
