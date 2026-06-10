@@ -33,6 +33,8 @@ export interface QueryOmnifocusParams {
     isRepeating?: boolean;
     completedWithin?: number;
     completedOn?: number;
+    droppedWithin?: number;
+    droppedOn?: number;
     reviewDue?: boolean;
   };
   fields?: string[];
@@ -393,6 +395,18 @@ function generateFilterConditions(entity: string, filters: any): string {
       conditions.push(`if (!checkSameDay(item.completionDate, ${filters.completedOn})) return false;`);
     }
 
+    if (filters.droppedWithin !== undefined) {
+      conditions.push(`
+        if (!item.dropDate || !checkDateWithinPast(item.dropDate, ${filters.droppedWithin})) {
+          return false;
+        }
+      `);
+    }
+
+    if (filters.droppedOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.dropDate, ${filters.droppedOn})) return false;`);
+    }
+
     if (filters.hasNote !== undefined) {
       conditions.push(`
         const hasNote = item.note && item.note.trim().length > 0;
@@ -451,6 +465,18 @@ function generateFilterConditions(entity: string, filters: any): string {
 
     if (filters.completedOn !== undefined) {
       conditions.push(`if (!checkSameDay(item.completionDate, ${filters.completedOn})) return false;`);
+    }
+
+    if (filters.droppedWithin !== undefined) {
+      conditions.push(`
+        if (!item.dropDate || !checkDateWithinPast(item.dropDate, ${filters.droppedWithin})) {
+          return false;
+        }
+      `);
+    }
+
+    if (filters.droppedOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.dropDate, ${filters.droppedOn})) return false;`);
     }
 
     if (filters.reviewDue !== undefined) {
@@ -573,6 +599,10 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `creationDate: formatDate(item.added)`;
     } else if (field === 'completionDate') {
       return `completionDate: item.completionDate ? formatDate(item.completionDate) : null`;
+    } else if (field === 'dropDate') {
+      return `dropDate: item.dropDate ? formatDate(item.dropDate) : null`;
+    } else if (field === 'effectiveDropDate') {
+      return `effectiveDropDate: item.effectiveDropDate ? formatDate(item.effectiveDropDate) : null`;
     } else if (field === 'dueDate') {
       return `dueDate: formatDate(item.dueDate)`;
     } else if (field === 'deferDate') {
