@@ -141,6 +141,9 @@ Parameters:
   - `inbox`: Filter by inbox status (true = inbox only, false = exclude inbox)
   - `dueWithin`, `deferredUntil`, `plannedWithin`: Range date filters (days from today)
   - `dueOn`, `deferOn`, `plannedOn`: Exact date filters (0 = today, 1 = tomorrow, etc.)
+  - `completedOn`, `completedWithin`: Completed-item date filters (use with `includeCompleted: true`)
+  - `droppedOn`, `droppedWithin`: Dropped-item date filters (use with `includeCompleted: true`)
+  - `reviewDue`: Filter projects due for review (projects entity only)
   - `hasNote`: Filter by note presence
 - `fields`: (Optional) Specific fields to return (id, name, note, dueDate, etc.)
 - `limit`: (Optional) Maximum items to return
@@ -275,6 +278,17 @@ Parameters:
 
 Returns:
 - List of tags with name, ID, parent hierarchy, active status, and task count
+
+### `create_tag`
+Create a new tag in OmniFocus, optionally nested under an existing parent tag.
+
+Parameters:
+- `name`: The name of the tag to create
+- `parentTagName`: (Optional) Name of an existing tag to nest the new tag under
+- `parentTagID`: (Optional) ID of an existing tag to nest the new tag under (takes precedence over name)
+
+Returns:
+- The created tag's name and ID, or an error if the parent tag was not found
 
 ## Server Instructions & Logging
 

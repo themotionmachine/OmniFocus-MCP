@@ -23,7 +23,7 @@ import * as createTagTool from './tools/definitions/createTag.js';
 
 // Create an MCP server with instructions
 const server = new McpServer(
-  { name: "OmniFocus MCP", version: "1.6.1" },
+  { name: "OmniFocus MCP", version: "1.9.0" },
   {
     instructions: `OmniFocus MCP server for macOS task management.
 
