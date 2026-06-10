@@ -260,7 +260,10 @@ function formatProjects(projects: any[]): string {
     const review = project.nextReviewDate ? ` [review: ${formatDate(project.nextReviewDate)}]` : '';
     const reviewInterval = project.reviewInterval ? ` [review every: ${project.reviewInterval}]` : '';
 
-    let result = `P: ${flagged}${project.name}${status}${due}${review}${reviewInterval}${folder}${taskCount}`;
+    const id = project.id ? ` [${project.id}]` : '';
+    const tags = project.tagNames?.length > 0 ? ` <${project.tagNames.join(',')}>` : '';
+
+    let result = `P: ${flagged}${project.name}${id}${status}${due}${review}${reviewInterval}${folder}${taskCount}${tags}`;
 
     // Add note on a new line if present
     if (project.note) {
@@ -273,10 +276,11 @@ function formatProjects(projects: any[]): string {
 
 function formatFolders(folders: any[]): string {
   return folders.map(folder => {
+    const id = folder.id ? ` [${folder.id}]` : '';
     const projectCount = folder.projectCount !== undefined ? ` (${folder.projectCount} projects)` : '';
     const path = folder.path ? ` 📍 ${folder.path}` : '';
-    
-    return `F: ${folder.name}${projectCount}${path}`;
+
+    return `F: ${folder.name}${id}${projectCount}${path}`;
   }).join('\n');
 }
 

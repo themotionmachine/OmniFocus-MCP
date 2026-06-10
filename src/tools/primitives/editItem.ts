@@ -226,6 +226,75 @@ export function generateAppleScript(params: EditItemParams): string {
 `;
   }
   
+  // Tag operations apply to both tasks and projects (OmniFocus supports tags on
+  // projects too). Kept in the common section so project edits aren't a no-op.
+  if (params.replaceTags && params.replaceTags.length > 0) {
+    const tagsList = params.replaceTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
+    script += `
+        -- Replace all tags
+        set tagNames to {${tagsList}}
+        set existingTags to tags of foundItem
+
+        -- First clear all existing tags
+        repeat with existingTag in existingTags
+          remove existingTag from tags of foundItem
+        end repeat
+
+        -- Then add new tags
+        repeat with tagName in tagNames
+          set tagObj to missing value
+          try
+            set tagObj to first flattened tag where name = (tagName as string)
+          on error
+            -- Tag doesn't exist, create it
+            set tagObj to make new tag with properties {name:(tagName as string)}
+          end try
+          if tagObj is not missing value then
+            add tagObj to tags of foundItem
+          end if
+        end repeat
+        set end of changedProperties to "tags (replaced)"
+`;
+  } else {
+    // Add tags if specified
+    if (params.addTags && params.addTags.length > 0) {
+      const tagsList = params.addTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
+      script += `
+        -- Add tags
+        set tagNames to {${tagsList}}
+        repeat with tagName in tagNames
+          set tagObj to missing value
+          try
+            set tagObj to first flattened tag where name = (tagName as string)
+          on error
+            -- Tag doesn't exist, create it
+            set tagObj to make new tag with properties {name:(tagName as string)}
+          end try
+          if tagObj is not missing value then
+            add tagObj to tags of foundItem
+          end if
+        end repeat
+        set end of changedProperties to "tags (added)"
+`;
+    }
+
+    // Remove tags if specified
+    if (params.removeTags && params.removeTags.length > 0) {
+      const tagsList = params.removeTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
+      script += `
+        -- Remove tags
+        set tagNames to {${tagsList}}
+        repeat with tagName in tagNames
+          try
+            set tagObj to first flattened tag where name = (tagName as string)
+            remove tagObj from tags of foundItem
+          end try
+        end repeat
+        set end of changedProperties to "tags (removed)"
+`;
+    }
+  }
+
   // Task-specific updates
   if (itemType === 'task') {
     // Update task status
@@ -270,74 +339,6 @@ export function generateAppleScript(params: EditItemParams): string {
         -- Mark task as incomplete
         mark incomplete foundItem
         set end of changedProperties to "status (incomplete)"
-`;
-      }
-    }
-    
-    // Handle tag operations
-    if (params.replaceTags && params.replaceTags.length > 0) {
-      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
-      script += `
-        -- Replace all tags
-        set tagNames to {${tagsList}}
-        set existingTags to tags of foundItem
-        
-        -- First clear all existing tags
-        repeat with existingTag in existingTags
-          remove existingTag from tags of foundItem
-        end repeat
-        
-        -- Then add new tags
-        repeat with tagName in tagNames
-          set tagObj to missing value
-          try
-            set tagObj to first flattened tag where name = (tagName as string)
-          on error
-            -- Tag doesn't exist, create it
-            set tagObj to make new tag with properties {name:(tagName as string)}
-          end try
-          if tagObj is not missing value then
-            add tagObj to tags of foundItem
-          end if
-        end repeat
-        set end of changedProperties to "tags (replaced)"
-`;
-    } else {
-      // Add tags if specified
-      if (params.addTags && params.addTags.length > 0) {
-        const tagsList = params.addTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
-        script += `
-        -- Add tags
-        set tagNames to {${tagsList}}
-        repeat with tagName in tagNames
-          set tagObj to missing value
-          try
-            set tagObj to first flattened tag where name = (tagName as string)
-          on error
-            -- Tag doesn't exist, create it
-            set tagObj to make new tag with properties {name:(tagName as string)}
-          end try
-          if tagObj is not missing value then
-            add tagObj to tags of foundItem
-          end if
-        end repeat
-        set end of changedProperties to "tags (added)"
-`;
-      }
-      
-      // Remove tags if specified
-      if (params.removeTags && params.removeTags.length > 0) {
-        const tagsList = params.removeTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
-        script += `
-        -- Remove tags
-        set tagNames to {${tagsList}}
-        repeat with tagName in tagNames
-          try
-            set tagObj to first flattened tag where name = (tagName as string)
-            remove tagObj from tags of foundItem
-          end try
-        end repeat
-        set end of changedProperties to "tags (removed)"
 `;
       }
     }

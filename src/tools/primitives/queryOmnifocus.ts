@@ -524,6 +524,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
           status: projectStatusMap[item.status] || "Unknown",
           folderName: item.parentFolder ? item.parentFolder.name : null,
           taskCount: taskArray.length,
+          tagNames: item.tags ? item.tags.map(t => t.name) : [],
           flagged: item.flagged || false,
           dueDate: formatDate(item.dueDate),
           deferDate: formatDate(item.deferDate),

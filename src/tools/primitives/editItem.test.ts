@@ -169,6 +169,38 @@ describe('editItem generateAppleScript', () => {
       expect(script).toContain('remove existingTag from tags of foundItem');
       expect(script).toContain('add tagObj to tags of foundItem');
     });
+
+    // Regression: #64 — addTags on a project was a silent no-op because tag
+    // handling was nested inside the task-only block.
+    it('generates tag add script for projects', () => {
+      const script = generateAppleScript({
+        itemType: 'project',
+        name: 'Sample Project',
+        addTags: ['zzTestTag'],
+      });
+      expect(script).toContain('"zzTestTag"');
+      expect(script).toContain('add tagObj to tags of foundItem');
+    });
+
+    it('generates tag remove script for projects', () => {
+      const script = generateAppleScript({
+        itemType: 'project',
+        name: 'Sample Project',
+        removeTags: ['old-tag'],
+      });
+      expect(script).toContain('"old-tag"');
+      expect(script).toContain('remove tagObj from tags of foundItem');
+    });
+
+    it('generates tag replace script for projects', () => {
+      const script = generateAppleScript({
+        itemType: 'project',
+        name: 'Sample Project',
+        replaceTags: ['new-tag'],
+      });
+      expect(script).toContain('"new-tag"');
+      expect(script).toContain('remove existingTag from tags of foundItem');
+    });
   });
 
   describe('item lookup', () => {

@@ -3,7 +3,7 @@ import { _testExports as primitives } from '../primitives/queryOmnifocus.js';
 import { _testExports as definitions } from '../definitions/queryOmnifocus.js';
 
 const { escapeJXA, generateFilterConditions, generateFieldMapping } = primitives;
-const { formatTasks, formatFilters } = definitions;
+const { formatTasks, formatProjects, formatFolders, formatFilters } = definitions;
 
 // ============================================================
 // escapeJXA
@@ -178,6 +178,60 @@ describe('formatTasks - hierarchy fields display', () => {
 });
 
 // ============================================================
+// formatProjects - id display (regression: #63)
+// ============================================================
+describe('formatProjects - id display', () => {
+  it('shows the project id when present', () => {
+    const result = formatProjects([
+      { name: 'Sample Project', id: 'p1a2b3c', status: 'Active' },
+    ]);
+    expect(result).toContain('[p1a2b3c]');
+  });
+
+  it('does NOT show an id section when id is absent', () => {
+    const result = formatProjects([
+      { name: 'No ID Project', status: 'Active' },
+    ]);
+    expect(result).not.toContain('[undefined]');
+    expect(result).not.toMatch(/\[\]/);
+  });
+
+  // Regression: #65 — project tags were never displayed even when present.
+  it('shows project tags when present', () => {
+    const result = formatProjects([
+      { name: 'Tagged Project', id: 'p1a2b3c', status: 'Active', tagNames: ['Work', 'Home'] },
+    ]);
+    expect(result).toContain('<Work,Home>');
+  });
+
+  it('does NOT show a tag section when there are no tags', () => {
+    const result = formatProjects([
+      { name: 'Untagged Project', id: 'p1a2b3c', status: 'Active', tagNames: [] },
+    ]);
+    expect(result).not.toContain('<');
+  });
+});
+
+// ============================================================
+// formatFolders - id display (regression: #63)
+// ============================================================
+describe('formatFolders - id display', () => {
+  it('shows the folder id when present', () => {
+    const result = formatFolders([
+      { name: 'Sample Folder', id: 'f9z8y7', projectCount: 2 },
+    ]);
+    expect(result).toContain('[f9z8y7]');
+  });
+
+  it('does NOT show an id section when id is absent', () => {
+    const result = formatFolders([
+      { name: 'No ID Folder', projectCount: 0 },
+    ]);
+    expect(result).not.toContain('[undefined]');
+  });
+});
+
+// ============================================================
 // generateFilterConditions - reviewDue filter (projects)
 // ============================================================
 describe('generateFilterConditions - reviewDue', () => {
@@ -220,6 +274,14 @@ describe('generateFieldMapping - review fields', () => {
     const result = generateFieldMapping('projects');
     expect(result).toContain('nextReviewDate');
     expect(result).toContain('reviewInterval');
+  });
+
+  // Regression: #65 — default project mapping omitted tagNames, so queries
+  // without explicit fields returned undefined for project tags.
+  it('default project fields include tagNames', () => {
+    const result = generateFieldMapping('projects');
+    expect(result).toContain('tagNames');
+    expect(result).toContain('item.tags');
   });
 });
 
