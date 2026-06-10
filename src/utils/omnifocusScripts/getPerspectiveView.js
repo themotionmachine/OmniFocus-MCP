@@ -306,11 +306,6 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
         return false;
       }
 
-      // Skip disabled rules — they are toggled off in the perspective editor
-      if (rule.disabledRule !== undefined) {
-        return true;
-      }
-
       // Handle standard rules
       for (const [key, value] of Object.entries(rule)) {
         if (possibleRuleTypes[key]) {
@@ -329,7 +324,18 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
     function evaluateTask(task, filters, aggregationType = "all") {
       if (!Array.isArray(filters) || filters.length === 0) return true;
 
-      const results = filters.map((filter) => {
+      // Disabled rules (toggled off in the perspective editor) must be excluded
+      // from aggregation entirely, not coerced to a boolean. Coercing them to
+      // true breaks "none" groups (every result must be false) and would create
+      // false positives in "any" groups; coercing to false breaks "all" groups.
+      const activeFilters = filters.filter(
+        (filter) => filter.disabledRule === undefined
+      );
+
+      // A group consisting only of disabled rules imposes no constraint.
+      if (activeFilters.length === 0) return true;
+
+      const results = activeFilters.map((filter) => {
         if (filter.aggregateType && filter.aggregateRules) {
           // Handle nested aggregate rules
           return evaluateTask(
@@ -428,9 +434,22 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
     let unknownRuleTypes = [];
     let tasksEvaluated = 0;
 
+    // A project's own root task ("project header" row). Action-list
+    // perspectives display actions, not the project root, so OmniFocus hides
+    // these in the GUI; we must skip them to avoid spurious header rows.
+    function isProjectRootTask(task) {
+      const proj = task.containingProject;
+      return !!(
+        proj &&
+        proj.task &&
+        proj.task.id.primaryKey === task.id.primaryKey
+      );
+    }
+
     if (isCustomPerspective && perspectiveRules) {
       flattenedTasks.forEach((task) => {
         tasksEvaluated++;
+        if (isProjectRootTask(task)) return;
         if (evaluateTask(task, perspectiveRules, perspectiveAggregation)) {
           filteredTasks.push(getTaskDetails(task));
         }
