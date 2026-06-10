@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
 const execAsync = promisify(exec);
 
 export interface CreateTagParams {
@@ -11,22 +12,18 @@ export interface CreateTagParams {
   parentTagID?: string;   // ID of an existing tag to nest the new tag under (takes precedence over parentTagName)
 }
 
-function escape(value: string): string {
-  return value.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ');
-}
-
 /**
  * Generate pure AppleScript for tag creation
  */
 export function generateAppleScript(params: CreateTagParams): string {
-  const name = escape(params.name);
+  const name = escapeAppleScriptString(params.name);
 
   // Resolve the parent tag (by id or name) when nesting is requested.
   let parentLookup = '';
   let creationTarget = 'make new tag with properties {name:"' + name + '"}';
 
   if (params.parentTagID) {
-    const parentId = escape(params.parentTagID);
+    const parentId = escapeAppleScriptString(params.parentTagID);
     const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Parent tag not found: ${parentId}\\\"}`;
     parentLookup = `
         set parentTag to missing value
@@ -38,7 +35,7 @@ export function generateAppleScript(params: CreateTagParams): string {
         end if`;
     creationTarget = 'make new tag with properties {name:"' + name + '"} at end of tags of parentTag';
   } else if (params.parentTagName) {
-    const parentName = escape(params.parentTagName);
+    const parentName = escapeAppleScriptString(params.parentTagName);
     const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Parent tag not found: ${parentName}\\\"}`;
     parentLookup = `
         set parentTag to missing value

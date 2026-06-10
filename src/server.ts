@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { readFileSync } from "fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SetLevelRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -21,9 +22,17 @@ import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.
 import * as listTagsTool from './tools/definitions/listTags.js';
 import * as createTagTool from './tools/definitions/createTag.js';
 
+// Single-source the version from package.json — the hardcoded string here
+// drifted out of sync with the published version more than once.
+// Works from both src/ (tsx) and dist/ (build): each is one level below the
+// package root.
+const { version } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf-8")
+);
+
 // Create an MCP server with instructions
 const server = new McpServer(
-  { name: "OmniFocus MCP", version: "1.9.0" },
+  { name: "OmniFocus MCP", version },
   {
     instructions: `OmniFocus MCP server for macOS task management.
 

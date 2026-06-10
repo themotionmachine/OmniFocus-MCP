@@ -4,7 +4,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
-import { generateFolderLookupScript } from '../../utils/appleScriptHelpers.js';
+import { generateFolderLookupScript, escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
 const execAsync = promisify(exec);
 
 // Interface for project creation parameters
@@ -25,10 +25,8 @@ export interface AddProjectParams {
  */
 export function generateAppleScript(params: AddProjectParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' '); // Escape quotes and backslashes
-  const note = params.note
-    ?.replace(/["\\]/g, '\\$&')
-    .replace(/\r\n|\r|\n/g, '" & linefeed & "') || '';
+  const name = escapeAppleScriptString(params.name);
+  const note = params.note ? escapeAppleScriptString(params.note, { preserveNewlines: true }) : '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
@@ -54,7 +52,7 @@ export function generateAppleScript(params: AddProjectParams): string {
   // Build project creation block — either at root or in a folder
   let projectCreationBlock: string;
   if (params.folderName) {
-    const escapedFolderName = params.folderName.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ');
+    const escapedFolderName = escapeAppleScriptString(params.folderName);
     const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${escapedFolderName}\\\"}`;
     const folderLookup = generateFolderLookupScript(params.folderName, 'theFolder', errorJson);
     projectCreationBlock = `
@@ -91,7 +89,7 @@ export function generateAppleScript(params: AddProjectParams): string {
 
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ');
+          const sanitizedTag = escapeAppleScriptString(tag);
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"

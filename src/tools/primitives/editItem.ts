@@ -4,7 +4,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { generateDateAssignmentV2 } from '../../utils/dateFormatting.js';
-import { generateFolderLookupScript, generateProjectLookupScript } from '../../utils/appleScriptHelpers.js';
+import { generateFolderLookupScript, generateProjectLookupScript, escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
 const execAsync = promisify(exec);
 
 // Status options for tasks and projects
@@ -45,8 +45,8 @@ export interface EditItemParams {
  */
 export function generateAppleScript(params: EditItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || ''; // Escape quotes and backslashes
-  const name = params.name?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
+  const id = params.id ? escapeAppleScriptString(params.id) : '';
+  const name = params.name ? escapeAppleScriptString(params.name) : '';
   const itemType = params.itemType;
   
   // Verify we have at least one identifier
@@ -172,7 +172,7 @@ export function generateAppleScript(params: EditItemParams): string {
   if (params.newName !== undefined) {
     script += `
         -- Update name
-        set name of foundItem to "${params.newName.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"
+        set name of foundItem to "${escapeAppleScriptString(params.newName)}"
         set end of changedProperties to "name"
 `;
   }
@@ -180,7 +180,7 @@ export function generateAppleScript(params: EditItemParams): string {
   if (params.newNote !== undefined) {
     script += `
         -- Update note
-        set note of foundItem to "${params.newNote.replace(/["\\]/g, '\\$&').replace(/\r\n|\r|\n/g, '" & linefeed & "')}"
+        set note of foundItem to "${escapeAppleScriptString(params.newNote, { preserveNewlines: true })}"
         set end of changedProperties to "note"
 `;
   }
@@ -229,7 +229,7 @@ export function generateAppleScript(params: EditItemParams): string {
   // Tag operations apply to both tasks and projects (OmniFocus supports tags on
   // projects too). Kept in the common section so project edits aren't a no-op.
   if (params.replaceTags && params.replaceTags.length > 0) {
-    const tagsList = params.replaceTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
+    const tagsList = params.replaceTags.map(tag => `"${escapeAppleScriptString(tag)}"`).join(", ");
     script += `
         -- Replace all tags
         set tagNames to {${tagsList}}
@@ -258,7 +258,7 @@ export function generateAppleScript(params: EditItemParams): string {
   } else {
     // Add tags if specified
     if (params.addTags && params.addTags.length > 0) {
-      const tagsList = params.addTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
+      const tagsList = params.addTags.map(tag => `"${escapeAppleScriptString(tag)}"`).join(", ");
       script += `
         -- Add tags
         set tagNames to {${tagsList}}
@@ -280,7 +280,7 @@ export function generateAppleScript(params: EditItemParams): string {
 
     // Remove tags if specified
     if (params.removeTags && params.removeTags.length > 0) {
-      const tagsList = params.removeTags.map(tag => `"${tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ')}"`).join(", ");
+      const tagsList = params.removeTags.map(tag => `"${escapeAppleScriptString(tag)}"`).join(", ");
       script += `
         -- Remove tags
         set tagNames to {${tagsList}}
@@ -352,7 +352,7 @@ export function generateAppleScript(params: EditItemParams): string {
         set end of changedProperties to "project (moved to inbox)"
 `;
       } else {
-        const escapedProjectPath = params.newProjectName.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ');
+        const escapedProjectPath = escapeAppleScriptString(params.newProjectName);
         const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${escapedProjectPath}\\\"}`;
         const projectLookup = generateProjectLookupScript(params.newProjectName, 'destProject', errorJson);
         script += `
@@ -414,7 +414,7 @@ export function generateAppleScript(params: EditItemParams): string {
 
     // Move to a new folder (supports nested paths like "Work/Engineering")
     if (params.newFolderName !== undefined && params.newFolderName !== '') {
-      const escapedFolderName = params.newFolderName.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ');
+      const escapedFolderName = escapeAppleScriptString(params.newFolderName);
       const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${escapedFolderName}\\\"}`;
       const folderLookup = generateFolderLookupScript(params.newFolderName, 'destFolder', errorJson);
       script += `

@@ -3,6 +3,23 @@
  */
 
 /**
+ * Escape a value for interpolation inside a double-quoted AppleScript string
+ * literal. Quotes and backslashes are escaped first, then newlines are either
+ * flattened to spaces (default) or preserved via `" & linefeed & "` splices
+ * (for multi-line content like notes). The escape order matters: escaping
+ * quotes/backslashes after splicing in linefeed would corrupt the splice.
+ */
+export function escapeAppleScriptString(
+  value: string,
+  options?: { preserveNewlines?: boolean }
+): string {
+  const escaped = value.replace(/["\\]/g, '\\$&');
+  return options?.preserveNewlines
+    ? escaped.replace(/\r\n|\r|\n/g, '" & linefeed & "')
+    : escaped.replace(/[\r\n]/g, ' ');
+}
+
+/**
  * Generate AppleScript that resolves a folder by path (e.g. "Work/Engineering")
  * or by simple name (e.g. "Work"). Sets `varName` to the found folder object,
  * or returns `errorReturnJson` if not found.
@@ -19,7 +36,7 @@ export function generateFolderLookupScript(
     return `set ${varName} to missing value`;
   }
 
-  const escaped = components.map(c => c.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' '));
+  const escaped = components.map(c => escapeAppleScriptString(c));
   const leafName = escaped[escaped.length - 1];
 
   if (components.length === 1) {
@@ -85,7 +102,7 @@ export function generateProjectLookupScript(
     return `set ${varName} to missing value`;
   }
 
-  const escaped = components.map(c => c.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' '));
+  const escaped = components.map(c => escapeAppleScriptString(c));
   const projectName = escaped[escaped.length - 1];
 
   if (components.length === 1) {
