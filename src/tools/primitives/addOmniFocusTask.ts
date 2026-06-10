@@ -4,6 +4,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
+import { escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
 const execAsync = promisify(exec);
 
 // Interface for task creation parameters
@@ -28,19 +29,17 @@ export interface AddOmniFocusTaskParams {
  */
 export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' '); // Escape quotes and backslashes
-  const note = params.note
-    ?.replace(/["\\]/g, '\\$&')
-    .replace(/\r\n|\r|\n/g, '" & linefeed & "') || '';
+  const name = escapeAppleScriptString(params.name);
+  const note = params.note ? escapeAppleScriptString(params.note, { preserveNewlines: true }) : '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const plannedDate = params.plannedDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
-  const parentTaskId = params.parentTaskId?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
-  const parentTaskName = params.parentTaskName?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
+  const projectName = params.projectName ? escapeAppleScriptString(params.projectName) : '';
+  const parentTaskId = params.parentTaskId ? escapeAppleScriptString(params.parentTaskId) : '';
+  const parentTaskName = params.parentTaskName ? escapeAppleScriptString(params.parentTaskName) : '';
 
   // Generate date constructions outside tell blocks
   let datePreScript = '';
@@ -184,7 +183,7 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ');
+          const sanitizedTag = escapeAppleScriptString(tag);
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"

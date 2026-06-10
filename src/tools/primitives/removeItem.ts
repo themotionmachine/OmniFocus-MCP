@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
 const execAsync = promisify(exec);
 
 // Interface for item removal parameters
@@ -17,8 +18,8 @@ export interface RemoveItemParams {
  */
 export function generateAppleScript(params: RemoveItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || ''; // Escape quotes and backslashes
-  const name = params.name?.replace(/["\\]/g, '\\$&').replace(/[\r\n]/g, ' ') || '';
+  const id = params.id ? escapeAppleScriptString(params.id) : '';
+  const name = params.name ? escapeAppleScriptString(params.name) : '';
   const itemType = params.itemType;
 
   // Verify we have at least one identifier
