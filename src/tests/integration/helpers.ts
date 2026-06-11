@@ -9,7 +9,7 @@ const execAsync = promisify(exec);
 export const TEST_PREFIX = 'TEST:';
 
 export async function execAppleScript(script: string): Promise<string> {
-  const tempFile = join(tmpdir(), `test_omnifocus_${Date.now()}.applescript`);
+  const tempFile = join(tmpdir(), `test_omnifocus_${crypto.randomUUID()}.applescript`);
   try {
     writeFileSync(tempFile, script);
     const { stdout } = await execAsync(`osascript "${tempFile}"`);

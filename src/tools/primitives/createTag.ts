@@ -75,7 +75,7 @@ export async function createTag(params: CreateTagParams): Promise<{success: bool
   try {
     const script = generateAppleScript(params);
 
-    tempFile = join(tmpdir(), `create_tag_${Date.now()}.applescript`);
+    tempFile = join(tmpdir(), `create_tag_${crypto.randomUUID()}.applescript`);
     writeFileSync(tempFile, script, { encoding: 'utf8' });
 
     const { stdout, stderr } = await execAsync(`osascript "${tempFile}"`);

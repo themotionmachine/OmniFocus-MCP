@@ -221,7 +221,7 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     console.error("Executing AppleScript via temp file...");
 
     // Write to a temporary AppleScript file to avoid shell escaping issues
-    const tempFile = join(tmpdir(), `omnifocus_add_${Date.now()}.applescript`);
+    const tempFile = join(tmpdir(), `omnifocus_add_${crypto.randomUUID()}.applescript`);
     writeFileSync(tempFile, script, { encoding: 'utf8' });
 
     // Execute AppleScript from file

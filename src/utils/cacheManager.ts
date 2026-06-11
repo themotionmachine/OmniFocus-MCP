@@ -157,7 +157,7 @@ class OmniFocusCacheManager {
       
       // Write to temp file and execute
       const fs = await import('fs');
-      const tempFile = `/tmp/omnifocus_checksum_${Date.now()}.js`;
+      const tempFile = `/tmp/omnifocus_checksum_${crypto.randomUUID()}.js`;
       fs.writeFileSync(tempFile, script);
       
       const result = await executeOmniFocusScript(tempFile);

@@ -11,6 +11,10 @@ export async function readToday(logger: Logger): Promise<ReadResourceResult> {
     queryOmnifocus({ entity: 'tasks', filters: { status: ['Overdue'] }, fields: ['id', 'name', 'flagged', 'dueDate', 'projectName', 'tagNames', 'taskStatus'] })
   ]);
 
+  for (const [label, result] of [['dueToday', dueResult], ['plannedToday', plannedResult], ['overdue', overdueResult]] as const) {
+    if (!result.success) logger.warning("resource:today", `${label} query failed: ${result.error}`);
+  }
+
   const data = {
     dueToday: dueResult.success ? dueResult.items ?? [] : [],
     plannedToday: plannedResult.success ? plannedResult.items ?? [] : [],

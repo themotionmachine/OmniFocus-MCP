@@ -85,11 +85,12 @@ export async function getDatabaseStats(): Promise<{
         
         const inboxCount = activeTasks.filter(task => task.inInbox).length;
         
-        // Get latest modification time
+        // Get latest modification time (OmniJS property is "modified",
+        // not the AppleScript name "modificationDate")
         let lastModified = new Date(0);
         allTasks.forEach(task => {
-          if (task.modificationDate && task.modificationDate > lastModified) {
-            lastModified = task.modificationDate;
+          if (task.modified && task.modified > lastModified) {
+            lastModified = task.modified;
           }
         });
         
@@ -117,7 +118,7 @@ export async function getDatabaseStats(): Promise<{
   
   // Write script to temp file and execute
   const fs = await import('fs');
-  const tempFile = `/tmp/omnifocus_stats_${Date.now()}.js`;
+  const tempFile = `/tmp/omnifocus_stats_${crypto.randomUUID()}.js`;
   fs.writeFileSync(tempFile, script);
   
   const result = await executeOmniFocusScript(tempFile);
@@ -217,7 +218,7 @@ export async function getChangesSince(since: Date): Promise<{
   
   // Write script to temp file and execute
   const fs = await import('fs');
-  const tempFile = `/tmp/omnifocus_changes_${Date.now()}.js`;
+  const tempFile = `/tmp/omnifocus_changes_${crypto.randomUUID()}.js`;
   fs.writeFileSync(tempFile, script);
   
   const result = await executeOmniFocusScript(tempFile);

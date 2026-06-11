@@ -129,7 +129,7 @@ export async function queryOmnifocusDebug(entity: 'task' | 'project' | 'folder')
   
   // Write script to temp file and execute
   const fs = await import('fs');
-  const tempFile = `/tmp/omnifocus_debug_${Date.now()}.js`;
+  const tempFile = `/tmp/omnifocus_debug_${crypto.randomUUID()}.js`;
   fs.writeFileSync(tempFile, script);
   
   const result = await executeOmniFocusScript(tempFile);

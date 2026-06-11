@@ -130,7 +130,7 @@ export async function addProject(params: AddProjectParams): Promise<{success: bo
     console.error("Executing AppleScript via temp file...");
 
     // Write to a temporary AppleScript file to avoid shell escaping issues
-    tempFile = join(tmpdir(), `add_project_${Date.now()}.applescript`);
+    tempFile = join(tmpdir(), `add_project_${crypto.randomUUID()}.applescript`);
     writeFileSync(tempFile, script, { encoding: 'utf8' });
 
     // Execute AppleScript from file
