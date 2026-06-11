@@ -81,7 +81,9 @@
         const projectsMap = new Map();
         activeProjects.forEach(project => {
           try {
-            const projectId = project.id.primaryKey;
+            // Use the root task id: it matches the AppleScript project id that
+            // edit_item/remove_item expect (OmniJS Project ids differ — issue #77)
+            const projectId = project.task.id.primaryKey;
             const projectData = {
               id: projectId,
               name: project.name,
@@ -171,7 +173,7 @@
             try {
               // Get task data with minimal processing
               const taskTags = task.tags.map(tag => tag.id.primaryKey);
-              const projectID = task.containingProject ? task.containingProject.id.primaryKey : null;
+              const projectID = task.containingProject ? task.containingProject.task.id.primaryKey : null;
 
               const taskData = {
                 id: task.id.primaryKey,
