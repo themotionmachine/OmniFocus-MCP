@@ -22,7 +22,7 @@ export async function executeJXA(script: string): Promise<any[]> {
   const start = Date.now();
   try {
     // Write the script to a temporary file in the system temp directory
-    const tempFile = join(tmpdir(), `jxa_script_${Date.now()}.js`);
+    const tempFile = join(tmpdir(), `jxa_script_${crypto.randomUUID()}.js`);
 
     // Write the script to the temporary file
     writeFileSync(tempFile, script);
@@ -134,7 +134,7 @@ ${scriptContent}`;
     }
 
     // Create a temporary file for our JXA wrapper script
-    const tempFile = join(tmpdir(), `jxa_wrapper_${Date.now()}.js`);
+    const tempFile = join(tmpdir(), `jxa_wrapper_${crypto.randomUUID()}.js`);
 
     // Escape the script content properly for use in JXA
     const escapedScript = escapeContent(wrappedScript);

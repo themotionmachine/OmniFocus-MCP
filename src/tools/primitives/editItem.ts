@@ -478,7 +478,7 @@ export async function editItem(params: EditItemParams): Promise<{
     console.error("AppleScript preview:\n", scriptPreview);
     
     // Write script to temporary file to avoid shell escaping issues
-    tempFile = join(tmpdir(), `edit_omnifocus_${Date.now()}.applescript`);
+    tempFile = join(tmpdir(), `edit_omnifocus_${crypto.randomUUID()}.applescript`);
     writeFileSync(tempFile, script);
     
     // Execute AppleScript from file

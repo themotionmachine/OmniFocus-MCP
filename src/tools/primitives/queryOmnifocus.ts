@@ -57,8 +57,9 @@ export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<Quer
     // Create JXA script for the query
     const jxaScript = generateQueryScript(params);
     
-    // Write script to temp file and execute
-    const tempFile = `/tmp/omnifocus_query_${Date.now()}.js`;
+    // randomUUID, not Date.now(): parallel queries (e.g. the today resource)
+    // land in the same millisecond and would clobber each other's temp file
+    const tempFile = `/tmp/omnifocus_query_${crypto.randomUUID()}.js`;
     const fs = await import('fs');
     fs.writeFileSync(tempFile, jxaScript);
     
