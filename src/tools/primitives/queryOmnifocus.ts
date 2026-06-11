@@ -424,6 +424,24 @@ function generateFilterConditions(entity: string, filters: any): string {
   }
   
   if (entity === 'projects') {
+    if (filters.projectId) {
+      const safeId = escapeJXA(filters.projectId);
+      conditions.push(`
+        if (item.id.primaryKey !== "${safeId}") {
+          return false;
+        }
+      `);
+    }
+
+    if (filters.projectName) {
+      const safeName = escapeJXA(filters.projectName.toLowerCase());
+      conditions.push(`
+        if (!item.name.toLowerCase().includes("${safeName}")) {
+          return false;
+        }
+      `);
+    }
+
     if (filters.folderId) {
       conditions.push(`
         {
@@ -649,6 +667,10 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `isRepeating: item.repetitionRule !== null`;
     } else if (field === 'repetitionRule') {
       return `repetitionRule: item.repetitionRule ? item.repetitionRule.toString() : null`;
+    } else if (field === 'sequential') {
+      // Both Task and Project expose a `sequential` Boolean in OmniJS. Coerce so an
+      // unexpected null/undefined surfaces as false rather than leaking through.
+      return `sequential: Boolean(item.sequential)`;
     } else if (field === 'estimatedMinutes') {
       return `estimatedMinutes: item.estimatedMinutes || null`;
     } else if (field === 'nextReviewDate') {
