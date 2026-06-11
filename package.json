@@ -32,9 +32,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/themotionmachine/omnifocus-mcp-server.git"
+    "url": "git+https://github.com/themotionmachine/OmniFocus-MCP.git"
   },
-  "homepage": "https://github.com/themotionmachine/omnifocus-mcp-server",
+  "homepage": "https://github.com/themotionmachine/OmniFocus-MCP",
   "keywords": [
     "omnifocus",
     "mcp",
