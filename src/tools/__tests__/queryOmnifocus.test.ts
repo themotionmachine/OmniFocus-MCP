@@ -365,6 +365,12 @@ describe('generateFilterConditions - projectId (projects)', () => {
     expect(result).toContain('return false');
   });
 
+  it('accepts both AppleScript (root task) and OmniJS project ids (issue #77)', () => {
+    const result = generateFilterConditions('projects', { projectId: 'kBqqJE3sKPU' });
+    expect(result).toContain('item.task.id.primaryKey !== "kBqqJE3sKPU"');
+    expect(result).toContain('item.id.primaryKey !== "kBqqJE3sKPU"');
+  });
+
   it('escapes projectId with quotes for projects entity', () => {
     const result = generateFilterConditions('projects', { projectId: 'id"bad' });
     expect(result).toContain('id\\"bad');
@@ -374,6 +380,49 @@ describe('generateFilterConditions - projectId (projects)', () => {
     const result = generateFilterConditions('tasks', { projectId: 'kBqqJE3sKPU' });
     expect(result).toContain('item.containingProject');
     expect(result).toContain('kBqqJE3sKPU');
+  });
+
+  it('task filter accepts both id namespaces for the containing project (issue #77)', () => {
+    const result = generateFilterConditions('tasks', { projectId: 'kBqqJE3sKPU' });
+    expect(result).toContain('item.containingProject.task.id.primaryKey !== "kBqqJE3sKPU"');
+    expect(result).toContain('item.containingProject.id.primaryKey !== "kBqqJE3sKPU"');
+  });
+});
+
+// ============================================================
+// generateFieldMapping - project ids use AppleScript namespace (issue #77)
+// ============================================================
+describe('generateFieldMapping - project id namespace', () => {
+  it('default project fields emit the root task id', () => {
+    const result = generateFieldMapping('projects');
+    expect(result).toContain('id: item.task.id.primaryKey');
+    expect(result).not.toContain('id: item.id.primaryKey');
+  });
+
+  it('explicit id field for projects emits the root task id', () => {
+    const result = generateFieldMapping('projects', ['id']);
+    expect(result).toContain('id: item.task.id.primaryKey');
+  });
+
+  it('explicit id field for tasks is unchanged', () => {
+    const result = generateFieldMapping('tasks', ['id']);
+    expect(result).toContain('id: item.id.primaryKey');
+    expect(result).not.toContain('item.task.id.primaryKey');
+  });
+
+  it('explicit id field for folders is unchanged', () => {
+    const result = generateFieldMapping('folders', ['id']);
+    expect(result).toContain('id: item.id.primaryKey');
+  });
+
+  it('projectId field on tasks emits the containing project root task id', () => {
+    const result = generateFieldMapping('tasks', ['projectId']);
+    expect(result).toContain('item.containingProject.task.id.primaryKey');
+  });
+
+  it('projects field on folders emits root task ids', () => {
+    const result = generateFieldMapping('folders', ['projects']);
+    expect(result).toContain('item.projects.map(p => p.task.id.primaryKey)');
   });
 });
 

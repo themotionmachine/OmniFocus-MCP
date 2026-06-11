@@ -289,9 +289,12 @@ function generateFilterConditions(entity: string, filters: any): string {
 
     if (filters.projectId) {
       const safeId = escapeJXA(filters.projectId);
+      // Match either the AppleScript-namespace id (project's root task id) or
+      // the OmniJS Project id — the two namespaces differ for projects.
       conditions.push(`
         if (!item.containingProject ||
-            item.containingProject.id.primaryKey !== "${safeId}") {
+            (item.containingProject.task.id.primaryKey !== "${safeId}" &&
+             item.containingProject.id.primaryKey !== "${safeId}")) {
           return false;
         }
       `);
@@ -426,8 +429,11 @@ function generateFilterConditions(entity: string, filters: any): string {
   if (entity === 'projects') {
     if (filters.projectId) {
       const safeId = escapeJXA(filters.projectId);
+      // Match either the AppleScript-namespace id (project's root task id) or
+      // the OmniJS Project id — the two namespaces differ for projects.
       conditions.push(`
-        if (item.id.primaryKey !== "${safeId}") {
+        if (item.task.id.primaryKey !== "${safeId}" &&
+            item.id.primaryKey !== "${safeId}") {
           return false;
         }
       `);
@@ -575,7 +581,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `
         const taskArray = item.tasks || [];
         return {
-          id: item.id.primaryKey,
+          id: item.task.id.primaryKey,
           name: item.name || "",
           status: projectStatusMap[item.status] || "Unknown",
           folderName: item.parentFolder ? item.parentFolder.name : null,
@@ -606,7 +612,12 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
   const mappings = fields!.map(field => {
     // Handle special field mappings based on entity type
     if (field === 'id') {
-      return `id: item.id.primaryKey`;
+      // For projects, emit the root task id: it matches the AppleScript project id,
+      // which edit_item/remove_item need (OmniJS Project ids live in a different
+      // namespace — issue #77).
+      return entity === 'projects'
+        ? `id: item.task.id.primaryKey`
+        : `id: item.id.primaryKey`;
     } else if (field === 'taskStatus') {
       return `taskStatus: taskStatusMap[item.taskStatus]`;
     } else if (field === 'status') {
@@ -640,7 +651,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
     } else if (field === 'projectName') {
       return `projectName: item.containingProject ? item.containingProject.name : (item.inInbox ? "Inbox" : null)`;
     } else if (field === 'projectId') {
-      return `projectId: item.containingProject ? item.containingProject.id.primaryKey : null`;
+      return `projectId: item.containingProject ? item.containingProject.task.id.primaryKey : null`;
     } else if (field === 'parentId') {
       return `parentId: item.parent ? item.parent.id.primaryKey : null`;
     } else if (field === 'childIds') {
@@ -658,7 +669,7 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
     } else if (field === 'projectCount') {
       return `projectCount: item.projects ? item.projects.length : 0`;
     } else if (field === 'projects') {
-      return `projects: item.projects ? item.projects.map(p => p.id.primaryKey) : []`;
+      return `projects: item.projects ? item.projects.map(p => p.task.id.primaryKey) : []`;
     } else if (field === 'subfolders') {
       return `subfolders: item.folders ? item.folders.map(f => f.id.primaryKey) : []`;
     } else if (field === 'path') {

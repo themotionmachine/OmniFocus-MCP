@@ -183,7 +183,7 @@ export async function getChangesSince(since: Date): Promise<{
         const newProjects = allProjects.filter(project =>
           project.creationDate && project.creationDate > sinceDate
         ).map(project => ({
-          id: project.id.primaryKey,
+          id: project.task.id.primaryKey,
           name: project.name,
           creationDate: project.creationDate.toISOString()
         }));
@@ -194,7 +194,7 @@ export async function getChangesSince(since: Date): Promise<{
           project.creationDate &&
           project.creationDate <= sinceDate
         ).map(project => ({
-          id: project.id.primaryKey,
+          id: project.task.id.primaryKey,
           name: project.name,
           modificationDate: project.modificationDate.toISOString()
         }));
