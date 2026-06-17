@@ -4,7 +4,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
-import { escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
+import { escapeAppleScriptString, generateProjectLookupScript } from '../../utils/appleScriptHelpers.js';
 const execAsync = promisify(exec);
 
 // Interface for task creation parameters
@@ -63,7 +63,18 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
     plannedDateVar = `plannedDate${Math.random().toString(36).substr(2, 9)}`;
     datePreScript += createDateOutsideTellBlock(plannedDate, plannedDateVar) + '\n\n';
   }
-  
+
+  // Build the projectName lookup fragment via generateProjectLookupScript —
+  // this gives folder-path support (e.g. "Work/My Project") for free, matching
+  // edit_item.newProjectName. Only emitted when projectName is supplied.
+  const projectNameLookup = params.projectName
+    ? generateProjectLookupScript(
+        params.projectName,
+        'targetProject',
+        `{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}`
+      )
+    : '';
+
   // Construct AppleScript with error handling
   let script = datePreScript + `
   try
@@ -79,12 +90,7 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
             return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: id ${projectId}\\\"}"
           end if
         else if "${projectName}" is not "" then
-          try
-            set targetProject to first flattened project where name = "${projectName}"
-          end try
-          if targetProject is missing value then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}"
-          end if
+          ${projectNameLookup}
         end if
 
         -- Resolve parent task if provided

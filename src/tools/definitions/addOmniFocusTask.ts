@@ -12,7 +12,7 @@ export const schema = z.object({
   estimatedMinutes: z.number().optional().describe("Estimated time to complete the task, in minutes"),
   tags: z.array(z.string()).optional().describe("Tags to assign to the task"),
   projectId: z.string().optional().describe("The id of the project to add the task to (preferred when the project name is ambiguous — e.g. multiple 'Single Actions' projects across folders). Obtain via query_omnifocus. Takes precedence over projectName when both are supplied."),
-  projectName: z.string().optional().describe("The name of the project to add the task to (will add to inbox if not specified). Used when projectId is not supplied; for ambiguous names, prefer projectId. This places a NEWLY created task; to move a task that already exists into a project, use edit_item with newProjectName instead of creating a new task here."),
+  projectName: z.string().optional().describe("The name or folder path of the project to add the task to (e.g. 'My Project' or 'Work/My Project' to disambiguate by folder). Will add to inbox if not specified. Used when projectId is not supplied; for ambiguous names, prefer projectId. This places a NEWLY created task; to move a task that already exists into a project, use edit_item with newProjectName instead of creating a new task here."),
   // Hierarchy support
   parentTaskId: z.string().optional().describe("ID of the parent task (preferred for accuracy)"),
   parentTaskName: z.string().optional().describe("Name of the parent task (used if ID not provided; matched within project or globally if no project)"),

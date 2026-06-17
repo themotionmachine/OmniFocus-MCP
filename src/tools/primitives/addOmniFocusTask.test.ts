@@ -7,14 +7,39 @@ describe('addOmniFocusTask generateAppleScript', () => {
     expect(script).toContain('make new inbox task with properties {name:"Buy milk"}');
   });
 
-  it('creates task in project when projectName specified', () => {
+  it('creates task in project when bare projectName specified', () => {
     const script = generateAppleScript({
       name: 'Write tests',
       projectName: 'Development',
     });
-    expect(script).toContain('first flattened project where name = "Development"');
+    // generateProjectLookupScript renders single-component lookups via `whose name is`
+    expect(script).toContain('first flattened project whose name is "Development"');
     expect(script).toContain('make new task with properties {name:"Write tests"}');
     expect(script).toContain('at end of tasks of targetProject');
+  });
+
+  it('resolves folder-path projectName via folder ancestry walk', () => {
+    const script = generateAppleScript({
+      name: 'Task in nested project',
+      projectName: 'Work/Engineering/Backend',
+    });
+    // generateProjectLookupScript splits on '/', iterates flattened projects,
+    // and verifies folder ancestry walks up matching each path component
+    expect(script).toContain('set folderPath to {"Work", "Engineering"}');
+    expect(script).toContain('if (name of aProject as string) = "Backend" then');
+    expect(script).toContain('repeat with i from (count of folderPath) to 1 by -1');
+    expect(script).toContain('at end of tasks of targetProject');
+  });
+
+  it('escapes quotes in folder-path components', () => {
+    const script = generateAppleScript({
+      name: 'Quoted',
+      projectName: 'Quotes "are" hard/My Project',
+    });
+    // AppleScript escapes embedded quotes by doubling — verify both components
+    // are escaped via the same helper editItem uses
+    expect(script).toContain('set folderPath to');
+    expect(script).toContain('Quotes \\"are\\" hard');
   });
 
   it('preserves newlines in note via linefeed concatenation', () => {
@@ -52,7 +77,7 @@ describe('addOmniFocusTask generateAppleScript', () => {
     expect(script.indexOf('if "xyz789" is not "" then'))
       .toBeLessThan(script.indexOf('else if "Ambiguous Name" is not "" then'));
     expect(script.indexOf('first flattened project where id = "xyz789"'))
-      .toBeLessThan(script.indexOf('first flattened project where name = "Ambiguous Name"'));
+      .toBeLessThan(script.indexOf('first flattened project whose name is "Ambiguous Name"'));
   });
 
   it('parent-within-project constraint compares by id of containing project', () => {
