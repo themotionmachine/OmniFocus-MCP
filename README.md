@@ -40,11 +40,12 @@ Set `OMNIFOCUS_MCP_MODE` only when you want to allow writes:
 
 Recommended flow for agent use: start in read-only mode, inspect first with `query_omnifocus`, then switch to `write` only for planned captures or edits. Avoid `dangerous` unless you are intentionally removing items or marking them completed/dropped, and issue a fresh grant for each destructive operation.
 
-Dangerous grants are compact EdDSA-signed tokens bound to the exact tool name and canonical argument hash. Configure the verifier with an Ed25519 public key in PEM or OpenSSH `ssh-ed25519` format:
+Dangerous grants are compact signed tokens bound to the exact tool name and canonical argument hash. Configure the verifier with a PEM public key, OpenSSH `ssh-ed25519` public key, or OpenSSH `ssh-rsa` public key:
 
 ```bash
 export OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY='-----BEGIN PUBLIC KEY-----...'
 export OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY='ssh-ed25519 AAAA...'
+export OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY='ssh-rsa AAAA...'
 export OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY_PATH=/path/to/public-key.pem
 ```
 
@@ -209,6 +210,12 @@ Remove a task or project.
 
 - `id` or `name`: which item to remove
 - `itemType`: `task` or `project`
+
+### `remove_tag`
+
+Remove a tag by ID, or by exact name as a fallback.
+
+- `id` or `name`: which tag to remove
 
 ### `batch_add_items`
 

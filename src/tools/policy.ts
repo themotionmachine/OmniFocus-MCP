@@ -33,6 +33,7 @@ const WRITE_TOOLS = new Set([
 const DANGEROUS_TOOLS = new Set([
   'remove_item',
   'batch_remove_items',
+  'remove_tag',
 ]);
 
 const WRITE_MODES: OmniFocusMcpMode[] = ['write', 'dangerous'];

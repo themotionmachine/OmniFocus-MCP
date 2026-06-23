@@ -38,7 +38,7 @@ export type DangerousGrantValidationResult = {
 
 type DangerousGrantHeader = {
   typ: 'JWT';
-  alg: 'EdDSA';
+  alg: 'EdDSA' | 'RS256';
 };
 
 const usedGrantIds = new Set<string>();
@@ -62,15 +62,16 @@ export function createDangerousGrantToken(
   claims: DangerousGrantClaims,
   privateKeyPem: string
 ): string {
+  const privateKey = createSigningPrivateKey(privateKeyPem);
   const header: DangerousGrantHeader = {
     typ: 'JWT',
-    alg: 'EdDSA',
+    alg: privateKey.asymmetricKeyType === 'rsa' ? 'RS256' : 'EdDSA',
   };
   const signingInput = [
     base64UrlEncode(JSON.stringify(header)),
     base64UrlEncode(JSON.stringify(claims)),
   ].join('.');
-  const signature = sign(null, Buffer.from(signingInput), createSigningPrivateKey(privateKeyPem));
+  const signature = sign(signatureAlgorithmForHeader(header.alg), Buffer.from(signingInput), privateKey);
 
   return `${signingInput}.${base64UrlEncode(signature)}`;
 }
@@ -132,14 +133,14 @@ export function validateDangerousGrant(
     return { valid: false, reason: parsed.reason };
   }
 
-  if (parsed.header.typ !== 'JWT' || parsed.header.alg !== 'EdDSA') {
+  if (parsed.header.typ !== 'JWT' || !['EdDSA', 'RS256'].includes(parsed.header.alg)) {
     return { valid: false, reason: 'Unsupported dangerous grant header.' };
   }
 
   let signatureValid = false;
   try {
     signatureValid = verify(
-      null,
+      signatureAlgorithmForHeader(parsed.header.alg),
       Buffer.from(parsed.signingInput),
       createVerificationPublicKey(publicKey),
       parsed.signature
@@ -245,7 +246,7 @@ function createSigningPrivateKey(key: string): KeyObject {
   try {
     return createPrivateKey(key);
   } catch {
-    const jwk = parseOpenSshEd25519PrivateKey(key);
+    const jwk = parseOpenSshEd25519PrivateKey(key) ?? parseOpenSshRsaPrivateKey(key);
     if (!jwk) {
       throw new Error('Unsupported private key format.');
     }
@@ -253,11 +254,15 @@ function createSigningPrivateKey(key: string): KeyObject {
   }
 }
 
+function signatureAlgorithmForHeader(alg: DangerousGrantHeader['alg']): string | null {
+  return alg === 'RS256' ? 'RSA-SHA256' : null;
+}
+
 function createVerificationPublicKey(key: string): KeyObject {
   try {
     return createPublicKey(key);
   } catch {
-    const jwk = parseOpenSshEd25519PublicKey(key);
+    const jwk = parseOpenSshEd25519PublicKey(key) ?? parseOpenSshRsaPublicKey(key);
     if (!jwk) {
       throw new Error('Unsupported public key format.');
     }
@@ -287,6 +292,29 @@ function parseOpenSshEd25519PublicKey(key: string): JsonWebKey | undefined {
     kty: 'OKP',
     crv: 'Ed25519',
     x: base64UrlEncode(publicKey),
+  };
+}
+
+function parseOpenSshRsaPublicKey(key: string): JsonWebKey | undefined {
+  const trimmed = key.trim();
+  const parts = trimmed.split(/\s+/);
+  if (parts[0] !== 'ssh-rsa' || !parts[1]) {
+    return undefined;
+  }
+
+  const reader = new SshBufferReader(Buffer.from(parts[1], 'base64'));
+  const keyType = reader.readString().toString('utf-8');
+  if (keyType !== 'ssh-rsa') {
+    return undefined;
+  }
+
+  const e = readUnsignedMpint(reader);
+  const n = readUnsignedMpint(reader);
+
+  return {
+    kty: 'RSA',
+    n: base64UrlEncode(n),
+    e: base64UrlEncode(e),
   };
 }
 
@@ -336,6 +364,99 @@ function parseOpenSshEd25519PrivateKey(key: string): JsonWebKey | undefined {
     x: base64UrlEncode(publicKey),
     d: base64UrlEncode(privateKey.subarray(0, 32)),
   };
+}
+
+function parseOpenSshRsaPrivateKey(key: string): JsonWebKey | undefined {
+  const privateBlock = readOpenSshPrivateBlock(key);
+  if (!privateBlock) {
+    return undefined;
+  }
+
+  const keyType = privateBlock.readString().toString('utf-8');
+  if (keyType !== 'ssh-rsa') {
+    return undefined;
+  }
+
+  const n = readUnsignedMpint(privateBlock);
+  const e = readUnsignedMpint(privateBlock);
+  const d = readUnsignedMpint(privateBlock);
+  const iqmp = readUnsignedMpint(privateBlock);
+  const p = readUnsignedMpint(privateBlock);
+  const q = readUnsignedMpint(privateBlock);
+
+  const dValue = bufferToBigInt(d);
+  const pValue = bufferToBigInt(p);
+  const qValue = bufferToBigInt(q);
+  const dp = bigIntToBuffer(dValue % (pValue - 1n));
+  const dq = bigIntToBuffer(dValue % (qValue - 1n));
+
+  return {
+    kty: 'RSA',
+    n: base64UrlEncode(n),
+    e: base64UrlEncode(e),
+    d: base64UrlEncode(d),
+    p: base64UrlEncode(p),
+    q: base64UrlEncode(q),
+    dp: base64UrlEncode(dp),
+    dq: base64UrlEncode(dq),
+    qi: base64UrlEncode(iqmp),
+  };
+}
+
+function readOpenSshPrivateBlock(key: string): SshBufferReader | undefined {
+  const match = key.match(/-----BEGIN OPENSSH PRIVATE KEY-----\s+([\s\S]+?)\s+-----END OPENSSH PRIVATE KEY-----/);
+  if (!match) {
+    return undefined;
+  }
+
+  const decoded = Buffer.from(match[1].replace(/\s+/g, ''), 'base64');
+  const reader = new SshBufferReader(decoded);
+  const magic = reader.readBytes('openssh-key-v1\0'.length).toString('utf-8');
+  if (magic !== 'openssh-key-v1\0') {
+    return undefined;
+  }
+
+  const cipherName = reader.readString().toString('utf-8');
+  const kdfName = reader.readString().toString('utf-8');
+  reader.readString(); // kdf options
+  const keyCount = reader.readUInt32();
+  if (cipherName !== 'none' || kdfName !== 'none' || keyCount !== 1) {
+    return undefined;
+  }
+
+  reader.readString(); // public key blob
+  const privateBlock = new SshBufferReader(reader.readString());
+  const check1 = privateBlock.readUInt32();
+  const check2 = privateBlock.readUInt32();
+  if (check1 !== check2) {
+    return undefined;
+  }
+
+  return privateBlock;
+}
+
+function readUnsignedMpint(reader: SshBufferReader): Buffer {
+  const value = reader.readString();
+  let offset = 0;
+  while (offset < value.length - 1 && value[offset] === 0) {
+    offset += 1;
+  }
+  return value.subarray(offset);
+}
+
+function bufferToBigInt(value: Buffer): bigint {
+  if (value.length === 0) {
+    return 0n;
+  }
+  return BigInt(`0x${value.toString('hex')}`);
+}
+
+function bigIntToBuffer(value: bigint): Buffer {
+  if (value === 0n) {
+    return Buffer.from([0]);
+  }
+  const hex = value.toString(16);
+  return Buffer.from(hex.length % 2 === 0 ? hex : `0${hex}`, 'hex');
 }
 
 function canonicalize(value: unknown): unknown {

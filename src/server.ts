@@ -14,6 +14,7 @@ import * as dumpDatabaseTool from './tools/definitions/dumpDatabase.js';
 import * as addOmniFocusTaskTool from './tools/definitions/addOmniFocusTask.js';
 import * as addProjectTool from './tools/definitions/addProject.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
+import * as removeTagTool from './tools/definitions/removeTag.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
@@ -106,6 +107,13 @@ server.tool(
   "Remove a task or project from OmniFocus",
   removeItemTool.schema.shape,
   guardToolHandler("remove_item", removeItemTool.handler)
+);
+
+server.tool(
+  "remove_tag",
+  "Remove a tag from OmniFocus by ID or exact name",
+  removeTagTool.schema.shape,
+  guardToolHandler("remove_tag", removeTagTool.handler)
 );
 
 server.tool(

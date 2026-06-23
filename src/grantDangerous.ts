@@ -149,7 +149,8 @@ Examples:
     --reason 'cleanup test data'
 
 The args JSON must match the destructive MCP tool arguments exactly, excluding
-the dangerousGrant field that this command creates.
+the dangerousGrant field that this command creates. Ed25519 keys sign with
+EdDSA; RSA keys sign with RS256.
 `);
 }
 

@@ -53,6 +53,7 @@ describe('OmniFocus MCP safety policy', () => {
     it('classifies removals and completion/drop edits as dangerous', () => {
       expect(getToolAccessLevel('remove_item')).toBe('dangerous');
       expect(getToolAccessLevel('batch_remove_items')).toBe('dangerous');
+      expect(getToolAccessLevel('remove_tag')).toBe('dangerous');
       expect(getToolAccessLevel('edit_item', { newStatus: 'completed' })).toBe('dangerous');
       expect(getToolAccessLevel('edit_item', { newProjectStatus: 'dropped' })).toBe('dangerous');
     });
@@ -82,11 +83,13 @@ describe('OmniFocus MCP safety policy', () => {
 
     it('blocks dangerous operations in write mode', () => {
       expect(isToolAllowed('remove_item', { id: 'abc', itemType: 'task' }, 'write')).toBe(false);
+      expect(isToolAllowed('remove_tag', { id: 'abc' }, 'write')).toBe(false);
       expect(isToolAllowed('edit_item', { newStatus: 'completed' }, 'write')).toBe(false);
     });
 
     it('allows dangerous operations only in dangerous mode', () => {
       expect(isToolAllowed('remove_item', { id: 'abc', itemType: 'task' }, 'dangerous')).toBe(true);
+      expect(isToolAllowed('remove_tag', { id: 'abc' }, 'dangerous')).toBe(true);
     });
 
     it('detects dangerous dry-run mode', () => {
@@ -144,6 +147,30 @@ describe('OmniFocus MCP safety policy', () => {
 
       try {
         const result = await guardedHandler({ name: 'Draft', itemType: 'task' }, {} as any);
+
+        expect(handler).not.toHaveBeenCalled();
+        expect(result.isError).toBe(true);
+        expect(result.content[0].text).toContain('requires a valid dangerousGrant');
+      } finally {
+        if (originalMode === undefined) {
+          delete process.env.OMNIFOCUS_MCP_MODE;
+        } else {
+          process.env.OMNIFOCUS_MCP_MODE = originalMode;
+        }
+      }
+    });
+
+    it('blocks remove_tag without a grant even in dangerous mode', async () => {
+      const handler = vi.fn().mockResolvedValue({
+        content: [{ type: 'text', text: 'removed' }],
+      });
+      const guardedHandler = guardToolHandler('remove_tag', handler);
+
+      const originalMode = process.env.OMNIFOCUS_MCP_MODE;
+      process.env.OMNIFOCUS_MCP_MODE = 'dangerous';
+
+      try {
+        const result = await guardedHandler({ name: 'Old Tag' }, {} as any);
 
         expect(handler).not.toHaveBeenCalled();
         expect(result.isError).toBe(true);
@@ -238,6 +265,57 @@ describe('OmniFocus MCP safety policy', () => {
         expect(payload.dryRun).toBe(true);
         expect(payload.grant.jti).toBe('policy-grant-dry-run-1');
         expect(payload.grant.reason).toBeUndefined();
+      } finally {
+        if (originalMode === undefined) {
+          delete process.env.OMNIFOCUS_MCP_MODE;
+        } else {
+          process.env.OMNIFOCUS_MCP_MODE = originalMode;
+        }
+        if (originalPublicKey === undefined) {
+          delete process.env.OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY;
+        } else {
+          process.env.OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY = originalPublicKey;
+        }
+        if (originalDryRun === undefined) {
+          delete process.env.OMNIFOCUS_MCP_DANGEROUS_DRY_RUN;
+        } else {
+          process.env.OMNIFOCUS_MCP_DANGEROUS_DRY_RUN = originalDryRun;
+        }
+      }
+    });
+
+    it('verifies remove_tag grants but skips the handler in dry-run mode', async () => {
+      resetDangerousGrantReplayCache();
+      const handler = vi.fn().mockResolvedValue({
+        content: [{ type: 'text', text: 'removed' }],
+      });
+      const guardedHandler = guardToolHandler('remove_tag', handler);
+      const args = { name: 'Old Tag' };
+      const claims = createExactDangerousGrantClaims({
+        toolName: 'remove_tag',
+        args,
+        expiresInSeconds: 60,
+        jti: 'policy-remove-tag-dry-run-1',
+      });
+      const dangerousGrant = createDangerousGrantToken(claims, privateKeyPem);
+
+      const originalMode = process.env.OMNIFOCUS_MCP_MODE;
+      const originalPublicKey = process.env.OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY;
+      const originalDryRun = process.env.OMNIFOCUS_MCP_DANGEROUS_DRY_RUN;
+      process.env.OMNIFOCUS_MCP_MODE = 'dangerous';
+      process.env.OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY = publicKeyPem;
+      process.env.OMNIFOCUS_MCP_DANGEROUS_DRY_RUN = '1';
+
+      try {
+        const result = await guardedHandler({ ...args, dangerousGrant }, {} as any);
+
+        expect(handler).not.toHaveBeenCalled();
+        expect(result.isError).toBeUndefined();
+        const payload = extractDangerousActionPayload(result);
+        expect(payload.tool).toBe('remove_tag');
+        expect(payload.args).toEqual(args);
+        expect(payload.executed).toBe(false);
+        expect(payload.dryRun).toBe(true);
       } finally {
         if (originalMode === undefined) {
           delete process.env.OMNIFOCUS_MCP_MODE;

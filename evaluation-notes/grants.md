@@ -19,7 +19,7 @@ V1 implements exact-operation grants only:
 - one canonicalized argument hash
 - one short expiry
 - one `jti`, accepted once per server process
-- one EdDSA signature from a configured public key
+- one signature from a configured public key
 
 The grant verifier rejects missing, expired, replayed, wrong-tool, wrong-args, wrong-audience, wrong-issuer, unsupported-version, and unsupported-grant-type tokens.
 
@@ -87,7 +87,10 @@ Future `grant_type: "pattern"` grants can reuse `allowed_tools` and `constraints
 
 ## Signing Path
 
-The current helper signs compact EdDSA JWT-style grants and accepts PEM or unencrypted OpenSSH Ed25519 private keys:
+The current helper signs compact JWT-style grants and accepts PEM keys plus unencrypted OpenSSH keys:
+
+- Ed25519 keys sign with `EdDSA`
+- RSA keys sign with `RS256`
 
 ```sh
 omnifocus-mcp-grant \
@@ -97,7 +100,7 @@ omnifocus-mcp-grant \
   --reason 'cleanup test data'
 ```
 
-The `--private-key-ref` mode uses `op read --no-newline` and keeps the private key in process memory only. This is a pragmatic v1 path for standard JWT-style signatures. The verifier accepts PEM or OpenSSH `ssh-ed25519` public keys.
+The `--private-key-ref` mode uses `op read --no-newline` and keeps the private key in process memory only. This is a pragmatic v1 path for standard JWT-style signatures. The verifier accepts PEM public keys, OpenSSH `ssh-ed25519` public keys, and OpenSSH `ssh-rsa` public keys.
 
 The preferred no-export path is still worth investigating: use the 1Password SSH agent with `ssh-keygen -Y sign` so the private key never leaves 1Password. That produces an SSH signature envelope rather than a normal JOSE/JWT signature, so it should be treated as a separate signer/verifier backend.
 
@@ -109,6 +112,7 @@ The preferred no-export path is still worth investigating: use the 1Password SSH
 - Build passes with the grant helper compiled to `dist/grantDangerous.js`.
 - The grant helper was smoke-tested with a temporary generated PEM Ed25519 keypair and produced a three-part compact token.
 - The grant helper and verifier were smoke-tested end-to-end with a temporary `ssh-keygen -t ed25519` OpenSSH private/public keypair.
+- Unit tests cover OpenSSH RSA private/public key signing and verification with `RS256`.
 - The full dangerous dry-run MCP matrix passed with a temporary OpenSSH keypair. Each case returned `dangerousAction.executed: false`, `dangerousAction.dryRun: true`, and matching sanitized args:
   - `remove_item`
   - `batch_remove_items`
@@ -147,8 +151,10 @@ Post-cleanup query for tasks in the project returned:
 No tasks found matching the specified criteria.
 ```
 
-The write-smoke tag remains because the MCP server does not currently expose tag deletion:
+The write-smoke tag remained after the first cleanup because the MCP server did not expose tag deletion at the time:
 
 ```text
 TEST-write-smoke-2026-06-23T06-29-58-260Z
 ```
+
+Issue #1 tracks adding `remove_tag`; follow-up verification is recorded in `tag-deletion.md`.

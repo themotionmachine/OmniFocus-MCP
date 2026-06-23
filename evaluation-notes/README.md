@@ -6,3 +6,4 @@ Fork-local verification notes for agent-safety work. These files capture what wa
 - [Write evaluation](writes.md)
 - [Dangerous grant evaluation](grants.md)
 - [Backup notes](backups.md)
+- [Tag deletion notes](tag-deletion.md)

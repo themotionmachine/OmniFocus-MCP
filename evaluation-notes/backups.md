@@ -78,3 +78,20 @@ OmniFocusDatabase.db size=1630208
 ```
 
 `OmniFocusDatabase.db-wal` was `0B`, which is expected after a clean quit/checkpoint.
+
+## Tag Cleanup Backup
+
+The backup script was run again on 2026-06-23 before live `remove_tag` cleanup.
+
+Backup path:
+
+```text
+~/Workspace/OmniFocus-MCP-local-backups/20260623-025106/
+```
+
+The script reported:
+
+```text
+Backup created: /Users/xh/Workspace/OmniFocus-MCP-local-backups/20260623-025106
+Manifest: /Users/xh/Workspace/OmniFocus-MCP-local-backups/20260623-025106/manifest.txt
+```
