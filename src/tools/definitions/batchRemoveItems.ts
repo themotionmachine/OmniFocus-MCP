@@ -7,7 +7,8 @@ export const schema = z.object({
     id: z.string().optional().describe("The ID of the task or project to remove"),
     name: z.string().optional().describe("The name of the task or project to remove (as fallback if ID not provided)"),
     itemType: z.enum(['task', 'project']).describe("Type of item to remove ('task' or 'project')")
-  })).describe("Array of items (tasks or projects) to remove")
+  })).describe("Array of items (tasks or projects) to remove"),
+  dangerousGrant: z.string().optional().describe("Short-lived signed grant authorizing this exact destructive operation")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {

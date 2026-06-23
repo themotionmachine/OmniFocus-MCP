@@ -7,6 +7,7 @@ import { SetLevelRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from './utils/logger.js';
 import { setScriptLogger } from './utils/scriptExecution.js';
 import { registerResources } from './resources/index.js';
+import { getOmniFocusMcpMode, guardToolHandler } from './tools/policy.js';
 
 // Import tool definitions
 import * as dumpDatabaseTool from './tools/definitions/dumpDatabase.js';
@@ -37,6 +38,8 @@ const server = new McpServer(
     instructions: `OmniFocus MCP server for macOS task management.
 
 TOOL GUIDANCE:
+- Safety mode defaults to read-only; set OMNIFOCUS_MCP_MODE=write for ordinary writes
+- Destructive operations require OMNIFOCUS_MCP_MODE=dangerous plus a fresh signed dangerousGrant bound to the exact tool arguments
 - Prefer query_omnifocus over dump_database for targeted lookups (85-95% context savings)
 - Use the "fields" parameter to request only needed fields
 - Use "summary: true" for quick counts without full data
@@ -81,85 +84,87 @@ server.tool(
   "dump_database",
   "Gets the current state of your OmniFocus database",
   dumpDatabaseTool.schema.shape,
-  dumpDatabaseTool.handler
+  guardToolHandler("dump_database", dumpDatabaseTool.handler)
 );
 
 server.tool(
   "add_omnifocus_task",
   "Create a NEW task in OmniFocus. Use this ONLY when the task does not already exist. If a matching task already exists (e.g. an item already in the Inbox, or one referenced earlier in the conversation) and the goal is to file/place/move it into a project or the inbox, do NOT create a duplicate here — use edit_item with newProjectName to MOVE the existing task instead. When unsure whether a matching task already exists, search with query_omnifocus first and prefer moving over creating.",
   addOmniFocusTaskTool.schema.shape,
-  addOmniFocusTaskTool.handler
+  guardToolHandler("add_omnifocus_task", addOmniFocusTaskTool.handler)
 );
 
 server.tool(
   "add_project",
   "Add a new project to OmniFocus",
   addProjectTool.schema.shape,
-  addProjectTool.handler
+  guardToolHandler("add_project", addProjectTool.handler)
 );
 
 server.tool(
   "remove_item",
   "Remove a task or project from OmniFocus",
   removeItemTool.schema.shape,
-  removeItemTool.handler
+  guardToolHandler("remove_item", removeItemTool.handler)
 );
 
 server.tool(
   "edit_item",
   "Edit an existing task or project in OmniFocus. This is also how you MOVE/reassign an existing task: set newProjectName to a project name/path to move it into that project, or to \"\" / \"inbox\" to move it to the inbox. Whenever a task already exists, prefer moving it with this tool over creating a new one via add_omnifocus_task, so you never create duplicates.",
   editItemTool.schema.shape,
-  editItemTool.handler
+  guardToolHandler("edit_item", editItemTool.handler)
 );
 
 server.tool(
   "batch_add_items",
   "Add multiple tasks or projects to OmniFocus in a single operation",
   batchAddItemsTool.schema.shape,
-  batchAddItemsTool.handler
+  guardToolHandler("batch_add_items", batchAddItemsTool.handler)
 );
 
 server.tool(
   "batch_remove_items",
   "Remove multiple tasks or projects from OmniFocus in a single operation",
   batchRemoveItemsTool.schema.shape,
-  batchRemoveItemsTool.handler
+  guardToolHandler("batch_remove_items", batchRemoveItemsTool.handler)
 );
 
 server.tool(
   "query_omnifocus",
   "Efficiently query OmniFocus database with powerful filters. Get specific tasks, projects, or folders without loading the entire database. Supports filtering by project, tags, status, due dates, and more. Much faster than dump_database for targeted queries.",
   queryOmniFocusTool.schema.shape,
-  queryOmniFocusTool.handler
+  guardToolHandler("query_omnifocus", queryOmniFocusTool.handler)
 );
 
 server.tool(
   "list_perspectives",
   "List all available perspectives in OmniFocus, including built-in perspectives (Inbox, Projects, Tags, etc.) and custom perspectives (Pro feature)",
   listPerspectivesTool.schema.shape,
-  listPerspectivesTool.handler
+  guardToolHandler("list_perspectives", listPerspectivesTool.handler)
 );
 
 server.tool(
   "get_perspective_view",
   "Get the items visible in a specific OmniFocus perspective. Shows what tasks and projects are displayed when viewing that perspective",
   getPerspectiveViewTool.schema.shape,
-  getPerspectiveViewTool.handler
+  guardToolHandler("get_perspective_view", getPerspectiveViewTool.handler)
 );
 
 server.tool(
   "list_tags",
   "List all tags in OmniFocus with their hierarchy. Useful for discovering available tags before creating or editing tasks.",
   listTagsTool.schema.shape,
-  listTagsTool.handler
+  guardToolHandler("list_tags", listTagsTool.handler)
 );
 
 server.tool(
   "create_tag",
   "Create a new tag in OmniFocus, optionally nested under an existing parent tag",
   createTagTool.schema.shape,
-  createTagTool.handler
+  guardToolHandler("create_tag", createTagTool.handler)
 );
+
+logger.info("server", `OmniFocus MCP safety mode: ${getOmniFocusMcpMode()}`);
 
 // Start the MCP server
 const transport = new StdioServerTransport();

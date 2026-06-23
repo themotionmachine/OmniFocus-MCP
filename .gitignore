@@ -25,6 +25,9 @@ build/
 logs/
 *.log
 
+# Local OmniFocus database backups created before destructive testing
+OmniFocus-MCP-local-backups/
+
 # Coverage directory used by tools like istanbul
 coverage/
 

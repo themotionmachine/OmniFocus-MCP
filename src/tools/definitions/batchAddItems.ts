@@ -27,7 +27,8 @@ export const schema = z.object({
     sequential: z.boolean().optional().describe("For projects: Whether tasks in the project should be sequential")
   })).describe("Array of items (tasks or projects) to add")
   ,
-  createSequentially: z.boolean().optional().describe("Process parents before children; when false, best-effort order will still try to resolve parents first")
+  createSequentially: z.boolean().optional().describe("Process parents before children; when false, best-effort order will still try to resolve parents first"),
+  dangerousGrant: z.string().optional().describe("Short-lived signed grant authorizing this exact destructive operation when adding a broad batch")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {

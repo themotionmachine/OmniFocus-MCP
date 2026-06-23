@@ -26,6 +26,46 @@ This server bridges AI assistants and your OmniFocus database. Through natural c
 
 The first time the server talks to OmniFocus, macOS will ask you to allow automation access. Grant it once and you're set.
 
+### Safety Modes
+
+The server defaults to read-only mode. With `OMNIFOCUS_MCP_MODE` unset, read tools and resources work, but tools that create, edit, complete, drop, or remove OmniFocus items are blocked before they reach OmniFocus.
+
+Set `OMNIFOCUS_MCP_MODE` only when you want to allow writes:
+
+| Mode | Behavior |
+|---|---|
+| unset or `readonly` | Allows read tools and resources. Blocks all writes. |
+| `write` | Allows ordinary creates and edits. Still blocks removals, completion/drop status changes, and broad batch adds. |
+| `dangerous` | Allows destructive tools only when each destructive call also includes a short-lived signed `dangerousGrant`. Use briefly and deliberately. |
+
+Recommended flow for agent use: start in read-only mode, inspect first with `query_omnifocus`, then switch to `write` only for planned captures or edits. Avoid `dangerous` unless you are intentionally removing items or marking them completed/dropped, and issue a fresh grant for each destructive operation.
+
+Dangerous grants are compact EdDSA-signed tokens bound to the exact tool name and canonical argument hash. Configure the verifier with an Ed25519 public key in PEM or OpenSSH `ssh-ed25519` format:
+
+```bash
+export OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY='-----BEGIN PUBLIC KEY-----...'
+export OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY='ssh-ed25519 AAAA...'
+export OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY_PATH=/path/to/public-key.pem
+```
+
+Generate an exact-operation grant with:
+
+```bash
+omnifocus-mcp-grant \
+  --tool remove_item \
+  --args-json '{"name":"TEST: old task","itemType":"task"}' \
+  --private-key-ref 'op://Private/SSH Key/private key?ssh-format=openssh' \
+  --reason 'cleanup test data'
+```
+
+To test dangerous grant validation without executing the destructive OmniFocus mutation, set:
+
+```bash
+export OMNIFOCUS_MCP_DANGEROUS_DRY_RUN=1
+```
+
+Dangerous responses include a `dangerousAction` JSON object with the tool name, sanitized arguments, canonical argument hash, grant metadata, and whether the mutation handler executed. Dry-run sets `executed: false`; normal dangerous execution appends the same audit object with `executed: true`.
+
 ### Claude Desktop
 
 Add the server to `~/Library/Application Support/Claude/claude_desktop_config.json`:
@@ -41,12 +81,34 @@ Add the server to `~/Library/Application Support/Claude/claude_desktop_config.js
 }
 ```
 
+To enable ordinary writes, add an environment variable:
+
+```json
+{
+  "mcpServers": {
+    "omnifocus": {
+      "command": "npx",
+      "args": ["-y", "omnifocus-mcp"],
+      "env": {
+        "OMNIFOCUS_MCP_MODE": "write"
+      }
+    }
+  }
+}
+```
+
 Then restart Claude Desktop.
 
 ### Claude Code
 
 ```bash
 claude mcp add omnifocus -- npx -y omnifocus-mcp
+```
+
+For ordinary writes:
+
+```bash
+claude mcp add omnifocus --env OMNIFOCUS_MCP_MODE=write -- npx -y omnifocus-mcp
 ```
 
 Other MCP clients work the same way: launch `npx -y omnifocus-mcp` over stdio.

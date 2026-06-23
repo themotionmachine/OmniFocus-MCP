@@ -3,9 +3,10 @@ import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate.js";
 import { getPerspectiveView } from '../tools/primitives/getPerspectiveView.js';
 import { listPerspectives } from '../tools/primitives/listPerspectives.js';
 import { Logger } from '../utils/logger.js';
+import { decodeResourceName } from './uri.js';
 
 export async function readPerspective(uri: URL, variables: Variables, logger: Logger): Promise<ReadResourceResult> {
-  const name = String(variables.name);
+  const name = decodeResourceName(variables.name);
   logger.debug("resource:perspective", `Reading perspective: ${name}`);
 
   const result = await getPerspectiveView({ perspectiveName: name });

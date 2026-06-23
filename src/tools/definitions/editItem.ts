@@ -27,7 +27,8 @@ export const schema = z.object({
   newSequential: z.boolean().optional().describe("Whether the project should be sequential"),
   newFolderName: z.string().optional().describe("New folder to move the project to"),
   newProjectStatus: z.enum(['active', 'completed', 'dropped', 'onHold']).optional().describe("New status for projects"),
-  markReviewed: z.boolean().optional().describe("Mark the project as reviewed (projects only). Sets the next review date to now + the project's review interval. Only works when set to true.")
+  markReviewed: z.boolean().optional().describe("Mark the project as reviewed (projects only). Sets the next review date to now + the project's review interval. Only works when set to true."),
+  dangerousGrant: z.string().optional().describe("Short-lived signed grant authorizing this exact destructive operation when completing, dropping, or skipping items")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {

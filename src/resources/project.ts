@@ -2,9 +2,10 @@ import { ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
 import { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate.js";
 import { queryOmnifocus } from '../tools/primitives/queryOmnifocus.js';
 import { Logger } from '../utils/logger.js';
+import { decodeResourceName } from './uri.js';
 
 export async function readProject(uri: URL, variables: Variables, logger: Logger): Promise<ReadResourceResult> {
-  const name = String(variables.name);
+  const name = decodeResourceName(variables.name);
   logger.debug("resource:project", `Reading project: ${name}`);
 
   const result = await queryOmnifocus({
