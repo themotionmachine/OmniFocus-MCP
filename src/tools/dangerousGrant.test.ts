@@ -1,9 +1,14 @@
+import { execFileSync } from 'child_process';
 import { generateKeyPairSync } from 'crypto';
+import { mkdtempSync, readFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   canonicalJson,
   createDangerousGrantToken,
   createExactDangerousGrantClaims,
+  createSshSignatureDangerousGrantToken,
   dangerousArgsHash,
   inspectDangerousGrantPrivateKey,
   inspectDangerousGrantPublicKey,
@@ -58,6 +63,14 @@ PqeC6OJEtNEWUrhlxLozraeIGezwaYxqgovgLhyEfXcHhpXKSyBj/XfsqSEAdZDnrtI7Oo
 2X9FI415GFeTn+cAAAAab21uaWZvY3VzLW1jcC1yc2EtdGVzdC1rZXkB
 -----END OPENSSH PRIVATE KEY-----`;
 const openSshRsaPublicKey = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDvk3e+fiM19gOV1Y83NeR7UbLlAijonrAEG3m8gyA9sa+0jXTmfDtieplUtU73kCm5TC1YzEn9U6WyZEf68ncl90SJyojQ6xGMuWBX15iBntJFYHZ9IFyQqdXFo/sq1igtqe1kRQjXgQibZbdblNUH08egtxh6o4ltSLkAtQP656llbsUgsPwq4XyZK02qGhw/D7G/YyO/X5ab3oaMVSyynAU190nbuTP0FSXfZ7CGsPcufvuJf1dxFxqNe3ylfpJzKMIaS5litgr99ZMNSOfxOv8+ZluNumNZNnFiUyVR42bnZ+AOuH4qZG1Prwqc2G20WV16RhVMvWi6rXkTBMnl omnifocus-mcp-rsa-test-key';
+const sshKeygenAvailable = (() => {
+  try {
+    execFileSync('ssh-keygen', ['-Y', 'check-novalidate'], { stdio: 'ignore' });
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== 'ENOENT';
+  }
+})();
 
 describe('dangerous grants', () => {
   beforeEach(() => {
@@ -137,6 +150,49 @@ describe('dangerous grants', () => {
 
     expect(token.startsWith('eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.')).toBe(true);
     expect(result.valid).toBe(true);
+  });
+
+  (sshKeygenAvailable ? it : it.skip)('supports SSH signature grants created by ssh-keygen', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'omnifocus-mcp-grant-test-'));
+    const keyPath = join(directory, 'id_ed25519');
+
+    try {
+      execFileSync('ssh-keygen', [
+        '-q',
+        '-t',
+        'ed25519',
+        '-N',
+        '',
+        '-C',
+        'omnifocus-mcp-sshsig-test',
+        '-f',
+        keyPath,
+      ]);
+
+      const publicKey = readFileSync(`${keyPath}.pub`, 'utf-8');
+      const args = { name: 'TEST: remove me', itemType: 'task' };
+      const claims = createExactDangerousGrantClaims({
+        toolName: 'remove_item',
+        args,
+        nowSeconds: 100,
+        expiresInSeconds: 60,
+        jti: 'sshsig-grant-1',
+      });
+      const token = createSshSignatureDangerousGrantToken(claims, keyPath);
+
+      const result = validateDangerousGrant(
+        'remove_item',
+        { ...args, dangerousGrant: token },
+        { OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY: publicKey },
+        120
+      );
+
+      expect(token.startsWith('SSHSIG.')).toBe(true);
+      expect(result.valid).toBe(true);
+      expect(result.claims?.operation?.args_sha256).toBe(dangerousArgsHash(args));
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it('inspects supported private and public key algorithms', () => {

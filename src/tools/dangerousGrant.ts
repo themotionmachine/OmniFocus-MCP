@@ -1,8 +1,13 @@
+import { execFileSync } from 'child_process';
 import { JsonWebKey, KeyObject, createHash, createPrivateKey, createPublicKey, randomUUID, sign, verify } from 'crypto';
-import { readFileSync } from 'fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 export const DANGEROUS_GRANT_AUDIENCE = 'omnifocus-mcp-dangerous-grant';
 export const DANGEROUS_GRANT_ISSUER = 'omnifocus-mcp';
+export const DANGEROUS_GRANT_SSH_SIGNATURE_NAMESPACE = DANGEROUS_GRANT_AUDIENCE;
+export const DANGEROUS_GRANT_SSH_SIGNATURE_PRINCIPAL = DANGEROUS_GRANT_AUDIENCE;
 
 export type DangerousGrantType = 'exact' | 'pattern';
 
@@ -50,6 +55,7 @@ type DangerousGrantHeader = {
   alg: 'EdDSA' | 'RS256';
 };
 
+const SSH_SIGNATURE_TOKEN_PREFIX = 'SSHSIG';
 const usedGrantIds = new Set<string>();
 
 export function canonicalJson(value: unknown): string {
@@ -83,6 +89,21 @@ export function createDangerousGrantToken(
   const signature = sign(signatureAlgorithmForHeader(header.alg), Buffer.from(signingInput), privateKey);
 
   return `${signingInput}.${base64UrlEncode(signature)}`;
+}
+
+export function createSshSignatureDangerousGrantToken(
+  claims: DangerousGrantClaims,
+  signingKeyPath: string,
+  sshAuthSock?: string
+): string {
+  const signedPayload = Buffer.from(canonicalJson(claims));
+  const signature = signSshPayload(signedPayload, signingKeyPath, sshAuthSock);
+
+  return [
+    SSH_SIGNATURE_TOKEN_PREFIX,
+    base64UrlEncode(signedPayload),
+    base64UrlEncode(signature),
+  ].join('.');
 }
 
 export function createExactDangerousGrantClaims(params: {
@@ -138,28 +159,43 @@ export function validateDangerousGrant(
   }
 
   const parsed = parseDangerousGrant(token);
-  if (!parsed.valid || !parsed.header || !parsed.claims || !parsed.signature || !parsed.signingInput) {
+  if (!parsed.valid || !parsed.claims) {
     return { valid: false, reason: parsed.reason };
   }
 
-  if (parsed.header.typ !== 'JWT' || !['EdDSA', 'RS256'].includes(parsed.header.alg)) {
-    return { valid: false, reason: 'Unsupported dangerous grant header.' };
-  }
+  if (parsed.kind === 'jwt') {
+    if (!parsed.header || !parsed.signature || !parsed.signingInput) {
+      return { valid: false, reason: parsed.reason };
+    }
 
-  let signatureValid = false;
-  try {
-    signatureValid = verify(
-      signatureAlgorithmForHeader(parsed.header.alg),
-      Buffer.from(parsed.signingInput),
-      createVerificationPublicKey(publicKey),
-      parsed.signature
-    );
-  } catch {
-    return { valid: false, reason: 'Dangerous grant public key is invalid.' };
-  }
+    if (parsed.header.typ !== 'JWT' || !['EdDSA', 'RS256'].includes(parsed.header.alg)) {
+      return { valid: false, reason: 'Unsupported dangerous grant header.' };
+    }
 
-  if (!signatureValid) {
-    return { valid: false, reason: 'Dangerous grant signature is invalid.' };
+    let signatureValid = false;
+    try {
+      signatureValid = verify(
+        signatureAlgorithmForHeader(parsed.header.alg),
+        Buffer.from(parsed.signingInput),
+        createVerificationPublicKey(publicKey),
+        parsed.signature
+      );
+    } catch {
+      return { valid: false, reason: 'Dangerous grant public key is invalid.' };
+    }
+
+    if (!signatureValid) {
+      return { valid: false, reason: 'Dangerous grant signature is invalid.' };
+    }
+  } else {
+    if (!parsed.signature || !parsed.signedPayload) {
+      return { valid: false, reason: parsed.reason };
+    }
+
+    const signatureResult = verifySshSignature(parsed.signedPayload, parsed.signature, publicKey);
+    if (!signatureResult.valid) {
+      return { valid: false, reason: signatureResult.reason };
+    }
   }
 
   return validateDangerousGrantClaims(parsed.claims, toolName, args, nowSeconds);
@@ -257,12 +293,34 @@ function validateDangerousGrantClaims(
 function parseDangerousGrant(token: string): {
   valid: boolean;
   reason?: string;
+  kind?: 'jwt' | 'ssh-signature';
   header?: DangerousGrantHeader;
   claims?: DangerousGrantClaims;
   signature?: Buffer;
   signingInput?: string;
+  signedPayload?: Buffer;
 } {
   const parts = token.split('.');
+  if (parts[0] === SSH_SIGNATURE_TOKEN_PREFIX) {
+    if (parts.length !== 3) {
+      return { valid: false, reason: 'Dangerous SSH signature grant must have three parts.' };
+    }
+
+    try {
+      const [, encodedClaims, encodedSignature] = parts;
+      const signedPayload = base64UrlDecode(encodedClaims);
+      return {
+        valid: true,
+        kind: 'ssh-signature',
+        claims: JSON.parse(signedPayload.toString('utf-8')),
+        signature: base64UrlDecode(encodedSignature),
+        signedPayload,
+      };
+    } catch {
+      return { valid: false, reason: 'Dangerous SSH signature grant is not valid JSON/base64url.' };
+    }
+  }
+
   if (parts.length !== 3) {
     return { valid: false, reason: 'Dangerous grant must have three JWT parts.' };
   }
@@ -271,6 +329,7 @@ function parseDangerousGrant(token: string): {
     const [encodedHeader, encodedClaims, encodedSignature] = parts;
     return {
       valid: true,
+      kind: 'jwt',
       header: JSON.parse(base64UrlDecodeToString(encodedHeader)),
       claims: JSON.parse(base64UrlDecodeToString(encodedClaims)),
       signature: base64UrlDecode(encodedSignature),
@@ -336,6 +395,88 @@ function createVerificationPublicKey(key: string): KeyObject {
       throw new Error('Unsupported public key format.');
     }
     return assertSupportedVerificationKey(createPublicKey({ key: jwk, format: 'jwk' }));
+  }
+}
+
+function signSshPayload(payload: Buffer, signingKeyPath: string, sshAuthSock?: string): Buffer {
+  const directory = mkdtempSync(join(tmpdir(), 'omnifocus-mcp-grant-'));
+  const payloadPath = join(directory, 'claims.json');
+  const signaturePath = `${payloadPath}.sig`;
+
+  try {
+    writeFileSync(payloadPath, payload);
+    execFileSync('ssh-keygen', [
+      '-q',
+      '-Y',
+      'sign',
+      '-f',
+      signingKeyPath,
+      '-n',
+      DANGEROUS_GRANT_SSH_SIGNATURE_NAMESPACE,
+      payloadPath,
+    ], {
+      encoding: 'utf-8',
+      env: sshAuthSock ? { ...process.env, SSH_AUTH_SOCK: sshAuthSock } : process.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    return readFileSync(signaturePath);
+  } catch (error) {
+    const stderr = (error as { stderr?: Buffer | string; code?: string }).stderr?.toString().trim();
+    const message = (error as { code?: string }).code === 'ENOENT'
+      ? 'ssh-keygen was not found.'
+      : stderr || (error as Error).message;
+    throw new Error(`Failed to create SSH signature dangerous grant: ${message}`);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+function verifySshSignature(payload: Buffer, signature: Buffer, publicKey: string): { valid: boolean; reason?: string } {
+  const publicKeyLine = publicKey.trim().split(/\r?\n/)[0];
+  if (!publicKeyLine.startsWith('ssh-ed25519 ') && !publicKeyLine.startsWith('ssh-rsa ')) {
+    return {
+      valid: false,
+      reason: 'Dangerous SSH signature grants require an OpenSSH ssh-ed25519 or ssh-rsa public key.',
+    };
+  }
+
+  const directory = mkdtempSync(join(tmpdir(), 'omnifocus-mcp-grant-'));
+  const allowedSignersPath = join(directory, 'allowed_signers');
+  const signaturePath = join(directory, 'grant.sig');
+
+  try {
+    writeFileSync(allowedSignersPath, `${DANGEROUS_GRANT_SSH_SIGNATURE_PRINCIPAL} ${publicKeyLine}\n`);
+    writeFileSync(signaturePath, signature);
+    execFileSync('ssh-keygen', [
+      '-Y',
+      'verify',
+      '-f',
+      allowedSignersPath,
+      '-I',
+      DANGEROUS_GRANT_SSH_SIGNATURE_PRINCIPAL,
+      '-n',
+      DANGEROUS_GRANT_SSH_SIGNATURE_NAMESPACE,
+      '-s',
+      signaturePath,
+    ], {
+      input: payload,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    return { valid: true };
+  } catch (error) {
+    const stderr = (error as { stderr?: Buffer | string; code?: string }).stderr?.toString().trim();
+    const message = (error as { code?: string }).code === 'ENOENT'
+      ? 'ssh-keygen was not found.'
+      : stderr || 'Dangerous grant SSH signature is invalid.';
+    return {
+      valid: false,
+      reason: `Dangerous grant SSH signature is invalid: ${message}`,
+    };
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 }
 

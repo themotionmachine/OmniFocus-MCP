@@ -40,7 +40,7 @@ Set `OMNIFOCUS_MCP_MODE` only when you want to allow writes:
 
 Recommended flow for agent use: start in read-only mode, inspect first with `query_omnifocus`, then switch to `write` only for planned captures or edits. Avoid `dangerous` unless you are intentionally removing items or marking them completed/dropped, and issue a fresh grant for each destructive operation.
 
-Dangerous grants are compact signed tokens bound to the exact tool name and canonical argument hash. Configure the verifier with a PEM public key, OpenSSH `ssh-ed25519` public key, or OpenSSH `ssh-rsa` public key:
+Dangerous grants are compact signed tokens bound to the exact tool name and canonical argument hash. Configure the verifier with a PEM public key, OpenSSH `ssh-ed25519` public key, or OpenSSH `ssh-rsa` public key. The no-export SSH signature backend requires an OpenSSH public key because verification is delegated to `ssh-keygen -Y verify`.
 
 ```bash
 export OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY='-----BEGIN PUBLIC KEY-----...'
@@ -59,6 +59,20 @@ omnifocus-mcp-grant \
   --reason 'cleanup test data'
 ```
 
+The compatibility signer above reads the private key into the helper process. To keep private key material inside the 1Password SSH agent, use the SSH signature signer and point it at the public key identity instead:
+
+```bash
+omnifocus-mcp-grant \
+  --signer ssh-signature \
+  --tool remove_item \
+  --args-json '{"name":"TEST: old task","itemType":"task"}' \
+  --ssh-signing-key-ref 'op://Private/SSH Key/public key' \
+  --ssh-auth-sock "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  --reason 'cleanup test data'
+```
+
+This produces an `SSHSIG...` dangerous grant using `ssh-keygen -Y sign`. The helper may read the public key from 1Password, but it rejects private-key material for `--ssh-signing-key-ref` and `--ssh-signing-key-env`. If the key is protected by 1Password, the 1Password SSH agent may request approval during signing.
+
 Check grant key compatibility without performing any OmniFocus action:
 
 ```bash
@@ -67,7 +81,17 @@ omnifocus-mcp-grant doctor \
   --public-key-ref 'op://Private/SSH Key/public key'
 ```
 
-The doctor reports supported key type, signing algorithm, key format, and whether a synthetic sign/verify round trip succeeds. This is useful before live dangerous cleanup.
+For the no-export path:
+
+```bash
+omnifocus-mcp-grant doctor \
+  --signer ssh-signature \
+  --ssh-signing-key-ref 'op://Private/SSH Key/public key' \
+  --ssh-auth-sock "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  --public-key-ref 'op://Private/SSH Key/public key'
+```
+
+The doctor reports supported key type, signing backend, key format, and whether a synthetic sign/verify round trip succeeds. This is useful before live dangerous cleanup.
 
 To test dangerous grant validation without executing the destructive OmniFocus mutation, set:
 
