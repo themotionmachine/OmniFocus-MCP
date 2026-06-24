@@ -104,15 +104,53 @@ The `--private-key-ref` mode uses `op read --no-newline` and keeps the private k
 
 The preferred no-export path is still worth investigating: use the 1Password SSH agent with `ssh-keygen -Y sign` so the private key never leaves 1Password. That produces an SSH signature envelope rather than a normal JOSE/JWT signature, so it should be treated as a separate signer/verifier backend.
 
+## Grant Doctor
+
+The grant helper includes a diagnostic command that performs no OmniFocus action:
+
+```sh
+omnifocus-mcp-grant doctor \
+  --private-key-ref 'op://Private/SSH Key - MacBook Pro R9JG4390L4/private key?ssh-format=openssh' \
+  --public-key-ref 'op://Private/SSH Key - MacBook Pro R9JG4390L4/public key'
+```
+
+The doctor reports non-secret compatibility metadata for each key and, when both private and public keys are provided, signs and verifies a synthetic `grant_doctor` token. This would have caught an unsupported signing key before a live cleanup attempt.
+
+Verified with the user's 1Password key refs on 2026-06-23:
+
+```json
+{
+  "privateKey": {
+    "supported": true,
+    "keyKind": "private",
+    "keyType": "rsa",
+    "algorithm": "RS256",
+    "format": "openssh"
+  },
+  "publicKey": {
+    "supported": true,
+    "keyKind": "public",
+    "keyType": "rsa",
+    "algorithm": "RS256",
+    "format": "openssh"
+  },
+  "roundTrip": {
+    "supported": true
+  }
+}
+```
+
 ## Verified Locally
 
 - Unit tests cover canonical hashing, grant creation, signature verification, expiry, args mismatch, replay rejection, missing public-key config, policy blocking without grants, and policy allowance with valid exact grants.
 - Unit tests cover dangerous audit output for both dry-run and real handler execution.
+- Unit tests cover grant key inspection for supported and unsupported key material.
 - Unit tests cover dangerous dry-run behavior: valid grants are verified, but the destructive handler is not called.
 - Build passes with the grant helper compiled to `dist/grantDangerous.js`.
 - The grant helper was smoke-tested with a temporary generated PEM Ed25519 keypair and produced a three-part compact token.
 - The grant helper and verifier were smoke-tested end-to-end with a temporary `ssh-keygen -t ed25519` OpenSSH private/public keypair.
 - Unit tests cover OpenSSH RSA private/public key signing and verification with `RS256`.
+- The grant doctor was smoke-tested with a temporary Ed25519 keypair and with the user's 1Password RSA key refs.
 - The full dangerous dry-run MCP matrix passed with a temporary OpenSSH keypair. Each case returned `dangerousAction.executed: false`, `dangerousAction.dryRun: true`, and matching sanitized args:
   - `remove_item`
   - `batch_remove_items`

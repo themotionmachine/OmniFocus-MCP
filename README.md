@@ -59,6 +59,16 @@ omnifocus-mcp-grant \
   --reason 'cleanup test data'
 ```
 
+Check grant key compatibility without performing any OmniFocus action:
+
+```bash
+omnifocus-mcp-grant doctor \
+  --private-key-ref 'op://Private/SSH Key/private key?ssh-format=openssh' \
+  --public-key-ref 'op://Private/SSH Key/public key'
+```
+
+The doctor reports supported key type, signing algorithm, key format, and whether a synthetic sign/verify round trip succeeds. This is useful before live dangerous cleanup.
+
 To test dangerous grant validation without executing the destructive OmniFocus mutation, set:
 
 ```bash

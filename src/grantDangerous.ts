@@ -5,6 +5,10 @@ import { readFileSync } from 'fs';
 import {
   createDangerousGrantToken,
   createExactDangerousGrantClaims,
+  inspectDangerousGrantPrivateKey,
+  inspectDangerousGrantPublicKey,
+  resetDangerousGrantReplayCache,
+  validateDangerousGrant,
 } from './tools/dangerousGrant.js';
 
 type CliOptions = {
@@ -13,12 +17,21 @@ type CliOptions = {
   privateKeyPath?: string;
   privateKeyEnv?: string;
   privateKeyRef?: string;
+  publicKeyPath?: string;
+  publicKeyEnv?: string;
+  publicKeyRef?: string;
   expiresInSeconds: number;
   reason?: string;
+  command: 'create' | 'doctor';
 };
 
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
+
+  if (options.command === 'doctor') {
+    runDoctor(options);
+    return;
+  }
 
   if (!options.tool || !options.argsJson) {
     fail('Usage: omnifocus-mcp-grant --tool <name> --args-json <json> (--private-key-ref <op-ref> | --private-key-path <path> | --private-key-env <env>) [--reason <text>] [--expires-in <seconds>]');
@@ -38,8 +51,14 @@ function main(): void {
 
 function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
+    command: 'create',
     expiresInSeconds: 300,
   };
+
+  if (argv[0] === 'doctor') {
+    options.command = 'doctor';
+    argv = argv.slice(1);
+  }
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -68,6 +87,15 @@ function parseArgs(argv: string[]): CliOptions {
       case '--private-key-ref':
         options.privateKeyRef = next();
         break;
+      case '--public-key-path':
+        options.publicKeyPath = next();
+        break;
+      case '--public-key-env':
+        options.publicKeyEnv = next();
+        break;
+      case '--public-key-ref':
+        options.publicKeyRef = next();
+        break;
       case '--expires-in':
         options.expiresInSeconds = Number(next());
         if (!Number.isInteger(options.expiresInSeconds) || options.expiresInSeconds <= 0) {
@@ -89,6 +117,67 @@ function parseArgs(argv: string[]): CliOptions {
   return options;
 }
 
+function runDoctor(options: CliOptions): void {
+  const privateSourceCount = countKeySources(options.privateKeyPath, options.privateKeyEnv, options.privateKeyRef);
+  const publicSourceCount = countKeySources(options.publicKeyPath, options.publicKeyEnv, options.publicKeyRef);
+  const hasPrivate = privateSourceCount === 1;
+  const hasPublic = publicSourceCount === 1;
+
+  if (privateSourceCount > 1) {
+    fail('Specify at most one private key source: --private-key-ref, --private-key-path, or --private-key-env.');
+  }
+  if (publicSourceCount > 1) {
+    fail('Specify at most one public key source: --public-key-ref, --public-key-path, or --public-key-env.');
+  }
+
+  if (!hasPrivate && !hasPublic) {
+    fail('Usage: omnifocus-mcp-grant doctor [(--private-key-ref <op-ref> | --private-key-path <path> | --private-key-env <env>)] [(--public-key-ref <op-ref> | --public-key-path <path> | --public-key-env <env>)]');
+  }
+
+  const privateKey = hasPrivate ? readPrivateKey(options) : undefined;
+  const publicKey = hasPublic ? readPublicKey(options) : undefined;
+  const privateKeyInfo = privateKey ? inspectDangerousGrantPrivateKey(privateKey) : undefined;
+  const publicKeyInfo = publicKey ? inspectDangerousGrantPublicKey(publicKey) : undefined;
+  const roundTrip = privateKey && publicKey
+    ? runDoctorRoundTrip(privateKey, publicKey)
+    : undefined;
+
+  process.stdout.write(`${JSON.stringify({
+    privateKey: privateKeyInfo,
+    publicKey: publicKeyInfo,
+    roundTrip,
+  }, null, 2)}\n`);
+}
+
+function runDoctorRoundTrip(privateKey: string, publicKey: string): Record<string, unknown> {
+  const args = { doctor: true };
+  try {
+    resetDangerousGrantReplayCache();
+    const claims = createExactDangerousGrantClaims({
+      toolName: 'grant_doctor',
+      args,
+      expiresInSeconds: 60,
+      reason: 'grant doctor compatibility check',
+    });
+    const token = createDangerousGrantToken(claims, privateKey);
+    const result = validateDangerousGrant(
+      'grant_doctor',
+      { ...args, dangerousGrant: token },
+      { OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY: publicKey },
+    );
+
+    return {
+      supported: result.valid,
+      reason: result.reason,
+    };
+  } catch (error) {
+    return {
+      supported: false,
+      reason: (error as Error).message,
+    };
+  }
+}
+
 function parseJsonObject(json: string): Record<string, unknown> {
   try {
     const value = JSON.parse(json);
@@ -102,40 +191,74 @@ function parseJsonObject(json: string): Record<string, unknown> {
 }
 
 function readPrivateKey(options: CliOptions): string {
-  const sources = [
-    options.privateKeyPath,
-    options.privateKeyEnv,
-    options.privateKeyRef,
-  ].filter(Boolean);
-
-  if (sources.length !== 1) {
+  if (!hasExactlyOneKeySource(options.privateKeyPath, options.privateKeyEnv, options.privateKeyRef)) {
     fail('Specify exactly one private key source: --private-key-ref, --private-key-path, or --private-key-env.');
   }
 
-  if (options.privateKeyPath) {
-    return readFileSync(options.privateKeyPath, 'utf-8');
+  return readKeyFromSource({
+    path: options.privateKeyPath,
+    env: options.privateKeyEnv,
+    ref: options.privateKeyRef,
+    envLabel: 'private',
+  });
+}
+
+function readPublicKey(options: CliOptions): string {
+  if (!hasExactlyOneKeySource(options.publicKeyPath, options.publicKeyEnv, options.publicKeyRef)) {
+    fail('Specify exactly one public key source: --public-key-ref, --public-key-path, or --public-key-env.');
   }
 
-  if (options.privateKeyEnv) {
-    const value = process.env[options.privateKeyEnv];
+  return readKeyFromSource({
+    path: options.publicKeyPath,
+    env: options.publicKeyEnv,
+    ref: options.publicKeyRef,
+    envLabel: 'public',
+  });
+}
+
+function readKeyFromSource(source: {
+  path?: string;
+  env?: string;
+  ref?: string;
+  envLabel: string;
+}): string {
+  if (source.path) {
+    return readFileSync(source.path, 'utf-8');
+  }
+
+  if (source.env) {
+    const value = process.env[source.env];
     if (!value) {
-      fail(`Environment variable ${options.privateKeyEnv} is empty or unset.`);
+      fail(`Environment variable ${source.env} is empty or unset.`);
     }
     return value;
   }
 
-  if (options.privateKeyRef) {
-    return execFileSync('op', [
-      'read',
-      '--no-newline',
-      options.privateKeyRef,
-    ], {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'inherit'],
-    });
+  if (source.ref) {
+    try {
+      return execFileSync('op', [
+        'read',
+        '--no-newline',
+        source.ref,
+      ], {
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch (error) {
+      const stderr = (error as { stderr?: Buffer }).stderr?.toString().trim();
+      fail(`Failed to read ${source.envLabel} key from 1Password${stderr ? `: ${stderr}` : '.'}`);
+    }
   }
 
-  fail('Missing private key source.');
+  fail(`Missing ${source.envLabel} key source.`);
+}
+
+function hasExactlyOneKeySource(...sources: Array<string | undefined>): boolean {
+  return countKeySources(...sources) === 1;
+}
+
+function countKeySources(...sources: Array<string | undefined>): number {
+  return sources.filter(Boolean).length;
 }
 
 function printHelp(): void {
@@ -151,6 +274,11 @@ Examples:
 The args JSON must match the destructive MCP tool arguments exactly, excluding
 the dangerousGrant field that this command creates. Ed25519 keys sign with
 EdDSA; RSA keys sign with RS256.
+
+Diagnostics:
+  omnifocus-mcp-grant doctor \\
+    --private-key-ref 'op://Private/SSH Key/private key?ssh-format=openssh' \\
+    --public-key-ref 'op://Private/SSH Key/public key'
 `);
 }
 

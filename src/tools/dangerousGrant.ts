@@ -36,6 +36,15 @@ export type DangerousGrantValidationResult = {
   claims?: DangerousGrantClaims;
 };
 
+export type DangerousGrantKeyInfo = {
+  supported: boolean;
+  keyKind: 'private' | 'public';
+  keyType?: 'ed25519' | 'rsa';
+  algorithm?: DangerousGrantHeader['alg'];
+  format?: 'pem' | 'openssh';
+  reason?: string;
+};
+
 type DangerousGrantHeader = {
   typ: 'JWT';
   alg: 'EdDSA' | 'RS256';
@@ -156,6 +165,48 @@ export function validateDangerousGrant(
   return validateDangerousGrantClaims(parsed.claims, toolName, args, nowSeconds);
 }
 
+export function inspectDangerousGrantPrivateKey(key: string): DangerousGrantKeyInfo {
+  try {
+    const privateKey = createSigningPrivateKey(key);
+    const algorithm = privateKey.asymmetricKeyType === 'rsa' ? 'RS256' : 'EdDSA';
+    return {
+      supported: true,
+      keyKind: 'private',
+      keyType: keyTypeForAsymmetricKey(privateKey),
+      algorithm,
+      format: keyFormat(key),
+    };
+  } catch (error) {
+    return {
+      supported: false,
+      keyKind: 'private',
+      format: keyFormat(key),
+      reason: (error as Error).message,
+    };
+  }
+}
+
+export function inspectDangerousGrantPublicKey(key: string): DangerousGrantKeyInfo {
+  try {
+    const publicKey = createVerificationPublicKey(key);
+    const algorithm = publicKey.asymmetricKeyType === 'rsa' ? 'RS256' : 'EdDSA';
+    return {
+      supported: true,
+      keyKind: 'public',
+      keyType: keyTypeForAsymmetricKey(publicKey),
+      algorithm,
+      format: keyFormat(key),
+    };
+  } catch (error) {
+    return {
+      supported: false,
+      keyKind: 'public',
+      format: keyFormat(key),
+      reason: (error as Error).message,
+    };
+  }
+}
+
 function validateDangerousGrantClaims(
   claims: DangerousGrantClaims,
   toolName: string,
@@ -244,13 +295,13 @@ function readDangerousGrantPublicKey(env: NodeJS.ProcessEnv): string | undefined
 
 function createSigningPrivateKey(key: string): KeyObject {
   try {
-    return createPrivateKey(key);
+    return assertSupportedSigningKey(createPrivateKey(key));
   } catch {
     const jwk = parseOpenSshEd25519PrivateKey(key) ?? parseOpenSshRsaPrivateKey(key);
     if (!jwk) {
       throw new Error('Unsupported private key format.');
     }
-    return createPrivateKey({ key: jwk, format: 'jwk' });
+    return assertSupportedSigningKey(createPrivateKey({ key: jwk, format: 'jwk' }));
   }
 }
 
@@ -258,16 +309,48 @@ function signatureAlgorithmForHeader(alg: DangerousGrantHeader['alg']): string |
   return alg === 'RS256' ? 'RSA-SHA256' : null;
 }
 
+function keyTypeForAsymmetricKey(key: KeyObject): DangerousGrantKeyInfo['keyType'] {
+  if (key.asymmetricKeyType === 'ed25519') {
+    return 'ed25519';
+  }
+  if (key.asymmetricKeyType === 'rsa') {
+    return 'rsa';
+  }
+  return undefined;
+}
+
+function keyFormat(key: string): DangerousGrantKeyInfo['format'] {
+  return key.trim().startsWith('-----BEGIN OPENSSH PRIVATE KEY-----')
+    || key.trim().startsWith('ssh-ed25519 ')
+    || key.trim().startsWith('ssh-rsa ')
+    ? 'openssh'
+    : 'pem';
+}
+
 function createVerificationPublicKey(key: string): KeyObject {
   try {
-    return createPublicKey(key);
+    return assertSupportedVerificationKey(createPublicKey(key));
   } catch {
     const jwk = parseOpenSshEd25519PublicKey(key) ?? parseOpenSshRsaPublicKey(key);
     if (!jwk) {
       throw new Error('Unsupported public key format.');
     }
-    return createPublicKey({ key: jwk, format: 'jwk' });
+    return assertSupportedVerificationKey(createPublicKey({ key: jwk, format: 'jwk' }));
   }
+}
+
+function assertSupportedSigningKey(key: KeyObject): KeyObject {
+  if (key.asymmetricKeyType !== 'ed25519' && key.asymmetricKeyType !== 'rsa') {
+    throw new Error('Unsupported private key format.');
+  }
+  return key;
+}
+
+function assertSupportedVerificationKey(key: KeyObject): KeyObject {
+  if (key.asymmetricKeyType !== 'ed25519' && key.asymmetricKeyType !== 'rsa') {
+    throw new Error('Unsupported public key format.');
+  }
+  return key;
 }
 
 function parseOpenSshEd25519PublicKey(key: string): JsonWebKey | undefined {

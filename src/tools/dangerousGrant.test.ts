@@ -5,6 +5,8 @@ import {
   createDangerousGrantToken,
   createExactDangerousGrantClaims,
   dangerousArgsHash,
+  inspectDangerousGrantPrivateKey,
+  inspectDangerousGrantPublicKey,
   resetDangerousGrantReplayCache,
   validateDangerousGrant,
 } from './dangerousGrant.js';
@@ -12,6 +14,11 @@ import {
 const { privateKey, publicKey } = generateKeyPairSync('ed25519');
 const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
 const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
+const { privateKey: ecPrivateKey, publicKey: ecPublicKey } = generateKeyPairSync('ec', {
+  namedCurve: 'P-256',
+});
+const ecPrivateKeyPem = ecPrivateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+const ecPublicKeyPem = ecPublicKey.export({ type: 'spki', format: 'pem' }).toString();
 const env = {
   OMNIFOCUS_MCP_DANGEROUS_GRANT_PUBLIC_KEY: publicKeyPem,
 };
@@ -130,6 +137,51 @@ describe('dangerous grants', () => {
 
     expect(token.startsWith('eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.')).toBe(true);
     expect(result.valid).toBe(true);
+  });
+
+  it('inspects supported private and public key algorithms', () => {
+    expect(inspectDangerousGrantPrivateKey(openSshPrivateKey)).toMatchObject({
+      supported: true,
+      keyKind: 'private',
+      keyType: 'ed25519',
+      algorithm: 'EdDSA',
+      format: 'openssh',
+    });
+    expect(inspectDangerousGrantPublicKey(openSshRsaPublicKey)).toMatchObject({
+      supported: true,
+      keyKind: 'public',
+      keyType: 'rsa',
+      algorithm: 'RS256',
+      format: 'openssh',
+    });
+  });
+
+  it('reports unsupported key material without exposing it', () => {
+    expect(inspectDangerousGrantPrivateKey('not a key')).toMatchObject({
+      supported: false,
+      keyKind: 'private',
+      reason: 'Unsupported private key format.',
+    });
+    expect(inspectDangerousGrantPublicKey('not a key')).toMatchObject({
+      supported: false,
+      keyKind: 'public',
+      reason: 'Unsupported public key format.',
+    });
+  });
+
+  it('reports unsupported PEM key algorithms', () => {
+    expect(inspectDangerousGrantPrivateKey(ecPrivateKeyPem)).toMatchObject({
+      supported: false,
+      keyKind: 'private',
+      format: 'pem',
+      reason: 'Unsupported private key format.',
+    });
+    expect(inspectDangerousGrantPublicKey(ecPublicKeyPem)).toMatchObject({
+      supported: false,
+      keyKind: 'public',
+      format: 'pem',
+      reason: 'Unsupported public key format.',
+    });
   });
 
   it('rejects missing grants', () => {
