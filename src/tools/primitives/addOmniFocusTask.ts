@@ -1,11 +1,9 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { runOsascriptFile } from '../../utils/scriptExecution.js';
 import { writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
 import { escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
-const execAsync = promisify(exec);
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -273,7 +271,7 @@ async function verifyTaskResolvable(taskId: string): Promise<boolean> {
     const tempFile = join(tmpdir(), `omnifocus_verify_${crypto.randomUUID()}.applescript`);
     try {
       writeFileSync(tempFile, script, { encoding: 'utf8' });
-      const { stdout } = await execAsync(`osascript "${tempFile}"`);
+      const { stdout } = await runOsascriptFile(tempFile);
       return stdout.trim() === 'found';
     } catch {
       // Treat a transient osascript error as not-yet-resolvable and keep retrying.
@@ -300,7 +298,7 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     writeFileSync(tempFile, script, { encoding: 'utf8' });
 
     // Execute AppleScript from file
-    const { stdout, stderr } = await execAsync(`osascript "${tempFile}"`);
+    const { stdout, stderr } = await runOsascriptFile(tempFile);
 
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
