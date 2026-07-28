@@ -1,10 +1,8 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
-const execAsync = promisify(exec);
+import { runOsascriptFile } from '../../utils/scriptExecution.js';
 
 export interface CreateTagParams {
   name: string;
@@ -78,7 +76,7 @@ export async function createTag(params: CreateTagParams): Promise<{success: bool
     tempFile = join(tmpdir(), `create_tag_${crypto.randomUUID()}.applescript`);
     writeFileSync(tempFile, script, { encoding: 'utf8' });
 
-    const { stdout, stderr } = await execAsync(`osascript "${tempFile}"`);
+    const { stdout, stderr } = await runOsascriptFile(tempFile);
 
     try { unlinkSync(tempFile); } catch {}
 

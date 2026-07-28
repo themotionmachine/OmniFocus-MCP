@@ -1,10 +1,8 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
-const execAsync = promisify(exec);
+import { runOsascriptFile } from '../../utils/scriptExecution.js';
 
 // Interface for item removal parameters
 export interface RemoveItemParams {
@@ -142,7 +140,7 @@ export async function removeItem(params: RemoveItemParams): Promise<{success: bo
     writeFileSync(tempFile, script);
 
     // Execute AppleScript from file
-    const { stdout, stderr } = await execAsync(`osascript "${tempFile}"`);
+    const { stdout, stderr } = await runOsascriptFile(tempFile);
 
     // Clean up temp file
     try {
