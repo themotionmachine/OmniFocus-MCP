@@ -49,15 +49,11 @@ const FILTER_SPEC: Record<string, { tasks: boolean; projects: boolean }> = {
 // on the projects branch yet — real "tasks work, projects forgotten" gaps this
 // suite surfaces. Tracked in #71. When one is fixed, the "gaps stay honest" test
 // below fails on purpose, forcing its removal from this set.
-const KNOWN_PROJECT_GAPS = new Set<string>([
-  'tags',
-  'flagged',
-  'dueWithin',
-  'deferredUntil',
-  'hasNote',
-  'dueOn',
-  'deferOn',
-]);
+//
+// Empty as of the #71 follow-up: the seven gaps this suite originally surfaced
+// (tags, flagged, dueWithin, deferredUntil, hasNote, dueOn, deferOn) are all
+// implemented. Keep the mechanism — it is how the next gap gets recorded.
+const KNOWN_PROJECT_GAPS = new Set<string>([]);
 
 // A representative value for invoking each filter.
 const SAMPLE: Record<string, unknown> = {
@@ -172,5 +168,54 @@ describe('query_omnifocus field parity (#71)', () => {
   it('entity-specific status fields map to their own status maps', () => {
     expect(generateFieldMapping('tasks', ['taskStatus'])).toContain('taskStatusMap[item.taskStatus]');
     expect(generateFieldMapping('projects', ['status'])).toContain('projectStatusMap[item.status]');
+  });
+});
+
+/**
+ * Emitting *some* code for a filter (what the parity contract above checks) is not
+ * the same as reading the right property. OmniJS `Project` forwards most of its
+ * root task's properties but NOT `added`/`modified` — those come back `undefined`
+ * on a Project, so `addedWithin`/`addedOn` matched nothing and the `added`/
+ * `modified` fields returned null, silently. Verified against a live database:
+ * 0/43 projects had `.added`, 43/43 had `.task.added`.
+ */
+describe('query_omnifocus project property routing', () => {
+  it('project added filters read the root task, never Project.added', () => {
+    for (const filters of [{ addedWithin: 7 }, { addedOn: 0 }]) {
+      const emitted = generateFilterConditions('projects', filters);
+      expect(emitted).toContain('item.task ? item.task.added');
+      // `item.added` is always undefined on a Project — catching it here is the
+      // whole point, so assert on a boundary-delimited match.
+      expect(emitted).not.toMatch(/[^.]\bitem\.added\b/);
+    }
+  });
+
+  it('tasks still read their own added property', () => {
+    expect(generateFilterConditions('tasks', { addedWithin: 7 })).toContain('item.added');
+    expect(generateFilterConditions('tasks', { addedWithin: 7 })).not.toContain('item.task.added');
+  });
+
+  it('project added/modified fields route through the root task', () => {
+    expect(generateFieldMapping('projects', ['added'])).toContain('item.task ? item.task.added');
+    expect(generateFieldMapping('projects', ['modified'])).toContain('item.task ? item.task.modified');
+    expect(generateFieldMapping('tasks', ['added'])).toContain('formatDate(item.added)');
+    expect(generateFieldMapping('tasks', ['modified'])).toContain('formatDate(item.modified)');
+  });
+
+  it('hasNote coerces to a Boolean so hasNote:false can match', () => {
+    // `item.note && item.note.trim().length > 0` yields "" — not false — for an
+    // empty note, so a strict `!== false` compare rejected everything. Live check
+    // before the fix: hasNote:false returned 0 of 185 tasks and 0 of 31 projects.
+    for (const entity of ['tasks', 'projects'] as const) {
+      const emitted = generateFilterConditions(entity, { hasNote: false });
+      expect(emitted).toContain('Boolean(item.note');
+      expect(emitted).toContain('!== false');
+    }
+  });
+
+  it('project tag filtering tolerates a project with no tags', () => {
+    // A bare `item.tags.some(...)` would throw inside the filter callback and take
+    // the whole query down rather than returning no matches.
+    expect(generateFilterConditions('projects', { tags: ['Work'] })).toContain('item.tags || []');
   });
 });
