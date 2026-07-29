@@ -3,7 +3,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
-import { escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
+import { escapeAppleScriptString, generateProjectLookupScript } from '../../utils/appleScriptHelpers.js';
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -15,7 +15,8 @@ export interface AddOmniFocusTaskParams {
   flagged?: boolean;
   estimatedMinutes?: number;
   tags?: string[]; // Tag names
-  projectName?: string; // Project name to add task to
+  projectId?: string; // Project id to add task to (preferred when disambiguation is needed)
+  projectName?: string; // Project name to add task to (used when projectId is not supplied)
   // Hierarchy support
   parentTaskId?: string;
   parentTaskName?: string;
@@ -35,6 +36,7 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
+  const projectId = params.projectId ? escapeAppleScriptString(params.projectId) : '';
   const projectName = params.projectName ? escapeAppleScriptString(params.projectName) : '';
   const parentTaskId = params.parentTaskId ? escapeAppleScriptString(params.parentTaskId) : '';
   const parentTaskName = params.parentTaskName ? escapeAppleScriptString(params.parentTaskName) : '';
@@ -59,12 +61,36 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
     plannedDateVar = `plannedDate${Math.random().toString(36).substr(2, 9)}`;
     datePreScript += createDateOutsideTellBlock(plannedDate, plannedDateVar) + '\n\n';
   }
-  
+
+  // Build the projectName lookup fragment via generateProjectLookupScript —
+  // this gives folder-path support (e.g. "Work/My Project") for free, matching
+  // edit_item.newProjectName. Only emitted when projectName is supplied.
+  const projectNameLookup = params.projectName
+    ? generateProjectLookupScript(
+        params.projectName,
+        'targetProject',
+        `{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}`
+      )
+    : '';
+
   // Construct AppleScript with error handling
   let script = datePreScript + `
   try
     tell application "OmniFocus"
       tell front document
+        -- Resolve target project up front: by id if provided, else by name, else missing
+        set targetProject to missing value
+        if "${projectId}" is not "" then
+          try
+            set targetProject to first flattened project where id = "${projectId}"
+          end try
+          if targetProject is missing value then
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: id ${projectId}\\\"}"
+          end if
+        else if "${projectName}" is not "" then
+          ${projectNameLookup}
+        end if
+
         -- Resolve parent task if provided
         set newTask to missing value
         set parentTask to missing value
@@ -79,25 +105,25 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
               set parentTask to first inbox task where id = "${parentTaskId}"
             end try
           end if
-          -- If projectName provided, ensure parent is within that project
-          if parentTask is not missing value and "${projectName}" is not "" then
+          -- If target project resolved, ensure parent is within that project
+          if parentTask is not missing value and targetProject is not missing value then
             try
               set pproj to containing project of parentTask
-              if pproj is missing value or name of pproj is not "${projectName}" then set parentTask to missing value
+              if pproj is missing value or (id of pproj as string) is not equal to (id of targetProject as string) then set parentTask to missing value
             end try
           end if
         end if
 
         if parentTask is missing value and "${parentTaskName}" is not "" then
-          if "${projectName}" is not "" then
-            -- Find by name but constrain to the specified project
+          if targetProject is not missing value then
+            -- Find by name but constrain to the target project
             try
               set parentTask to first flattened task where name = "${parentTaskName}"
             end try
             if parentTask is not missing value then
               try
                 set pproj to containing project of parentTask
-                if pproj is missing value or name of pproj is not "${projectName}" then set parentTask to missing value
+                if pproj is missing value or (id of pproj as string) is not equal to (id of targetProject as string) then set parentTask to missing value
               end try
             end if
           else
@@ -116,14 +142,9 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
         if parentTask is not missing value then
           -- Create task under parent task
           set newTask to make new task with properties {name:"${name}"} at end of tasks of parentTask
-        else if "${projectName}" is not "" then
-          -- Create under specified project
-          try
-            set theProject to first flattened project where name = "${projectName}"
-            set newTask to make new task with properties {name:"${name}"} at end of tasks of theProject
-          on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}"
-          end try
+        else if targetProject is not missing value then
+          -- Create under the resolved target project
+          set newTask to make new task with properties {name:"${name}"} at end of tasks of targetProject
         else
           -- Fallback to inbox
           set newTask to make new inbox task with properties {name:"${name}"}
@@ -168,8 +189,8 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
             set placement to "inbox"
           end if
         on error
-          -- If container access fails (e.g., inbox), default based on projectName
-          if "${projectName}" is not "" then
+          -- If container access fails (e.g., inbox), default based on whether a project was targeted
+          if "${projectId}" is not "" or "${projectName}" is not "" then
             set placement to "project"
           else
             set placement to "inbox"
