@@ -33,7 +33,12 @@ export function generateFolderLookupScript(
 ): string {
   const components = rawFolderPath.split('/').filter(c => c.length > 0);
   if (components.length === 0) {
-    return `set ${varName} to missing value`;
+    // A path with no usable components (e.g. "/" or "//") names no folder. Fail
+    // loudly: leaving `varName` as `missing value` with no return lets the caller
+    // fall through to a default container and report success for a placement
+    // nobody asked for — the silent-success class of bug fixed in #57.
+    return `set ${varName} to missing value
+        return "${errorReturnJson}"`;
   }
 
   const escaped = components.map(c => escapeAppleScriptString(c));
@@ -99,7 +104,10 @@ export function generateProjectLookupScript(
 ): string {
   const components = rawProjectPath.split('/').filter(c => c.length > 0);
   if (components.length === 0) {
-    return `set ${varName} to missing value`;
+    // See the note in generateFolderLookupScript: a component-less path must not
+    // resolve to "no project" silently, or creation falls through to the inbox.
+    return `set ${varName} to missing value
+        return "${errorReturnJson}"`;
   }
 
   const escaped = components.map(c => escapeAppleScriptString(c));
