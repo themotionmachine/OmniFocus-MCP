@@ -53,6 +53,17 @@ describe('generateFolderLookupScript', () => {
     expect(result).toContain('set f to missing value');
   });
 
+  it('errors rather than silently resolving nothing for component-less paths', () => {
+    // A component-less path names no folder. If the emitted script only sets the
+    // variable to `missing value` and returns nothing, the caller falls through
+    // to its default container and reports success for a placement the caller
+    // never asked for — see the header comment in the helper.
+    for (const path of ['', '/', '//']) {
+      const result = generateFolderLookupScript(path, 'f', 'boom');
+      expect(result, `path ${JSON.stringify(path)} must fail loudly`).toContain('return "boom"');
+    }
+  });
+
   it('uses the provided variable name', () => {
     const result = generateFolderLookupScript('Work', 'myVar', 'error');
     expect(result).toContain('set myVar to missing value');
@@ -108,6 +119,16 @@ describe('generateProjectLookupScript', () => {
     const result = generateProjectLookupScript('', 'p', 'error');
     expect(result).toContain('set p to missing value');
     expect(result).not.toContain('flattened projects');
+  });
+
+  it('errors rather than silently resolving nothing for component-less paths', () => {
+    // Verified live before this fix: add_omnifocus_task with projectName "/"
+    // returned success:true and created the task in the INBOX, where main had
+    // previously returned "Project not found: /".
+    for (const path of ['', '/', '//']) {
+      const result = generateProjectLookupScript(path, 'p', 'boom');
+      expect(result, `path ${JSON.stringify(path)} must fail loudly`).toContain('return "boom"');
+    }
   });
 
   it('escapes special characters in project name', () => {

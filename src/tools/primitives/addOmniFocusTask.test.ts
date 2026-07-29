@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { generateAppleScript } from './addOmniFocusTask.js';
+import { describe, it, expect, vi } from 'vitest';
+import { generateAppleScript, verifyPersistedWithRetries } from './addOmniFocusTask.js';
 
 describe('addOmniFocusTask generateAppleScript', () => {
   it('creates inbox task when no project specified', () => {
@@ -89,5 +89,42 @@ describe('addOmniFocusTask generateAppleScript', () => {
     // The constraint compares container-project id against the resolved targetProject id,
     // not against the projectName text (which may be unset when only projectId is given).
     expect(script).toContain('(id of pproj as string) is not equal to (id of targetProject as string)');
+  });
+});
+
+describe('verifyPersistedWithRetries (issue #57 persistence guard)', () => {
+  const noSleep = () => Promise.resolve();
+
+  it('returns true on the first successful probe without sleeping', async () => {
+    const probe = vi.fn().mockResolvedValue(true);
+    const sleepFn = vi.fn(noSleep);
+    const ok = await verifyPersistedWithRetries(probe, { sleepFn });
+    expect(ok).toBe(true);
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(sleepFn).not.toHaveBeenCalled();
+  });
+
+  it('retries until a later probe succeeds, then stops', async () => {
+    const probe = vi
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+    const ok = await verifyPersistedWithRetries(probe, {
+      delaysMs: [0, 10, 20, 40],
+      sleepFn: noSleep,
+    });
+    expect(ok).toBe(true);
+    expect(probe).toHaveBeenCalledTimes(3);
+  });
+
+  it('returns false when the task never becomes resolvable', async () => {
+    const probe = vi.fn().mockResolvedValue(false);
+    const ok = await verifyPersistedWithRetries(probe, {
+      delaysMs: [0, 10, 20],
+      sleepFn: noSleep,
+    });
+    expect(ok).toBe(false);
+    expect(probe).toHaveBeenCalledTimes(3);
   });
 });

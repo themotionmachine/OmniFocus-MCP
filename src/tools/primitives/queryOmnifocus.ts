@@ -10,6 +10,20 @@ function escapeJXA(str: string): string {
     .replace(/\r/g, '\\r');
 }
 
+// OmniJS `Project` forwards most of its root task's properties (name, note,
+// flagged, dueDate, deferDate, tags, completionDate, dropDate...) but NOT
+// `added`/`modified` — reading those off a Project yields `undefined`, which
+// silently matched nothing. Route them through the root task instead. Verified
+// against the live OmniFocus 4.x database: 0/43 projects had `.added`, 43/43 had
+// `.task.added`.
+const PROJECT_ADDED_EXPR = 'item.task ? item.task.added : null';
+const PROJECT_MODIFIED_EXPR = 'item.task ? item.task.modified : null';
+
+// An empty note makes `item.note && ...` evaluate to "" rather than false, so the
+// strict `hasNote !== false` comparison below rejected every item and
+// `hasNote: false` returned nothing. Coerce before comparing.
+const HAS_NOTE_EXPR = 'Boolean(item.note && item.note.trim().length > 0)';
+
 export interface QueryOmnifocusParams {
   entity: 'tasks' | 'projects' | 'folders';
   filters?: {
@@ -413,7 +427,7 @@ function generateFilterConditions(entity: string, filters: any): string {
 
     if (filters.hasNote !== undefined) {
       conditions.push(`
-        const hasNote = item.note && item.note.trim().length > 0;
+        const hasNote = ${HAS_NOTE_EXPR};
         if (hasNote !== ${filters.hasNote}) return false;
       `);
     }
@@ -468,16 +482,73 @@ function generateFilterConditions(entity: string, filters: any): string {
       conditions.push(`if (!(${statusCondition})) return false;`);
     }
 
-    if (filters.addedWithin !== undefined) {
+    if (filters.tags && filters.tags.length > 0) {
+      const tagCondition = filters.tags.map((tag: string) =>
+        `_projectTags.some(t => t.name === "${escapeJXA(tag)}")`
+      ).join(' || ');
       conditions.push(`
-        if (!item.added || !checkDateWithinPast(item.added, ${filters.addedWithin})) {
+        {
+          const _projectTags = item.tags || [];
+          if (!(${tagCondition})) return false;
+        }
+      `);
+    }
+
+    if (filters.flagged !== undefined) {
+      conditions.push(`if (item.flagged !== ${filters.flagged}) return false;`);
+    }
+
+    if (filters.dueWithin !== undefined) {
+      conditions.push(`
+        if (!item.dueDate || !checkDateFilter(item.dueDate, ${filters.dueWithin})) {
           return false;
         }
       `);
     }
 
+    if (filters.deferredUntil !== undefined) {
+      conditions.push(`
+        if (!item.deferDate || !checkDateFilter(item.deferDate, ${filters.deferredUntil})) {
+          return false;
+        }
+      `);
+    }
+
+    if (filters.dueOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.dueDate, ${filters.dueOn})) return false;`);
+    }
+
+    if (filters.deferOn !== undefined) {
+      conditions.push(`if (!checkSameDay(item.deferDate, ${filters.deferOn})) return false;`);
+    }
+
+    if (filters.hasNote !== undefined) {
+      conditions.push(`
+        {
+          const hasNote = ${HAS_NOTE_EXPR};
+          if (hasNote !== ${filters.hasNote}) return false;
+        }
+      `);
+    }
+
+    if (filters.addedWithin !== undefined) {
+      conditions.push(`
+        {
+          const addedDate = ${PROJECT_ADDED_EXPR};
+          if (!addedDate || !checkDateWithinPast(addedDate, ${filters.addedWithin})) {
+            return false;
+          }
+        }
+      `);
+    }
+
     if (filters.addedOn !== undefined) {
-      conditions.push(`if (!checkSameDay(item.added, ${filters.addedOn})) return false;`);
+      conditions.push(`
+        {
+          const addedDate = ${PROJECT_ADDED_EXPR};
+          if (!checkSameDay(addedDate, ${filters.addedOn})) return false;
+        }
+      `);
     }
 
     if (filters.completedWithin !== undefined) {
@@ -624,9 +695,13 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
     } else if (field === 'status') {
       return `status: projectStatusMap[item.status]`;
     } else if (field === 'modificationDate' || field === 'modified') {
-      return `modificationDate: formatDate(item.modified)`;
+      return entity === 'projects'
+        ? `modificationDate: formatDate(${PROJECT_MODIFIED_EXPR})`
+        : `modificationDate: formatDate(item.modified)`;
     } else if (field === 'creationDate' || field === 'added') {
-      return `creationDate: formatDate(item.added)`;
+      return entity === 'projects'
+        ? `creationDate: formatDate(${PROJECT_ADDED_EXPR})`
+        : `creationDate: formatDate(item.added)`;
     } else if (field === 'completionDate') {
       return `completionDate: item.completionDate ? formatDate(item.completionDate) : null`;
     } else if (field === 'dropDate') {

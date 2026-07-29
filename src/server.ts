@@ -6,6 +6,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { SetLevelRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from './utils/logger.js';
 import { setScriptLogger } from './utils/scriptExecution.js';
+import { resolveIdleTimeoutMinutes, installIdleTimeout } from './utils/idleTimeout.js';
 import { registerResources } from './resources/index.js';
 
 // Import tool definitions
@@ -186,3 +187,21 @@ process.stdin.on('close', shutdown);
 process.on('SIGTERM', shutdown);
 process.on('SIGHUP', shutdown);
 process.on('SIGINT', shutdown);
+
+// Idle-timeout backstop (issue #80). The stdin-EOF and signal handlers above
+// catch the clean-disconnect case; when the wrapper chain holds stdin open after
+// a SIGKILL'd client, they don't fire and the server lingers as an orphan. If no
+// client traffic arrives within the idle window, exit. Every JSON-RPC request
+// reaches us as stdin data (the SDK's stdio transport also listens on 'data', so
+// our listener is additive), so an actively-used server keeps resetting the timer
+// and never times out. Configure with OMNIFOCUS_MCP_IDLE_TIMEOUT_MINUTES
+// (default 30; set 0 to disable). See src/utils/idleTimeout.ts.
+const idleTimeoutMinutes = resolveIdleTimeoutMinutes(
+  process.env.OMNIFOCUS_MCP_IDLE_TIMEOUT_MINUTES
+);
+installIdleTimeout(process.stdin, idleTimeoutMinutes, () => {
+  console.error(
+    `[omnifocus-mcp] no client traffic for ${idleTimeoutMinutes}m; exiting to avoid orphaned-process accumulation (issue #80).`
+  );
+  process.exit(0);
+});
