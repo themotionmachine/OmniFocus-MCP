@@ -361,11 +361,9 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       }
     }
 
-    // Helper functions
-    function formatDate(date) {
-      if (!date) return null;
-      return date.toISOString();
-    }
+    // Helper functions.
+    // formatDate is supplied by the executor prelude (see
+    // src/utils/dateSerialization.ts). Do not redeclare it here — #91.
 
     function getTaskDetails(task) {
       // Task status mapping to match queryOmnifocus.ts

@@ -105,7 +105,7 @@ export async function getDatabaseStats(): Promise<{
           nextActionCount: nextActionCount,
           flaggedCount: flaggedCount,
           inboxCount: inboxCount,
-          lastModified: lastModified.toISOString()
+          lastModified: formatDate(lastModified)
         });
         
       } catch (error) {
@@ -155,7 +155,7 @@ export async function getChangesSince(since: Date): Promise<{
         ).map(task => ({
           id: task.id.primaryKey,
           name: task.name,
-          creationDate: task.creationDate.toISOString()
+          creationDate: formatDate(task.creationDate)
         }));
         
         const updatedTasks = allTasks.filter(task => 
@@ -166,7 +166,7 @@ export async function getChangesSince(since: Date): Promise<{
         ).map(task => ({
           id: task.id.primaryKey,
           name: task.name,
-          modificationDate: task.modificationDate.toISOString()
+          modificationDate: formatDate(task.modificationDate)
         }));
         
         const completedTasks = allTasks.filter(task =>
@@ -175,7 +175,7 @@ export async function getChangesSince(since: Date): Promise<{
         ).map(task => ({
           id: task.id.primaryKey,
           name: task.name,
-          completionDate: task.completionDate.toISOString()
+          completionDate: formatDate(task.completionDate)
         }));
         
         // Find projects that changed
@@ -186,7 +186,7 @@ export async function getChangesSince(since: Date): Promise<{
         ).map(project => ({
           id: project.task.id.primaryKey,
           name: project.name,
-          creationDate: project.creationDate.toISOString()
+          creationDate: formatDate(project.creationDate)
         }));
         
         const updatedProjects = allProjects.filter(project =>
@@ -197,7 +197,7 @@ export async function getChangesSince(since: Date): Promise<{
         ).map(project => ({
           id: project.task.id.primaryKey,
           name: project.name,
-          modificationDate: project.modificationDate.toISOString()
+          modificationDate: formatDate(project.modificationDate)
         }));
         
         return JSON.stringify({
