@@ -32,8 +32,22 @@ export function createDateOutsideTellBlock(isoDateString: string, varName: strin
   const minutes = date.getMinutes();
   const seconds = date.getSeconds();
   
-  // Generate AppleScript to construct date outside tell blocks
+  // Generate AppleScript to construct date outside tell blocks.
+  //
+  // `set day to 1` FIRST is load-bearing, not tidiness (issue #91). This scaffolds
+  // off `current date`, so the intermediate date carries *today's* day-of-month.
+  // Setting the month while that day is out of range for the target month makes
+  // AppleScript roll the date forward, and the later `set day` cannot undo it:
+  //
+  //     today = Jul 31, target = Nov 1
+  //       set month to 11  -> Nov 31 is invalid -> rolls to Dec 1
+  //       set day to 1     -> already 1, no-op  -> stays Dec 1   (a month late)
+  //
+  // Normalizing the day to 1 up front makes every intermediate valid in every
+  // month, so year/month/day can then be set without rollover. This silently
+  // corrupted any date written on the 29th-31st toward a shorter month.
   return `copy current date to ${varName}
+set day of ${varName} to 1
 set year of ${varName} to ${year}
 set month of ${varName} to ${month}
 set day of ${varName} to ${day}

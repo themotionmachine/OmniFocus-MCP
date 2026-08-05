@@ -3,11 +3,8 @@
       try {
         const startTime = new Date();
 
-        // Helper function to format dates consistently or return null
-        function formatDate(date) {
-          if (!date) return null;
-          return date.toISOString();
-        }
+        // formatDate is supplied by the executor prelude (see
+        // src/utils/dateSerialization.ts). Do not redeclare it here — #91.
 
         // Helper function to safely get enum values - Simplified with direct mapping
         const taskStatusMap = {

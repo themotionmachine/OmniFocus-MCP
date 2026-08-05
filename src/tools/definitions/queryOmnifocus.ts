@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { queryOmnifocus, QueryOmnifocusParams } from '../primitives/queryOmnifocus.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import { resolveDateFilter } from '../../utils/dateFilter.js';
+import { localDatePart } from '../../utils/dateSerialization.js';
 
 export const schema = z.object({
   entity: z.enum(['tasks', 'projects', 'folders']).describe("Type of entity to query. Choose 'tasks' for individual tasks, 'projects' for projects, or 'folders' for folder organization"),
@@ -300,8 +301,10 @@ function formatFolders(folders: any[]): string {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toISOString().slice(0, 10);
+  // Delegates to localDatePart rather than `new Date(x).toISOString().slice(0,10)`:
+  // that round-trip re-introduced the off-by-one day for UTC-ahead users even after
+  // the query layer started emitting correct local dates (#91).
+  return localDatePart(dateStr);
 }
 
 // Exported for testing only - not part of the public API

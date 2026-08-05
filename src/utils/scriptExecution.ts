@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { existsSync } from "fs";
 import { Logger } from './logger.js';
+import { JXA_FORMAT_DATE_SOURCE } from './dateSerialization.js';
 
 const execAsync = promisify(exec);
 const MAX_BUFFER = 10 * 1024 * 1024; // 10MB — default 1MB is too small for large OmniFocus databases
@@ -241,14 +242,22 @@ export async function executeOmniFocusScript(
     // Read the script file
     const scriptContent = readFileSync(actualPath, "utf8");
 
-    // Create a wrapper script that sets up arguments and executes the original script
-    let wrappedScript = scriptContent;
+    // Create a wrapper script that sets up arguments and executes the original script.
+    //
+    // Every payload gets `formatDate` from the canonical implementation (#91) instead
+    // of declaring its own. The payloads each used to carry a `toISOString()` copy,
+    // which meant a timezone fix had to be applied in N places or silently only
+    // half-land. Payloads must NOT declare `formatDate` themselves — a `function`
+    // declaration alongside this `const` is a redeclaration SyntaxError, which the
+    // prelude test asserts against.
+    let wrappedScript = `${JXA_FORMAT_DATE_SOURCE}\n\n${scriptContent}`;
 
     if (args && args.length > 0) {
       const quotedArgs = args
         .map((arg) => `"${escapeContent(arg)}"`)
         .join(", ");
-      wrappedScript = `
+      wrappedScript = `${JXA_FORMAT_DATE_SOURCE}
+
 // Set up arguments
 const argv = [${quotedArgs}];
 

@@ -1,4 +1,5 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
+import { JXA_FORMAT_DATE_SOURCE } from '../../utils/dateSerialization.js';
 
 // Escape user-provided strings before embedding in JXA script template literals.
 // Prevents syntax errors and code injection from characters like " \ newlines.
@@ -112,11 +113,9 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
     try {
       const startTime = new Date();
       
-      // Helper function to format dates
-      function formatDate(date) {
-        if (!date) return null;
-        return date.toISOString();
-      }
+      // Helper function to format dates — injected from src/utils/dateSerialization.ts
+      // so this and the human-readable formatter cannot disagree (#91).
+      ${JXA_FORMAT_DATE_SOURCE}
       
       // Helper to check date filters
       function checkDateFilter(itemDate, daysFromNow) {
