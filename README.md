@@ -221,6 +221,25 @@ The two template resources support listing all available values and autocompleti
 
 The server communicates with OmniFocus through `osascript`, using JXA (JavaScript for Automation) and OmniFocus's embedded Omni Automation (OmniJS) where appropriate. It's built on the official [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) and talks to clients over stdio.
 
+### Shared daemon
+
+Launching `omnifocus-mcp` starts a small shim that connects to a **shared background daemon**, starting one if it isn't already running. Every client on the machine gets its own independent MCP session, but they all run inside that single process.
+
+This matters when several agents use OmniFocus at once. OmniFocus is a single-threaded application driven over AppleEvents, and the server caps how many `osascript` calls it will run concurrently. When each client ran its own server, that cap was per-process — ten clients meant ten independent budgets aimed at one app, causing AppleEvent timeouts. Sharing one process makes the cap global.
+
+The daemon listens on a Unix domain socket in a `0700` directory (`~/.omnifocus-mcp/daemon.sock` by default), so access is enforced by the filesystem — no network port and no token. It exits on its own once no client has been connected for the idle window, and logs to `daemon.log` beside the socket.
+
+Nothing about client configuration changes. If the daemon can't be started — an unusual sandbox, a read-only home directory — the shim falls back to running a standalone server in-process, exactly as earlier versions did.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `OMNIFOCUS_MCP_NO_DAEMON` | unset | Set to `1` to skip the daemon entirely and run a dedicated server per client (the pre-daemon behavior). First thing to try if you suspect the daemon. |
+| `OMNIFOCUS_MCP_SOCKET` | `~/.omnifocus-mcp/daemon.sock` | Override the socket path, e.g. to run an isolated instance. |
+| `OMNIFOCUS_MCP_IDLE_TIMEOUT_MINUTES` | `30` | Exit after this long with no client traffic. `0` disables the timeout. |
+| `OMNIFOCUS_MCP_MAX_CONCURRENT_OSASCRIPT` | `4` | Maximum concurrent `osascript` calls. Lower it if you still see AppleEvent timeouts. |
+
 ## Roadmap
 
 - MCP `prompt` support
