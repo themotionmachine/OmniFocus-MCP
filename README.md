@@ -1,5 +1,7 @@
 # OmniFocus MCP Server
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Fthemotionmachine%2FOmniFocus-MCP.svg)](https://mcptoplist.com/server/glama%2Fthemotionmachine%2FOmniFocus-MCP)
+
 [![npm version](https://img.shields.io/npm/v/omnifocus-mcp.svg)](https://www.npmjs.com/package/omnifocus-mcp)
 [![CI](https://github.com/themotionmachine/OmniFocus-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/themotionmachine/OmniFocus-MCP/actions/workflows/ci.yml)
 
