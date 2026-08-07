@@ -33,7 +33,16 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       if (placement === 'parent') {
         locationText = 'under the parent task';
       } else if (placement === 'project') {
-        locationText = args.projectName ? `in project "${args.projectName}"` : 'in a project';
+        // Name the project we were asked for. "in a project" was the old
+        // fallback for the projectId path, which is exactly the caller who
+        // cannot check the result by eye.
+        if (args.projectName) {
+          locationText = `in project "${args.projectName}"`;
+        } else if (args.projectId) {
+          locationText = `in project id ${args.projectId}`;
+        } else {
+          locationText = 'in a project';
+        }
       } else {
         locationText = 'in your inbox';
       }

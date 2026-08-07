@@ -12,6 +12,7 @@ export type BatchAddItemsParams = {
   flagged?: boolean;
   estimatedMinutes?: number;
   tags?: string[];
+  projectId?: string; // For tasks; takes precedence over projectName
   projectName?: string; // For tasks
   // Hierarchy for tasks
   parentTaskId?: string;
@@ -28,6 +29,13 @@ type ItemResult = {
   success: boolean;
   id?: string;
   error?: string;
+  /**
+   * Where the task actually ended up. Forwarded from addOmniFocusTask rather
+   * than discarded (#97): a dropped placement argument degrades to "inbox +
+   * success", so without this the caller cannot tell a correct placement from
+   * a silent fallthrough. Undefined for projects, which have no placement.
+   */
+  placement?: 'parent' | 'project' | 'inbox';
 };
 
 // Define the result type for the batch operation
@@ -146,6 +154,7 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
 
           // task
           let parentTaskId = item.parentTaskId;
+          let projectId = item.projectId;
           let projectName = item.projectName;
           if (!parentTaskId && item.parentTempId) {
             const resolved = tempResolved.get(item.parentTempId);
@@ -154,7 +163,13 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
               continue;
             }
             if (resolved.type === 'project') {
-              projectName = resolved.name;
+              // Target the project we just created by id, not by name. Both ids
+              // here are the AppleScript namespace (addProject returns `id of
+              // project`, which is what addOmniFocusTask looks up), and a batch
+              // that creates a project whose name already exists elsewhere would
+              // otherwise attach children to the wrong one.
+              projectId = resolved.id;
+              projectName = undefined;
             } else {
               parentTaskId = resolved.id;
             }
@@ -169,6 +184,7 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
             flagged: item.flagged,
             estimatedMinutes: item.estimatedMinutes,
             tags: item.tags,
+            projectId,
             projectName,
             parentTaskId,
             parentTaskName: item.parentTaskName,
@@ -179,7 +195,8 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
           results[i] = {
             success: taskResult.success,
             id: taskResult.taskId,
-            error: taskResult.error
+            error: taskResult.error,
+            placement: taskResult.placement
           };
           if (item.tempId && taskResult.taskId && taskResult.success) {
             tempResolved.set(item.tempId, { id: taskResult.taskId, type: 'task', name: item.name });
