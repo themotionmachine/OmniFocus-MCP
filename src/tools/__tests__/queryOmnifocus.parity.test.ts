@@ -219,3 +219,56 @@ describe('query_omnifocus project property routing', () => {
     expect(generateFilterConditions('projects', { tags: ['Work'] })).toContain('item.tags || []');
   });
 });
+
+/**
+ * The folder half of the same lesson (issue #95). `path` and `parentFolderID`
+ * both read `container`, which exists on no OmniJS class — verified live: 0/17
+ * folders, 0/970 tasks, 0/81 projects had `.container`, while 9/17 folders had a
+ * `.parent`. So `path` returned the bare folder name and `parentFolderID`
+ * returned null, and the tool described a flat database without ever erroring.
+ *
+ * These assert the property that is actually read, not merely that some code was
+ * emitted for the field — a presence-only test passes happily on `null`, which is
+ * exactly how this hid.
+ */
+describe('query_omnifocus folder property routing (#95)', () => {
+  it('folder path walks parent and never touches container', () => {
+    const emitted = generateFieldMapping('folders', ['path']);
+    expect(emitted).toContain('node.parent');
+    expect(emitted).not.toContain('container');
+  });
+
+  it('folder path walks the whole chain, not one level', () => {
+    // `container.name + "/" + item.name` could only ever produce depth 1, so a
+    // real nesting like PhD/Dissertation/Project 3 was unreachable by construction.
+    const emitted = generateFieldMapping('folders', ['path']);
+    expect(emitted).toContain('while');
+    expect(emitted).toContain('unshift');
+  });
+
+  it('parentFolderID reads parent.id.primaryKey rather than falling through', () => {
+    const emitted = generateFieldMapping('folders', ['parentFolderID']);
+    expect(emitted).toContain('item.parent ? item.parent.id.primaryKey : null');
+    // The generic fallback emits `item.parentFolderID`, which is not an OmniJS
+    // property and is therefore always null. That fallthrough was the bug.
+    expect(emitted).not.toContain('item.parentFolderID');
+  });
+
+  it('the default folder projection is fixed too, not just explicit fields', () => {
+    // Most callers never pass `fields`, so a fix that only covered
+    // buildFieldExpression would leave the common path broken.
+    const emitted = generateFieldMapping('folders', undefined as any);
+    expect(emitted).toContain('node.parent');
+    expect(emitted).not.toContain('container');
+  });
+
+  it('does not invent a folder-style path for tasks or projects', () => {
+    // Tasks and projects have a parent chain, but `path` is documented as a
+    // folder field; walking theirs would silently define new semantics.
+    for (const entity of ['tasks', 'projects'] as const) {
+      const emitted = generateFieldMapping(entity, ['path']);
+      expect(emitted).toContain('path: item.name');
+      expect(emitted).not.toContain('node.parent');
+    }
+  });
+});

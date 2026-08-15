@@ -25,6 +25,26 @@ const PROJECT_MODIFIED_EXPR = 'item.task ? item.task.modified : null';
 // `hasNote: false` returned nothing. Coerce before comparing.
 const HAS_NOTE_EXPR = 'Boolean(item.note && item.note.trim().length > 0)';
 
+// OmniJS has no `container` property at all — the containing folder is `parent`.
+// Both the `path` field and `parentFolderID` read `container`, so `path` fell
+// through to the bare name for every folder and `parentFolderID` (which had no
+// branch of its own) defaulted to null. Neither errored; both just quietly
+// described a flat database. Verified live against OmniFocus 4.x: 0/17 folders,
+// 0/970 tasks and 0/81 projects had `.container`, while 9/17 folders had a
+// `.parent` (issue #95).
+//
+// Walk the chain rather than reading one level up: nesting deeper than one folder
+// is real (`PhD/Dissertation/Project 3` in the database this was verified
+// against), and `container.name + "/" + item.name` could not have produced a
+// depth-2 path even if `container` had existed. `parent` is null at the top
+// level, which terminates the loop.
+const FOLDER_PATH_EXPR =
+  '(() => { const segments = []; let node = item; while (node) { segments.unshift(node.name); node = node.parent; } return segments.join("/"); })()';
+
+// Matches omnifocusDump.js, which has read folder parentage correctly all along —
+// dump_database reported the hierarchy while query_omnifocus flattened it.
+const FOLDER_PARENT_ID_EXPR = 'item.parent ? item.parent.id.primaryKey : null';
+
 export interface QueryOmnifocusParams {
   entity: 'tasks' | 'projects' | 'folders';
   filters?: {
@@ -673,7 +693,8 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
           id: item.id.primaryKey,
           name: item.name || "",
           projectCount: projectArray.length,
-          path: item.container ? item.container.name + "/" + item.name : item.name
+          path: ${FOLDER_PATH_EXPR},
+          parentFolderID: ${FOLDER_PARENT_ID_EXPR}
         };
       `;
     }
@@ -747,8 +768,16 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `projects: item.projects ? item.projects.map(p => p.task.id.primaryKey) : []`;
     } else if (field === 'subfolders') {
       return `subfolders: item.folders ? item.folders.map(f => f.id.primaryKey) : []`;
+    } else if (field === 'parentFolderID') {
+      return `parentFolderID: ${FOLDER_PARENT_ID_EXPR}`;
     } else if (field === 'path') {
-      return `path: item.container ? item.container.name + "/" + item.name : item.name`;
+      // `path` is documented as a folder field. Tasks and projects have a
+      // `parent`/`parentFolder` chain too, but walking it would invent an
+      // undocumented meaning for them, so they keep returning the bare name —
+      // which is what the broken `container` expression already gave them.
+      return entity === 'folders'
+        ? `path: ${FOLDER_PATH_EXPR}`
+        : `path: item.name`;
     } else if (field === 'isRepeating') {
       return `isRepeating: item.repetitionRule !== null`;
     } else if (field === 'repetitionRule') {
