@@ -294,9 +294,18 @@ function formatFolders(folders: any[]): string {
   return folders.map(folder => {
     const id = folder.id ? ` [${folder.id}]` : '';
     const projectCount = folder.projectCount !== undefined ? ` (${folder.projectCount} projects)` : '';
-    const path = folder.path ? ` 📍 ${folder.path}` : '';
+    // Only render the path once it says something the name doesn't. A top-level
+    // folder's path is just its own name, and "📍 Health" beside "F: Health"
+    // reads like a confirmed location when it is only an echo — which is part of
+    // how the flat-path bug (#95) stayed invisible.
+    const path = folder.path && folder.path !== folder.name ? ` 📍 ${folder.path}` : '';
+    // Fields formatFolders used to drop on the floor: requesting parentFolderID
+    // and seeing nothing rendered is indistinguishable from requesting it and
+    // getting null back (#95).
+    const parentFolderID = folder.parentFolderID ? ` ⬆️ ${folder.parentFolderID}` : '';
+    const subfolders = folder.subfolders?.length ? ` 📁 ${folder.subfolders.length} subfolders` : '';
 
-    return `F: ${folder.name}${id}${projectCount}${path}`;
+    return `F: ${folder.name}${id}${projectCount}${path}${parentFolderID}${subfolders}`;
   }).join('\n');
 }
 

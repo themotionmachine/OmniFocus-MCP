@@ -271,6 +271,41 @@ describe('formatFolders - id display', () => {
 });
 
 // ============================================================
+// formatFolders - hierarchy rendering (#95)
+// ============================================================
+describe('formatFolders - hierarchy', () => {
+  it('renders a nested path', () => {
+    const result = formatFolders([
+      { name: 'Dissertation', id: 'd1', path: 'PhD/Dissertation' },
+    ]);
+    expect(result).toContain('📍 PhD/Dissertation');
+  });
+
+  it('omits the path when it only echoes the name', () => {
+    // A top-level folder's path IS its name. Printing "📍 Health" beside
+    // "F: Health" looks like a located folder rather than an unlocated one, which
+    // is part of why every folder reading as top-level went unnoticed.
+    const result = formatFolders([{ name: 'Health', id: 'h1', path: 'Health' }]);
+    expect(result).not.toContain('📍');
+  });
+
+  it('renders parentFolderID and subfolder count when present', () => {
+    const result = formatFolders([
+      { name: 'Attentional Health', id: 'a1', parentFolderID: 'h1', subfolders: ['x', 'y'] },
+    ]);
+    expect(result).toContain('⬆️ h1');
+    expect(result).toContain('📁 2 subfolders');
+  });
+
+  it('omits hierarchy markers for a folder with no parent and no children', () => {
+    const result = formatFolders([
+      { name: 'Solo', id: 's1', parentFolderID: null, subfolders: [] },
+    ]);
+    expect(result).toBe('F: Solo [s1]');
+  });
+});
+
+// ============================================================
 // generateFieldMapping - dropDate field
 // ============================================================
 describe('generateFieldMapping - dropDate', () => {
