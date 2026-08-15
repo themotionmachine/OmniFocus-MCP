@@ -227,7 +227,9 @@ Launching `omnifocus-mcp` starts a small shim that connects to a **shared backgr
 
 This matters when several agents use OmniFocus at once. OmniFocus is a single-threaded application driven over AppleEvents, and the server caps how many `osascript` calls it will run concurrently. When each client ran its own server, that cap was per-process — ten clients meant ten independent budgets aimed at one app, causing AppleEvent timeouts. Sharing one process makes the cap global.
 
-The daemon listens on a Unix domain socket in a `0700` directory (`~/.omnifocus-mcp/daemon.sock` by default), so access is enforced by the filesystem — no network port and no token. It exits on its own once no client has been connected for the idle window, and logs to `daemon.log` beside the socket.
+The daemon listens on a Unix domain socket in a `0700` directory (`~/.omnifocus-mcp/daemon-<version>.sock` by default), so access is enforced by the filesystem — no network port and no token. It exits on its own once no client has been connected for the idle window, and logs to `daemon.log` beside the socket.
+
+The socket name carries the package version so that upgrading can never leave you talking to the previous version's daemon. Right after an upgrade you may briefly see two daemons: the old one keeps serving the clients already attached to it and exits once the last of them disconnects.
 
 Nothing about client configuration changes. If the daemon can't be started — an unusual sandbox, a read-only home directory — the shim falls back to running a standalone server in-process, exactly as earlier versions did.
 
@@ -236,7 +238,7 @@ Nothing about client configuration changes. If the daemon can't be started — a
 | Variable | Default | Purpose |
 |---|---|---|
 | `OMNIFOCUS_MCP_NO_DAEMON` | unset | Set to `1` to skip the daemon entirely and run a dedicated server per client (the pre-daemon behavior). First thing to try if you suspect the daemon. |
-| `OMNIFOCUS_MCP_SOCKET` | `~/.omnifocus-mcp/daemon.sock` | Override the socket path, e.g. to run an isolated instance. |
+| `OMNIFOCUS_MCP_SOCKET` | `~/.omnifocus-mcp/daemon-<version>.sock` | Override the socket path, e.g. to run an isolated instance. |
 | `OMNIFOCUS_MCP_IDLE_TIMEOUT_MINUTES` | `30` | Exit after this long with no client traffic. `0` disables the timeout. |
 | `OMNIFOCUS_MCP_MAX_CONCURRENT_OSASCRIPT` | `4` | Maximum concurrent `osascript` calls. Lower it if you still see AppleEvent timeouts. |
 

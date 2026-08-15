@@ -1,5 +1,6 @@
 import { homedir, tmpdir } from 'os';
 import { join } from 'path';
+import { VERSION_SLUG } from '../version.js';
 
 /**
  * Where the daemon listens, and why it's a Unix socket rather than a TCP port
@@ -28,7 +29,26 @@ export const SOCKET_DIR_MODE = 0o700;
  */
 export const MAX_SOCKET_PATH_LENGTH = 100;
 
-export const SOCKET_FILENAME = 'daemon.sock';
+/**
+ * The socket filename carries the package version (issue #99).
+ *
+ * With a fixed name, every version resolved to the same path and the shim
+ * treated "something is listening" as success — so after an upgrade, newly
+ * launched clients kept being served by the *old* daemon, silently. It doesn't
+ * self-heal either: the idle reaper only arms at zero connections, so a stale
+ * daemon's lifetime is the max over all its clients, not the idle timeout. With
+ * long-lived MCP clients (an editor session can hold one for days) the old
+ * daemon can outlive the upgrade indefinitely, and each new arrival extends it.
+ *
+ * Versioning the path makes reaching an old daemon structurally impossible
+ * rather than merely unlikely. The cost is one orphaned daemon per upgrade,
+ * which the existing idle timer reaps once its last client disconnects — a
+ * bounded, self-clearing resource cost in exchange for a silent correctness bug.
+ *
+ * `resolveSocketDir` measures the full path against MAX_SOCKET_PATH_LENGTH using
+ * this constant, so the longer name is accounted for before bind().
+ */
+export const SOCKET_FILENAME = `daemon-${VERSION_SLUG}.sock`;
 
 export interface SocketPathEnv {
   /** Explicit override; used verbatim. */

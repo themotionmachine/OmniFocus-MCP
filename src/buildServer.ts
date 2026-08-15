@@ -1,4 +1,3 @@
-import { readFileSync } from "fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SetLevelRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from './utils/logger.js';
@@ -33,14 +32,10 @@ import * as createTagTool from './tools/definitions/createTag.js';
  */
 
 // Single-source the version from package.json — the hardcoded string here
-// drifted out of sync with the published version more than once.
-// Works from both src/ (tsx) and dist/ (build): each is one level below the
-// package root.
-const { version } = JSON.parse(
-  readFileSync(new URL("../package.json", import.meta.url), "utf-8")
-);
-
-export const SERVER_VERSION: string = version;
+// drifted out of sync with the published version more than once. Re-exported
+// from version.ts, which the daemon socket path also depends on (#99).
+export { SERVER_VERSION } from "./version.js";
+import { SERVER_VERSION } from "./version.js";
 
 const INSTRUCTIONS = `OmniFocus MCP server for macOS task management.
 
@@ -78,7 +73,10 @@ export interface BuiltServer {
  * Caller owns the transport. Note the logger side-effect below.
  */
 export function createOmniFocusServer(): BuiltServer {
-  const server = new McpServer({ name: "OmniFocus MCP", version }, { instructions: INSTRUCTIONS });
+  const server = new McpServer(
+    { name: "OmniFocus MCP", version: SERVER_VERSION },
+    { instructions: INSTRUCTIONS }
+  );
 
   const logger = new Logger(server.server);
 
