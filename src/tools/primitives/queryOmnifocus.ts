@@ -52,6 +52,7 @@ export interface QueryOmnifocusParams {
     projectName?: string;
     taskName?: string;
     folderId?: string;
+    folderName?: string;
     tags?: string[];
     status?: string[];
     flagged?: boolean;
@@ -225,17 +226,26 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
         items = flattenedFolders;
       }
 
-      ${filters.folderId ? `
-      // Pre-compute the set of folder IDs that are the target or descendants of target.
-      // _folderIdSet is referenced by the filter conditions emitted from generateFilterConditions().
+      ${filters.folderId || filters.folderName ? `
+      // Pre-compute the set of folder IDs that are the target(s) or their
+      // descendants. _folderIdSet is referenced by the filter conditions emitted
+      // from generateFilterConditions(). folderId (exact) takes precedence over
+      // folderName (case-insensitive partial, may match several folders — #107).
       const _folderIdSet = new Set();
+      ${filters.folderId ? `
       const _targetFolderId = "${escapeJXA(filters.folderId)}";
       for (var _fi = 0; _fi < flattenedFolders.length; _fi++) {
         if (flattenedFolders[_fi].id.primaryKey === _targetFolderId) {
           collectDescendantFolderIds(flattenedFolders[_fi], _folderIdSet);
           break;
         }
-      }
+      }` : `
+      const _targetFolderName = "${escapeJXA(filters.folderName!.toLowerCase())}";
+      for (var _fi = 0; _fi < flattenedFolders.length; _fi++) {
+        if (flattenedFolders[_fi].name.toLowerCase().includes(_targetFolderName)) {
+          collectDescendantFolderIds(flattenedFolders[_fi], _folderIdSet);
+        }
+      }`}
       ` : ''}
       
       // Apply filters
@@ -334,7 +344,9 @@ function generateFilterConditions(entity: string, filters: any): string {
       `);
     }
 
-    if (filters.folderId) {
+    if (filters.folderId || filters.folderName) {
+      // Both resolve to the pre-computed _folderIdSet; folderName differs only
+      // in how the set is seeded (name match, possibly several folders — #107).
       conditions.push(`
         {
           let matchesFolder = false;
@@ -482,7 +494,7 @@ function generateFilterConditions(entity: string, filters: any): string {
       `);
     }
 
-    if (filters.folderId) {
+    if (filters.folderId || filters.folderName) {
       conditions.push(`
         {
           let matchesFolder = false;
@@ -812,4 +824,5 @@ export const _testExports = {
   escapeJXA,
   generateFilterConditions,
   generateFieldMapping,
+  generateQueryScript,
 };

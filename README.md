@@ -98,7 +98,7 @@ Query tasks, projects, or folders with targeted filters — much faster and ligh
 
 Available filters:
 
-- **Containers**: `projectName` (case-insensitive partial match; `"inbox"` targets the inbox), `projectId`, `folderId` (includes subfolders)
+- **Containers**: `projectName` (case-insensitive partial match; `"inbox"` targets the inbox), `projectId`, `folderId` (includes subfolders), `folderName` (case-insensitive partial match, includes subfolders)
 - **Names**: `taskName` (case-insensitive partial match)
 - **Tags**: `tags` (exact match, case-sensitive)
 - **Status**: `status` — tasks: `Next`, `Available`, `Blocked`, `DueSoon`, `Overdue`, `Completed`, `Dropped`; projects: `Active`, `OnHold`, `Done`, `Dropped`

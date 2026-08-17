@@ -24,6 +24,7 @@ const FILTER_SPEC: Record<string, { tasks: boolean; projects: boolean }> = {
   projectName: { tasks: true, projects: true },
   taskName: { tasks: true, projects: false },
   folderId: { tasks: true, projects: true },
+  folderName: { tasks: true, projects: true },
   tags: { tasks: true, projects: true },
   status: { tasks: true, projects: true },
   flagged: { tasks: true, projects: true },
@@ -61,6 +62,7 @@ const SAMPLE: Record<string, unknown> = {
   projectName: 'Work',
   taskName: 'Email',
   folderId: 'f1',
+  folderName: 'Work',
   tags: ['Work'],
   status: ['Active'],
   flagged: true,
@@ -270,5 +272,55 @@ describe('query_omnifocus folder property routing (#95)', () => {
       expect(emitted).toContain('path: item.name');
       expect(emitted).not.toContain('node.parent');
     }
+  });
+});
+
+/**
+ * folderName filter (#107): "all tasks in the Barochory folder" used to cost a
+ * folders query to find the id, then a folderId query — or, worse, dead
+ * projectName guesses. folderName seeds the same descendant-folder set as
+ * folderId, but by case-insensitive partial name match.
+ */
+describe('folderName filter seeding (#107)', () => {
+  const { generateQueryScript } = primitives;
+
+  it('seeds the folder set by lowercase partial name match', () => {
+    const script = generateQueryScript({
+      entity: 'tasks',
+      filters: { folderName: 'BaroChory' },
+    });
+    expect(script).toContain('_targetFolderName = "barochory"');
+    expect(script).toContain('.name.toLowerCase().includes(_targetFolderName)');
+    expect(script).toContain('collectDescendantFolderIds');
+  });
+
+  it('collects every matching folder — no break, unlike the by-id seed', () => {
+    const script = generateQueryScript({
+      entity: 'tasks',
+      filters: { folderName: 'work' },
+    });
+    const seed = script.slice(script.indexOf('_targetFolderName'), script.indexOf('// Apply filters'));
+    expect(seed).not.toContain('break');
+  });
+
+  it('folderId takes precedence when both are given', () => {
+    const script = generateQueryScript({
+      entity: 'projects',
+      filters: { folderId: 'f1', folderName: 'work' },
+    });
+    expect(script).toContain('_targetFolderId = "f1"');
+    expect(script).not.toContain('_targetFolderName');
+  });
+
+  it('emits the membership condition for both entities', () => {
+    for (const entity of ['tasks', 'projects'] as const) {
+      const conditions = generateFilterConditions(entity, { folderName: 'work' });
+      expect(conditions).toContain('_folderIdSet.has');
+    }
+  });
+
+  it('emits no folder machinery when neither folder filter is given', () => {
+    const script = generateQueryScript({ entity: 'tasks', filters: { flagged: true } });
+    expect(script).not.toContain('_folderIdSet');
   });
 });
