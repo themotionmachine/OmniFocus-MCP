@@ -1,7 +1,7 @@
 import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
+import { escapeAppleScriptString, JSON_ESCAPE_HANDLER } from '../../utils/appleScriptHelpers.js';
 import { runOsascriptFile } from '../../utils/scriptExecution.js';
 
 // Interface for item removal parameters
@@ -26,7 +26,7 @@ export function generateAppleScript(params: RemoveItemParams): string {
   }
 
   // Construct AppleScript with error handling
-  let script = `
+  let script = JSON_ESCAPE_HANDLER + `
   try
     tell application "OmniFocus"
       tell front document
@@ -102,8 +102,10 @@ export function generateAppleScript(params: RemoveItemParams): string {
           -- Delete the item
           delete foundItem
 
-          -- Return success
-          return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & itemName & "\\"}"
+          -- Return success. itemName only exists at script runtime, so it goes
+          -- through the jsonEscape handler — quotes in an item name would
+          -- otherwise corrupt the payload (#103).
+          return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & my jsonEscape(itemName) & "\\"}"
         else
           -- Item not found
           return "{\\\"success\\\":false,\\\"error\\\":\\\"Item not found\\\"}"
@@ -111,7 +113,7 @@ export function generateAppleScript(params: RemoveItemParams): string {
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape(errorMessage) & "\\"}"
   end try
   `;
 

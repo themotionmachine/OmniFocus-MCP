@@ -3,7 +3,13 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { generateDateAssignmentV2 } from '../../utils/dateFormatting.js';
-import { generateFolderLookupScript, generateProjectLookupScript, escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
+import {
+  escapeAppleScriptString,
+  escapeForJsonInAppleScript,
+  generateFolderLookupScript,
+  generateProjectLookupScript,
+  JSON_ESCAPE_HANDLER,
+} from '../../utils/appleScriptHelpers.js';
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped' | 'skipped';
@@ -84,8 +90,8 @@ export function generateAppleScript(params: EditItemParams): string {
   }
   
   // Build the complete script
-  let script = '';
-  
+  let script = JSON_ESCAPE_HANDLER;
+
   // Add date constructions outside tell blocks
   if (datePreScripts.length > 0) {
     script += datePreScripts.join('\n') + '\n\n';
@@ -350,8 +356,12 @@ export function generateAppleScript(params: EditItemParams): string {
         set end of changedProperties to "project (moved to inbox)"
 `;
       } else {
+        // escapedProjectPath is for AppleScript string contexts (the
+        // changedProperties note below); the error JSON needs
+        // escapeForJsonInAppleScript instead — an AppleScript-escaped quote
+        // would re-materialize raw inside the JSON and corrupt it (#103).
         const escapedProjectPath = escapeAppleScriptString(params.newProjectName);
-        const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${escapedProjectPath}\\\"}`;
+        const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${escapeForJsonInAppleScript(params.newProjectName)}\\\"}`;
         const projectLookup = generateProjectLookupScript(params.newProjectName, 'destProject', errorJson);
         script += `
         -- Find the destination project (supports folder paths like "Work/My Project")
@@ -412,8 +422,7 @@ export function generateAppleScript(params: EditItemParams): string {
 
     // Move to a new folder (supports nested paths like "Work/Engineering")
     if (params.newFolderName !== undefined && params.newFolderName !== '') {
-      const escapedFolderName = escapeAppleScriptString(params.newFolderName);
-      const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${escapedFolderName}\\\"}`;
+      const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${escapeForJsonInAppleScript(params.newFolderName)}\\\"}`;
       const folderLookup = generateFolderLookupScript(params.newFolderName, 'destFolder', errorJson);
       script += `
         -- Find the destination folder
@@ -436,8 +445,10 @@ export function generateAppleScript(params: EditItemParams): string {
           end if
         end repeat
         
-        -- Return success with details
-        return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & itemName & "\\",\\\"changedProperties\\\":\\"" & changedPropsText & "\\"}"
+        -- Return success with details. itemName and changedPropsText only exist
+        -- at script runtime, so they go through the jsonEscape handler — quotes
+        -- in an item name would otherwise corrupt the payload (#103).
+        return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & my jsonEscape(itemName) & "\\",\\\"changedProperties\\\":\\"" & my jsonEscape(changedPropsText) & "\\"}"
       else
         -- Item not found
         return "{\\\"success\\\":false,\\\"error\\\":\\\"Item not found\\"}"
@@ -445,7 +456,7 @@ export function generateAppleScript(params: EditItemParams): string {
     end tell
   end tell
 on error errorMessage
-  return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+  return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape(errorMessage) & "\\"}"
 end try
 `;
   

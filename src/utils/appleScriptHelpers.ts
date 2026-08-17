@@ -20,6 +20,63 @@ export function escapeAppleScriptString(
 }
 
 /**
+ * Escape a TypeScript-known string for embedding as a JSON string *value* inside
+ * a double-quoted AppleScript string literal (issue #103).
+ *
+ * `escapeAppleScriptString` alone is not enough for these sites: it protects the
+ * AppleScript *source*, but at runtime the escaped quote re-materializes as a raw
+ * `"` inside the JSON the script returns, and `JSON.parse` on our side then fails
+ * — reporting an error for a write that succeeded. Two layers, applied in order:
+ * JSON-escape the value (what the parser will see), then AppleScript-escape the
+ * result (so the source stays well-formed).
+ */
+export function escapeForJsonInAppleScript(value: string): string {
+  // slice(1, -1) drops JSON.stringify's surrounding quotes, leaving just the
+  // escaped body. JSON escaping also removes raw newlines, so the AppleScript
+  // layer never sees one.
+  return escapeAppleScriptString(JSON.stringify(value).slice(1, -1));
+}
+
+/**
+ * AppleScript source for a `jsonEscape` handler, for values that only exist at
+ * script runtime (an item's current name, AppleScript error text). Prepend this
+ * to a script and wrap interpolations with `my jsonEscape(...)` wherever a
+ * runtime string is spliced into a JSON return payload (issue #103).
+ *
+ * Escapes backslash first (order matters), then quote, then the control
+ * characters JSON.parse rejects raw. AppleScript has no replace; text item
+ * delimiters are the idiom.
+ */
+export const JSON_ESCAPE_HANDLER = `
+on jsonEscape(theText)
+  set theText to theText as string
+  set oldDelims to AppleScript's text item delimiters
+  set AppleScript's text item delimiters to "\\\\"
+  set theParts to text items of theText
+  set AppleScript's text item delimiters to "\\\\\\\\"
+  set theText to theParts as string
+  set AppleScript's text item delimiters to "\\""
+  set theParts to text items of theText
+  set AppleScript's text item delimiters to "\\\\\\""
+  set theText to theParts as string
+  set AppleScript's text item delimiters to linefeed
+  set theParts to text items of theText
+  set AppleScript's text item delimiters to "\\\\n"
+  set theText to theParts as string
+  set AppleScript's text item delimiters to return
+  set theParts to text items of theText
+  set AppleScript's text item delimiters to "\\\\r"
+  set theText to theParts as string
+  set AppleScript's text item delimiters to tab
+  set theParts to text items of theText
+  set AppleScript's text item delimiters to "\\\\t"
+  set theText to theParts as string
+  set AppleScript's text item delimiters to oldDelims
+  return theText
+end jsonEscape
+`;
+
+/**
  * Generate AppleScript that resolves a folder by path (e.g. "Work/Engineering")
  * or by simple name (e.g. "Work"). Sets `varName` to the found folder object,
  * or returns `errorReturnJson` if not found.
