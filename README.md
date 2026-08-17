@@ -229,7 +229,7 @@ This matters when several agents use OmniFocus at once. OmniFocus is a single-th
 
 The daemon listens on a Unix domain socket in a `0700` directory (`~/.omnifocus-mcp/daemon-<version>.sock` by default), so access is enforced by the filesystem — no network port and no token. It exits on its own once no client has been connected for the idle window, and logs to `daemon.log` beside the socket.
 
-The socket name carries the package version so that upgrading can never leave you talking to the previous version's daemon. Right after an upgrade you may briefly see two daemons: the old one keeps serving the clients already attached to it and exits once the last of them disconnects.
+The socket name carries the package version so that upgrading can never leave you talking to the previous version's daemon. Right after an upgrade you may briefly see two daemons: the old one keeps serving the clients already attached to it and exits once the last of them disconnects. Clients still attached to the old daemon are told about it in-band — while a newer daemon is serving, every tool result carries a one-line upgrade notice, so nobody has to remember to reconnect.
 
 Nothing about client configuration changes. If the daemon can't be started — an unusual sandbox, a read-only home directory — the shim falls back to running a standalone server in-process, exactly as earlier versions did.
 
