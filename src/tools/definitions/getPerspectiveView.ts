@@ -3,13 +3,13 @@ import { getPerspectiveView } from '../primitives/getPerspectiveView.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  perspectiveName: z.string().describe("Name of the perspective to view (e.g., 'Inbox', 'Projects', 'Flagged', or custom perspective name)"),
-  
-  limit: z.number().optional().describe("Maximum number of items to return. Default: 100"),
-  
-  includeMetadata: z.boolean().optional().describe("Include additional metadata like project names, tags, dates. Default: true"),
-  
-  fields: z.array(z.string()).optional().describe("Specific fields to include in the response. Reduces response size. Available fields: id, name, note, flagged, dueDate, deferDate, completionDate, taskStatus, projectName, tagNames, estimatedMinutes")
+  perspectiveName: z.string().describe("Perspective name, built-in ('Inbox', 'Flagged', …) or custom"),
+
+  limit: z.number().optional().describe("Max items to return (default: 100)"),
+
+  includeMetadata: z.boolean().optional().describe("Include project names, tags, dates (default: true)"),
+
+  fields: z.array(z.string()).optional().describe("Only return the listed fields: id, name, note, flagged, dueDate, deferDate, completionDate, taskStatus, projectName, tagNames, estimatedMinutes")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {

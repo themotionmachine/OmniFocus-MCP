@@ -4,34 +4,33 @@ import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.j
 
 export const schema = z.object({
   items: z.array(z.object({
-    type: z.enum(['task', 'project']).describe("Type of item to add ('task' or 'project')"),
-    name: z.string().describe("The name of the item"),
-    note: z.string().optional().describe("Additional notes for the item"),
-    dueDate: z.string().optional().describe("The due date in ISO format (YYYY-MM-DD or full ISO date)"),
-    deferDate: z.string().optional().describe("The defer date in ISO format (YYYY-MM-DD or full ISO date)"),
-    plannedDate: z.string().optional().describe("The planned date in ISO format (YYYY-MM-DD or full ISO date) - tasks only"),
-    flagged: z.boolean().optional().describe("Whether the item is flagged or not"),
-    estimatedMinutes: z.number().optional().describe("Estimated time to complete the item, in minutes"),
-    tags: z.array(z.string()).optional().describe("Tags to assign to the item"),
+    type: z.enum(['task', 'project']).describe("What to create"),
+    name: z.string().describe("Item name"),
+    note: z.string().optional().describe("Item note"),
+    dueDate: z.string().optional().describe("Due date (YYYY-MM-DD or full ISO)"),
+    deferDate: z.string().optional().describe("Defer date (YYYY-MM-DD or full ISO)"),
+    plannedDate: z.string().optional().describe("Planned date (ISO; tasks only)"),
+    flagged: z.boolean().optional().describe("Flag the item"),
+    estimatedMinutes: z.number().optional().describe("Time estimate in minutes"),
+    tags: z.array(z.string()).optional().describe("Tag names to assign"),
 
     // Task-specific properties.
     // Keep these in sync with add_omnifocus_task's schema — the two drifted
     // apart once already (#97): projectId was missing here, so Zod stripped it
     // and every task in the batch landed in the inbox reporting success.
-    projectId: z.string().optional().describe("For tasks: The id of the project to add the task to (preferred when the project name is ambiguous — e.g. multiple 'Single Actions' projects across folders). Obtain via query_omnifocus. Takes precedence over projectName when both are supplied."),
-    projectName: z.string().optional().describe("For tasks: The name or folder path of the project to add the task to (e.g. 'My Project' or 'Work/My Project' to disambiguate by folder). Will add to inbox if not specified. Used when projectId is not supplied; for ambiguous names, prefer projectId."),
-    parentTaskId: z.string().optional().describe("For tasks: ID of the parent task"),
-    parentTaskName: z.string().optional().describe("For tasks: Name of the parent task (scoped to project when provided)"),
-    tempId: z.string().optional().describe("For tasks: Temporary ID for within-batch references"),
-    parentTempId: z.string().optional().describe("For tasks: Reference to parent's tempId within the batch"),
-    hierarchyLevel: z.number().int().min(0).optional().describe("Optional ordering hint (0=root, 1=child, ...)"),
-    
+    projectId: z.string().optional().describe("Tasks: project id to place the task in; takes precedence over projectName. Prefer when names are ambiguous"),
+    projectName: z.string().optional().describe("Tasks: project name or folder path ('Work/My Project'); defaults to inbox"),
+    parentTaskId: z.string().optional().describe("Tasks: parent task id"),
+    parentTaskName: z.string().optional().describe("Tasks: parent task name, scoped to the project when one is given"),
+    tempId: z.string().optional().describe("Tasks: temporary id other items in this batch can reference"),
+    parentTempId: z.string().optional().describe("Tasks: nest under the batch item with this tempId"),
+    hierarchyLevel: z.number().int().min(0).optional().describe("Ordering hint (0 = root)"),
+
     // Project-specific properties
-    folderName: z.string().optional().describe("For projects: The name of the folder to add the project to"),
-    sequential: z.boolean().optional().describe("For projects: Whether tasks in the project should be sequential")
-  })).describe("Array of items (tasks or projects) to add")
-  ,
-  createSequentially: z.boolean().optional().describe("Process parents before children; when false, best-effort order will still try to resolve parents first")
+    folderName: z.string().optional().describe("Projects: folder to place the project in"),
+    sequential: z.boolean().optional().describe("Projects: make tasks sequential")
+  })).describe("Items to add"),
+  createSequentially: z.boolean().optional().describe("Process parents before children; even when false, parents are resolved first best-effort")
 });
 
 type PlacementRequest = {

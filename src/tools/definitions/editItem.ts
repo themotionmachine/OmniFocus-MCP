@@ -3,31 +3,31 @@ import { editItem, EditItemParams } from '../primitives/editItem.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  id: z.string().optional().describe("The ID of the task or project to edit"),
-  name: z.string().optional().describe("The name of the task or project to edit (as fallback if ID not provided)"),
-  itemType: z.enum(['task', 'project']).describe("Type of item to edit ('task' or 'project')"),
-  
-  // Common editable fields
-  newName: z.string().optional().describe("New name for the item"),
-  newNote: z.string().optional().describe("New note for the item"),
-  newDueDate: z.string().optional().describe("New due date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
-  newDeferDate: z.string().optional().describe("New defer date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
-  newPlannedDate: z.string().optional().describe("New planned date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear (tasks only)"),
-  newFlagged: z.boolean().optional().describe("Set flagged status (set to false for no flag, true for flag)"),
-  newEstimatedMinutes: z.number().optional().describe("New estimated minutes"),
+  id: z.string().optional().describe("Item id (takes precedence over name)"),
+  name: z.string().optional().describe("Item name, as fallback when no id"),
+  itemType: z.enum(['task', 'project']).describe("What kind of item"),
+
+  // Common editable fields. Dates take YYYY-MM-DD or full ISO; "" clears.
+  newName: z.string().optional().describe("New name"),
+  newNote: z.string().optional().describe("New note"),
+  newDueDate: z.string().optional().describe("New due date (ISO; \"\" clears)"),
+  newDeferDate: z.string().optional().describe("New defer date (ISO; \"\" clears)"),
+  newPlannedDate: z.string().optional().describe("New planned date (ISO; \"\" clears; tasks only)"),
+  newFlagged: z.boolean().optional().describe("Set flagged status"),
+  newEstimatedMinutes: z.number().optional().describe("New time estimate in minutes"),
 
   // Task-specific fields
-  newStatus: z.enum(['incomplete', 'completed', 'dropped', 'skipped']).optional().describe("New status for tasks (incomplete, completed, dropped, skipped). 'skipped' only works on repeating tasks — it completes the current occurrence to trigger the next repeat, then drops the completed instance."),
-  addTags: z.array(z.string()).optional().describe("Tags to add to the task"),
-  removeTags: z.array(z.string()).optional().describe("Tags to remove from the task"),
-  replaceTags: z.array(z.string()).optional().describe("Tags to replace all existing tags with"),
-  newProjectName: z.string().optional().describe("Move this task to a different project by name or folder path (e.g. 'My Project' or 'Work/My Project' to disambiguate). Pass an empty string or 'inbox' to move the task to the inbox. (tasks only)"),
+  newStatus: z.enum(['incomplete', 'completed', 'dropped', 'skipped']).optional().describe("New task status. 'skipped' (repeating tasks only) completes the occurrence to trigger the next repeat, then drops the instance"),
+  addTags: z.array(z.string()).optional().describe("Tags to add"),
+  removeTags: z.array(z.string()).optional().describe("Tags to remove"),
+  replaceTags: z.array(z.string()).optional().describe("Replace all tags with these"),
+  newProjectName: z.string().optional().describe("Move the task to this project (name or folder path like 'Work/My Project'); \"\" or 'inbox' moves it to the inbox (tasks only)"),
 
   // Project-specific fields
-  newSequential: z.boolean().optional().describe("Whether the project should be sequential"),
-  newFolderName: z.string().optional().describe("New folder to move the project to"),
-  newProjectStatus: z.enum(['active', 'completed', 'dropped', 'onHold']).optional().describe("New status for projects"),
-  markReviewed: z.boolean().optional().describe("Mark the project as reviewed (projects only). Sets the next review date to now + the project's review interval. Only works when set to true.")
+  newSequential: z.boolean().optional().describe("Make the project sequential"),
+  newFolderName: z.string().optional().describe("Move the project to this folder"),
+  newProjectStatus: z.enum(['active', 'completed', 'dropped', 'onHold']).optional().describe("New project status"),
+  markReviewed: z.boolean().optional().describe("true marks the project reviewed, scheduling the next review from its review interval (projects only)")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
