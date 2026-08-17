@@ -55,10 +55,14 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         changedText = ` (${result.changedProperties})`;
       }
       
+      // Echo the id (#104) — especially valuable here on the name-fallback
+      // lookup path, where the caller may not have known the id at all.
+      const idText = result.id ? ` (id: ${result.id})` : '';
+
       return {
         content: [{
           type: "text" as const,
-          text: `✅ ${itemTypeLabel} "${result.name}" updated successfully${changedText}.`
+          text: `✅ ${itemTypeLabel} "${result.name}" updated successfully${changedText}${idText}.`
         }]
       };
     } else {

@@ -141,7 +141,10 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
           const itemType = args.items[index].type;
           const itemName = args.items[index].name;
           const where = describePlacement(args.items[index], item.placement, args.items);
-          return `- ✅ ${itemType}: "${itemName}"${where}`;
+          // Echo each created id (#104): batch callers otherwise re-query for
+          // every id they need for follow-up edits.
+          const idText = item.id ? ` (id: ${item.id})` : '';
+          return `- ✅ ${itemType}: "${itemName}"${idText}${where}`;
         } else {
           const itemType = args.items[index].type;
           const itemName = args.items[index].name;
@@ -163,7 +166,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
             const itemType = args.items[index].type;
             const itemName = args.items[index].name;
             return r.success
-              ? `- ✅ ${itemType}: \"${itemName}\"${describePlacement(args.items[index], r.placement, args.items)}`
+              ? `- ✅ ${itemType}: \"${itemName}\"${r.id ? ` (id: ${r.id})` : ''}${describePlacement(args.items[index], r.placement, args.items)}`
               : `- ❌ ${itemType}: \"${itemName}\" - Error: ${r?.error || 'Unknown error'}`;
           }).join('\\n')
         : `No items processed. ${result.error || ''}`;

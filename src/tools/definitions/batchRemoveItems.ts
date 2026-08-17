@@ -42,7 +42,9 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       const details = result.results.map((item, index) => {
         if (item.success) {
           const itemType = args.items[index].itemType;
-          return `- ✅ ${itemType}: "${item.name}"`;
+          // Echo each removed id (#104): confirms exactly which item went away.
+          const idText = item.id ? ` (id: ${item.id})` : '';
+          return `- ✅ ${itemType}: "${item.name}"${idText}`;
         } else {
           const itemType = args.items[index].itemType;
           const identifier = args.items[index].id || args.items[index].name;

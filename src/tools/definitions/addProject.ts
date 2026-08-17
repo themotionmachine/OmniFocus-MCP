@@ -36,11 +36,15 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       let sequentialText = args.sequential
         ? " (sequential)"
         : " (parallel)";
-        
+
+      // Echo the id (#104): without it, agents re-query immediately after every
+      // write just to harvest the id for the follow-up edit.
+      const idText = result.projectId ? ` (id: ${result.projectId})` : '';
+
       return {
         content: [{
           type: "text" as const,
-          text: `✅ Project "${args.name}" created successfully ${locationText}${dueDateText}${tagText}${sequentialText}.`
+          text: `✅ Project "${args.name}" created successfully ${locationText}${dueDateText}${tagText}${sequentialText}${idText}.`
         }]
       };
     } else {
