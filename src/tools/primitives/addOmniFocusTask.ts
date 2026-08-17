@@ -3,7 +3,12 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
-import { escapeAppleScriptString, generateProjectLookupScript } from '../../utils/appleScriptHelpers.js';
+import {
+  escapeAppleScriptString,
+  escapeForJsonInAppleScript,
+  generateProjectLookupScript,
+  JSON_ESCAPE_HANDLER,
+} from '../../utils/appleScriptHelpers.js';
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -69,12 +74,15 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
     ? generateProjectLookupScript(
         params.projectName,
         'targetProject',
-        `{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}`
+        // escapeForJsonInAppleScript, not escapeAppleScriptString: this name lands
+        // inside a JSON payload, where an AppleScript-escaped quote re-materializes
+        // raw and corrupts the result (#103).
+        `{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${escapeForJsonInAppleScript(params.projectName)}\\\"}`
       )
     : '';
 
   // Construct AppleScript with error handling
-  let script = datePreScript + `
+  let script = JSON_ESCAPE_HANDLER + datePreScript + `
   try
     tell application "OmniFocus"
       tell front document
@@ -85,7 +93,7 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
             set targetProject to first flattened project where id = "${projectId}"
           end try
           if targetProject is missing value then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: id ${projectId}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: id ${params.projectId ? escapeForJsonInAppleScript(params.projectId) : ''}\\\"}"
           end if
         else if "${projectName}" is not "" then
           ${projectNameLookup}
@@ -218,12 +226,14 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
           end try`;
         }).join('\n') : ''}
         
-        -- Return success with task ID and placement
-        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\\",\\\"placement\\\":\\"" & placement & "\\"}"
+        -- Return success with task ID and placement. The name is deliberately NOT
+        -- echoed here: the caller already knows it, and splicing it into
+        -- hand-built JSON is how quotes in a task name corrupted the payload (#103).
+        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"placement\\\":\\"" & placement & "\\"}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape(errorMessage) & "\\"}"
   end try
   `;
   

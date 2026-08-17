@@ -2,7 +2,12 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { createDateOutsideTellBlock } from '../../utils/dateFormatting.js';
-import { generateFolderLookupScript, escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
+import {
+  escapeAppleScriptString,
+  escapeForJsonInAppleScript,
+  generateFolderLookupScript,
+  JSON_ESCAPE_HANDLER,
+} from '../../utils/appleScriptHelpers.js';
 import { runOsascriptFile } from '../../utils/scriptExecution.js';
 
 // Interface for project creation parameters
@@ -50,8 +55,10 @@ export function generateAppleScript(params: AddProjectParams): string {
   // Build project creation block — either at root or in a folder
   let projectCreationBlock: string;
   if (params.folderName) {
-    const escapedFolderName = escapeAppleScriptString(params.folderName);
-    const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${escapedFolderName}\\\"}`;
+    // escapeForJsonInAppleScript, not escapeAppleScriptString: this name lands
+    // inside a JSON payload, where an AppleScript-escaped quote re-materializes
+    // raw and corrupts the result (#103).
+    const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${escapeForJsonInAppleScript(params.folderName)}\\\"}`;
     const folderLookup = generateFolderLookupScript(params.folderName, 'theFolder', errorJson);
     projectCreationBlock = `
         -- Find the folder (supports nested paths like "Work/Engineering")
@@ -64,7 +71,7 @@ export function generateAppleScript(params: AddProjectParams): string {
   }
 
   // Construct AppleScript with error handling
-  let script = datePreScript + `
+  let script = JSON_ESCAPE_HANDLER + datePreScript + `
   try
     tell application "OmniFocus"
       tell front document
@@ -103,12 +110,14 @@ export function generateAppleScript(params: AddProjectParams): string {
           end try`;
         }).join('\n') : ''}
 
-        -- Return success with project ID
-        return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\",\\\"name\\\":\\"${name}\\"}"
+        -- Return success with project ID. The name is deliberately NOT echoed:
+        -- the caller already knows it, and splicing it into hand-built JSON is
+        -- how quotes in a name corrupted the payload (#103).
+        return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\"}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape(errorMessage) & "\\"}"
   end try
   `;
 

@@ -1,7 +1,11 @@
 import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { escapeAppleScriptString } from '../../utils/appleScriptHelpers.js';
+import {
+  escapeAppleScriptString,
+  escapeForJsonInAppleScript,
+  JSON_ESCAPE_HANDLER,
+} from '../../utils/appleScriptHelpers.js';
 import { runOsascriptFile } from '../../utils/scriptExecution.js';
 
 export interface CreateTagParams {
@@ -22,7 +26,9 @@ export function generateAppleScript(params: CreateTagParams): string {
 
   if (params.parentTagID) {
     const parentId = escapeAppleScriptString(params.parentTagID);
-    const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Parent tag not found: ${parentId}\\\"}`;
+    // escapeForJsonInAppleScript for the JSON payload — an AppleScript-escaped
+    // quote would re-materialize raw inside the JSON and corrupt it (#103).
+    const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Parent tag not found: ${escapeForJsonInAppleScript(params.parentTagID)}\\\"}`;
     parentLookup = `
         set parentTag to missing value
         try
@@ -34,7 +40,7 @@ export function generateAppleScript(params: CreateTagParams): string {
     creationTarget = 'make new tag with properties {name:"' + name + '"} at end of tags of parentTag';
   } else if (params.parentTagName) {
     const parentName = escapeAppleScriptString(params.parentTagName);
-    const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Parent tag not found: ${parentName}\\\"}`;
+    const errorJson = `{\\\"success\\\":false,\\\"error\\\":\\\"Parent tag not found: ${escapeForJsonInAppleScript(params.parentTagName)}\\\"}`;
     parentLookup = `
         set parentTag to missing value
         try
@@ -46,18 +52,20 @@ export function generateAppleScript(params: CreateTagParams): string {
     creationTarget = 'make new tag with properties {name:"' + name + '"} at end of tags of parentTag';
   }
 
-  const script = `
+  const script = JSON_ESCAPE_HANDLER + `
   try
     tell application "OmniFocus"
       tell front document
         ${parentLookup}
         set newTag to ${creationTarget}
         set tagId to id of newTag as string
-        return "{\\\"success\\\":true,\\\"tagId\\\":\\"" & tagId & "\\",\\\"name\\\":\\"${name}\\"}"
+        -- The name is deliberately NOT echoed: the caller already knows it, and
+        -- splicing it into hand-built JSON is how quotes corrupted payloads (#103).
+        return "{\\\"success\\\":true,\\\"tagId\\\":\\"" & tagId & "\\"}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape(errorMessage) & "\\"}"
   end try
   `;
 
@@ -89,7 +97,9 @@ export async function createTag(params: CreateTagParams): Promise<{success: bool
       return {
         success: result.success,
         tagId: result.tagId,
-        name: result.name,
+        // The script no longer echoes the name (#103); the caller's input is the
+        // authoritative value anyway.
+        name: result.success ? params.name : undefined,
         error: result.error
       };
     } catch (parseError) {
