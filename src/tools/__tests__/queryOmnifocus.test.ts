@@ -3,7 +3,7 @@ import { _testExports as primitives } from '../primitives/queryOmnifocus.js';
 import { _testExports as definitions } from '../definitions/queryOmnifocus.js';
 
 const { escapeJXA, generateFilterConditions, generateFieldMapping } = primitives;
-const { formatTasks, formatProjects, formatFolders, formatFilters } = definitions;
+const { formatTasks, formatProjects, formatFolders, formatQueryResults } = definitions;
 
 // ============================================================
 // escapeJXA
@@ -556,69 +556,6 @@ describe('formatTasks - sequential display', () => {
   });
 });
 
-// ============================================================
-// formatFilters - taskName display
-// ============================================================
-describe('formatFilters', () => {
-  it('displays taskName filter', () => {
-    const result = formatFilters({ taskName: 'email' });
-    expect(result).toContain('taskName: "email"');
-  });
-
-  it('displays combined filters', () => {
-    const result = formatFilters({ projectName: 'Test', taskName: 'foo' });
-    expect(result).toContain('project: "Test"');
-    expect(result).toContain('taskName: "foo"');
-  });
-
-  it('returns empty string for empty filters', () => {
-    const result = formatFilters({});
-    expect(result).toBe('');
-  });
-
-  it('displays string date filter values naturally', () => {
-    const result = formatFilters({ dueWithin: 'this week' });
-    expect(result).toBe('due within this week');
-    expect(result).not.toContain('days');
-  });
-
-  it('displays numeric date filter values with "days" unit', () => {
-    const result = formatFilters({ dueWithin: 7 });
-    expect(result).toBe('due within 7 days');
-  });
-
-  it('displays string dueOn naturally', () => {
-    const result = formatFilters({ dueOn: 'today' });
-    expect(result).toBe('due on today');
-    expect(result).not.toContain('+');
-  });
-
-  it('displays numeric dueOn with +N format', () => {
-    const result = formatFilters({ dueOn: 2 });
-    expect(result).toBe('due on day +2');
-  });
-
-  it('displays ISO date dueOn naturally', () => {
-    const result = formatFilters({ dueOn: '2026-04-15' });
-    expect(result).toBe('due on 2026-04-15');
-  });
-
-  it('displays reviewDue filter', () => {
-    const result = formatFilters({ reviewDue: true });
-    expect(result).toBe('review due: true');
-  });
-
-  it('displays droppedOn filter', () => {
-    const result = formatFilters({ droppedOn: 0 });
-    expect(result).toBe('dropped on day 0');
-  });
-
-  it('displays droppedWithin filter', () => {
-    const result = formatFilters({ droppedWithin: 7 });
-    expect(result).toBe('dropped within 7 days');
-  });
-});
-
 describe('formatTasks - dropDate display', () => {
   it('shows dropDate when present', () => {
     const result = formatTasks([
@@ -632,5 +569,47 @@ describe('formatTasks - dropDate display', () => {
       { name: 'Plain task', id: 't1' },
     ]);
     expect(result).not.toContain('[dropped');
+  });
+});
+
+// ============================================================
+// Result-format overhead fixes (#106)
+// ============================================================
+describe('formatProjects - status guard (#106)', () => {
+  it('renders nothing for status when the field was not requested', () => {
+    // Without the guard, `undefined !== 'Active'` rendered a literal
+    // "[undefined]" on every row — 49 times in one live 49-project query.
+    const result = formatProjects([{ name: 'Barochory', id: 'p1' }]);
+    expect(result).not.toContain('undefined');
+    expect(result).toBe('P: Barochory [p1]');
+  });
+
+  it('still renders a real non-Active status', () => {
+    const result = formatProjects([{ name: 'Paused', id: 'p2', status: 'OnHold' }]);
+    expect(result).toContain('[OnHold]');
+  });
+
+  it('still suppresses the default Active status', () => {
+    const result = formatProjects([{ name: 'Running', id: 'p3', status: 'Active' }]);
+    expect(result).not.toContain('[Active]');
+  });
+});
+
+describe('formatQueryResults - no argument echo (#106)', () => {
+  it('opens with a bare count line, not a markdown header', () => {
+    const output = formatQueryResults([{ name: 'Task', id: 't1' }], 'tasks');
+    expect(output.startsWith('1 tasks:\n')).toBe(true);
+    expect(output).not.toContain('## Query Results');
+  });
+
+  it('never restates the caller filters', () => {
+    const output = formatQueryResults([{ name: 'Task', id: 't1' }], 'tasks');
+    expect(output).not.toContain('Filters applied');
+  });
+
+  it('keeps the empty-result message', () => {
+    expect(formatQueryResults([], 'projects')).toBe(
+      'No projects found matching the specified criteria.'
+    );
   });
 });

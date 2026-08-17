@@ -76,7 +76,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       } else {
         // Format the results in a compact, readable format
         const items = result.items || [];
-        let output = formatQueryResults(items, args.entity, args.filters);
+        let output = formatQueryResults(items, args.entity);
         
         // Add metadata about the query
         if (items.length === args.limit) {
@@ -112,19 +112,20 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
   }
 }
 
-// Helper function to format query results in a compact way
-function formatQueryResults(items: any[], entity: string, filters?: any): string {
+// Helper function to format query results in a compact way.
+//
+// Deliberately spare (#106): the caller is an agent that still has its own
+// arguments in context, so restating them ("Filters applied: …", a markdown
+// header) was measured at ~15% overhead on typical results and carried no
+// information. The count line stays — it's the one thing the items themselves
+// don't say.
+function formatQueryResults(items: any[], entity: string): string {
   if (items.length === 0) {
     return `No ${entity} found matching the specified criteria.`;
   }
-  
-  let output = `## Query Results: ${items.length} ${entity}\n\n`;
-  
-  // Add filter summary if filters were applied
-  if (filters && Object.keys(filters).length > 0) {
-    output += `Filters applied: ${formatFilters(filters)}\n\n`;
-  }
-  
+
+  let output = `${items.length} ${entity}:\n`;
+
   // Format each item based on entity type
   switch (entity) {
     case 'tasks':
@@ -139,33 +140,6 @@ function formatQueryResults(items: any[], entity: string, filters?: any): string
   }
   
   return output;
-}
-
-function formatFilters(filters: any): string {
-  const parts = [];
-  if (filters.projectId) parts.push(`projectId: "${filters.projectId}"`);
-  if (filters.projectName) parts.push(`project: "${filters.projectName}"`);
-  if (filters.taskName) parts.push(`taskName: "${filters.taskName}"`);
-  if (filters.folderId) parts.push(`folderId: "${filters.folderId}"`);
-  if (filters.tags) parts.push(`tags: [${filters.tags.join(', ')}]`);
-  if (filters.status) parts.push(`status: [${filters.status.join(', ')}]`);
-  if (filters.flagged !== undefined) parts.push(`flagged: ${filters.flagged}`);
-  if (filters.dueWithin) parts.push(typeof filters.dueWithin === 'string' ? `due within ${filters.dueWithin}` : `due within ${filters.dueWithin} days`);
-  if (filters.deferredUntil) parts.push(typeof filters.deferredUntil === 'string' ? `deferred within ${filters.deferredUntil}` : `deferred becoming available within ${filters.deferredUntil} days`);
-  if (filters.hasNote !== undefined) parts.push(`has note: ${filters.hasNote}`);
-  if (filters.inbox !== undefined) parts.push(`inbox: ${filters.inbox}`);
-  if (filters.dueOn !== undefined) parts.push(typeof filters.dueOn === 'string' ? `due on ${filters.dueOn}` : `due on day +${filters.dueOn}`);
-  if (filters.deferOn !== undefined) parts.push(typeof filters.deferOn === 'string' ? `defer on ${filters.deferOn}` : `defer on day +${filters.deferOn}`);
-  if (filters.plannedOn !== undefined) parts.push(typeof filters.plannedOn === 'string' ? `planned on ${filters.plannedOn}` : `planned on day +${filters.plannedOn}`);
-  if (filters.addedWithin !== undefined) parts.push(`added within ${filters.addedWithin} days`);
-  if (filters.addedOn !== undefined) parts.push(`added on day ${filters.addedOn}`);
-  if (filters.isRepeating !== undefined) parts.push(`repeating: ${filters.isRepeating}`);
-  if (filters.completedWithin !== undefined) parts.push(`completed within ${filters.completedWithin} days`);
-  if (filters.completedOn !== undefined) parts.push(`completed on day ${filters.completedOn}`);
-  if (filters.droppedWithin !== undefined) parts.push(`dropped within ${filters.droppedWithin} days`);
-  if (filters.droppedOn !== undefined) parts.push(`dropped on day ${filters.droppedOn}`);
-  if (filters.reviewDue !== undefined) parts.push(`review due: ${filters.reviewDue}`);
-  return parts.join(', ');
 }
 
 function formatTasks(tasks: any[]): string {
@@ -265,7 +239,10 @@ function formatTasks(tasks: any[]): string {
 
 function formatProjects(projects: any[]): string {
   return projects.map(project => {
-    const status = project.status !== 'Active' ? ` [${project.status}]` : '';
+    // The truthiness guard matters (#106): when the caller's `fields` selection
+    // omits status, `undefined !== 'Active'` used to render a literal
+    // "[undefined]" on every row — 49 times in one live 49-project query.
+    const status = project.status && project.status !== 'Active' ? ` [${project.status}]` : '';
     const folder = project.folderName ? ` 📁 ${project.folderName}` : '';
     const taskCount = project.taskCount !== undefined && project.taskCount !== null ? ` (${project.taskCount} tasks)` : '';
     const flagged = project.flagged ? '🚩 ' : '';
@@ -322,5 +299,4 @@ export const _testExports = {
   formatProjects,
   formatFolders,
   formatQueryResults,
-  formatFilters,
 };
