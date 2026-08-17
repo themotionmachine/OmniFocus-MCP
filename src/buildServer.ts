@@ -107,7 +107,7 @@ export function createOmniFocusServer(): BuiltServer {
 
   server.tool(
     "add_omnifocus_task",
-    "Create a NEW task in OmniFocus. Use this ONLY when the task does not already exist. If a matching task already exists (e.g. an item already in the Inbox, or one referenced earlier in the conversation) and the goal is to file/place/move it into a project or the inbox, do NOT create a duplicate here — use edit_item with newProjectName to MOVE the existing task instead. When unsure whether a matching task already exists, search with query_omnifocus first and prefer moving over creating.",
+    "Create a NEW task. If a matching task already exists (e.g. in the Inbox), do NOT create a duplicate — MOVE it with edit_item + newProjectName. When unsure, check with query_omnifocus first.",
     addOmniFocusTaskTool.schema.shape,
     addOmniFocusTaskTool.handler
   );
@@ -128,7 +128,7 @@ export function createOmniFocusServer(): BuiltServer {
 
   server.tool(
     "edit_item",
-    "Edit an existing task or project in OmniFocus. This is also how you MOVE/reassign an existing task: set newProjectName to a project name/path to move it into that project, or to \"\" / \"inbox\" to move it to the inbox. Whenever a task already exists, prefer moving it with this tool over creating a new one via add_omnifocus_task, so you never create duplicates.",
+    "Edit an existing task or project. Also how you MOVE a task: set newProjectName (or \"\" / \"inbox\"). Prefer moving an existing task over re-creating it — never make duplicates.",
     editItemTool.schema.shape,
     editItemTool.handler
   );
@@ -149,28 +149,28 @@ export function createOmniFocusServer(): BuiltServer {
 
   server.tool(
     "query_omnifocus",
-    "Efficiently query OmniFocus database with powerful filters. Get specific tasks, projects, or folders without loading the entire database. Supports filtering by project, tags, status, due dates, and more. Much faster than dump_database for targeted queries.",
+    "Query tasks, projects, or folders with filters (project, folder, tags, status, dates). Much faster and lighter than dump_database for targeted lookups.",
     queryOmniFocusTool.schema.shape,
     queryOmniFocusTool.handler
   );
 
   server.tool(
     "list_perspectives",
-    "List all available perspectives in OmniFocus, including built-in perspectives (Inbox, Projects, Tags, etc.) and custom perspectives (Pro feature)",
+    "List built-in and custom perspectives (custom is a Pro feature)",
     listPerspectivesTool.schema.shape,
     listPerspectivesTool.handler
   );
 
   server.tool(
     "get_perspective_view",
-    "Get the items visible in a specific OmniFocus perspective. Shows what tasks and projects are displayed when viewing that perspective",
+    "Get the items visible in a named OmniFocus perspective",
     getPerspectiveViewTool.schema.shape,
     getPerspectiveViewTool.handler
   );
 
   server.tool(
     "list_tags",
-    "List all tags in OmniFocus with their hierarchy. Useful for discovering available tags before creating or editing tasks.",
+    "List all tags with their hierarchy",
     listTagsTool.schema.shape,
     listTagsTool.handler
   );

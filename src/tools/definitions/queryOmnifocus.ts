@@ -4,47 +4,52 @@ import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.j
 import { resolveDateFilter } from '../../utils/dateFilter.js';
 import { localDatePart } from '../../utils/dateSerialization.js';
 
+// Description budget (#105): these strings load into EVERY session that touches
+// the server, so shared grammar is stated once on the filters object and each
+// field describe keeps only what an agent can't infer — case-sensitivity,
+// exact-vs-partial matching, and cross-field requirements. A test caps the
+// total; spend the budget deliberately.
 export const schema = z.object({
-  entity: z.enum(['tasks', 'projects', 'folders']).describe("Type of entity to query. Choose 'tasks' for individual tasks, 'projects' for projects, or 'folders' for folder organization"),
-  
+  entity: z.enum(['tasks', 'projects', 'folders']).describe("What to query"),
+
   filters: z.object({
-    projectId: z.string().optional().describe("Filter tasks by exact project ID (use when you know the specific project ID)"),
-    projectName: z.string().optional().describe("Filter tasks by project name. CASE-INSENSITIVE PARTIAL MATCHING - 'review' matches 'Weekly Review', 'Review Documents', etc. Special value: 'inbox' returns inbox tasks"),
-    taskName: z.string().optional().describe("Filter tasks by task name. CASE-INSENSITIVE PARTIAL MATCHING - 'email' matches 'Send email to IT', 'Confirm email' etc. Useful for fuzzy searching specific tasks across all projects"),
-    folderId: z.string().optional().describe("Filter by folder ID. For tasks, returns tasks whose containing project is in this folder (or a subfolder). For projects, returns projects in this folder (or a subfolder)"),
-    folderName: z.string().optional().describe("Filter by folder name. CASE-INSENSITIVE PARTIAL MATCHING; may match several folders, each including its subfolders. Same task/project semantics as folderId, which takes precedence when both are given"),
-    tags: z.array(z.string()).optional().describe("Filter by tag names. EXACT MATCH, CASE-SENSITIVE. OR logic - items must have at least ONE of the specified tags. Example: ['Work'] and ['work'] are different"),
-    status: z.array(z.string()).optional().describe("Filter by status (OR logic - matches any). TASKS: 'Next' (next action), 'Available' (ready to work), 'Blocked' (waiting), 'DueSoon' (due <24h), 'Overdue' (past due), 'Completed', 'Dropped'. PROJECTS: 'Active', 'OnHold', 'Done', 'Dropped'"),
-    flagged: z.boolean().optional().describe("Filter by flagged status. true = only flagged items, false = only unflagged items"),
-    dueWithin: z.union([z.number(), z.string()]).optional().describe("Returns items due from TODAY through N days in future. Accepts: number (days), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
-    deferredUntil: z.union([z.number(), z.string()]).optional().describe("Returns items CURRENTLY DEFERRED that will become available within N days. Accepts: number (days), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
-    plannedWithin: z.union([z.number(), z.string()]).optional().describe("Returns tasks planned from TODAY through N days in future. Accepts: number (days), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
-    hasNote: z.boolean().optional().describe("Filter by note presence. true = items with non-empty notes (whitespace ignored), false = items with no notes or only whitespace"),
-    inbox: z.boolean().optional().describe("Filter tasks by inbox status. true = only inbox tasks (no project), false = only tasks in a project"),
-    dueOn: z.union([z.number(), z.string()]).optional().describe("Returns items due on exactly this day. Accepts: number (0 = today, 1 = tomorrow), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
-    deferOn: z.union([z.number(), z.string()]).optional().describe("Returns items with defer date on exactly this day. Accepts: number (0 = today, 1 = tomorrow), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
-    plannedOn: z.union([z.number(), z.string()]).optional().describe("Returns tasks with planned date on exactly this day. Accepts: number (0 = today, 1 = tomorrow), 'today', 'tomorrow', 'this week', 'next week', or ISO date 'YYYY-MM-DD'"),
-    addedWithin: z.number().optional().describe("Returns items added (created) within the last N days. Example: 7 = items added in the last week"),
-    addedOn: z.number().optional().describe("Returns items added (created) on exactly this day. 0 = today, 1 = tomorrow, -1 = yesterday. Negative values look backward"),
-    isRepeating: z.boolean().optional().describe("Filter by repeating status. true = only repeating tasks, false = only non-repeating tasks"),
-    completedWithin: z.number().optional().describe("Returns items completed within the last N days (uses completionDate, which OmniFocus only sets for truly completed items, not dropped ones). Example: 7 = items completed in the last week. For dropped items, use droppedWithin. Note: use with includeCompleted: true"),
-    completedOn: z.number().optional().describe("Returns items completed on exactly this day (uses completionDate, which OmniFocus only sets for truly completed items, not dropped ones). 0 = today, -1 = yesterday. Negative values look backward. For dropped items, use droppedOn. Note: use with includeCompleted: true"),
-    droppedWithin: z.number().optional().describe("Returns items dropped within the last N days (uses dropDate). Example: 7 = items dropped in the last week. Typically combined with status: ['Dropped']. Note: use with includeCompleted: true"),
-    droppedOn: z.number().optional().describe("Returns items dropped on exactly this day (uses dropDate). 0 = today, -1 = yesterday. Negative values look backward. Typically combined with status: ['Dropped']. Note: use with includeCompleted: true"),
-    reviewDue: z.boolean().optional().describe("Filter projects by review status. true = only projects whose next review date is today or in the past (due for review). false = only projects not yet due for review. Only applies to 'projects' entity")
-  }).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies"),
-  
-  fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, dropDate, effectiveDropDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completionDate, dropDate, effectiveDropDate, completedByChildren, containsSingletonActions, taskCount, tasks, nextReviewDate, reviewInterval, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
-  
-  limit: z.number().optional().describe("Maximum number of items to return. Useful for large result sets. Default: no limit"),
-  
-  sortBy: z.string().optional().describe("Field to sort by. OPTIONS: name (alphabetical), dueDate (earliest first, null last), deferDate (earliest first, null last), modificationDate (most recent first), creationDate (oldest first), estimatedMinutes (shortest first), taskStatus (groups by status)"),
-  
-  sortOrder: z.enum(['asc', 'desc']).optional().describe("Sort order. 'asc' = ascending (A-Z, old-new, small-large), 'desc' = descending (Z-A, new-old, large-small). Default: 'asc'"),
-  
-  includeCompleted: z.boolean().optional().describe("Include completed and dropped items. Default: false (active items only)"),
-  
-  summary: z.boolean().optional().describe("Return only count of matches, not full details. Efficient for statistics. Default: false")
+    projectId: z.string().optional().describe("Exact project id"),
+    projectName: z.string().optional().describe("Project name; case-insensitive partial match. 'inbox' targets the inbox"),
+    taskName: z.string().optional().describe("Task name; case-insensitive partial match"),
+    folderId: z.string().optional().describe("Folder id, including subfolders; tasks match via their containing project"),
+    folderName: z.string().optional().describe("Folder name; case-insensitive partial match, may match several folders, each including subfolders. folderId takes precedence"),
+    tags: z.array(z.string()).optional().describe("Tag names; exact match, case-sensitive"),
+    status: z.array(z.string()).optional().describe("Tasks: Next, Available, Blocked, DueSoon, Overdue, Completed, Dropped. Projects: Active, OnHold, Done, Dropped"),
+    flagged: z.boolean().optional().describe("true = flagged only, false = unflagged only"),
+    dueWithin: z.union([z.number(), z.string()]).optional().describe("Due between today and the given day/range"),
+    deferredUntil: z.union([z.number(), z.string()]).optional().describe("Currently deferred, becoming available by the given day"),
+    plannedWithin: z.union([z.number(), z.string()]).optional().describe("Planned between today and the given day/range"),
+    hasNote: z.boolean().optional().describe("true = has a non-empty note"),
+    inbox: z.boolean().optional().describe("true = inbox tasks only, false = project tasks only"),
+    dueOn: z.union([z.number(), z.string()]).optional().describe("Due on exactly that day"),
+    deferOn: z.union([z.number(), z.string()]).optional().describe("Defer date exactly that day"),
+    plannedOn: z.union([z.number(), z.string()]).optional().describe("Planned date exactly that day"),
+    addedWithin: z.number().optional().describe("Added in the last N days"),
+    addedOn: z.number().optional().describe("Added on day N (0 = today, -1 = yesterday)"),
+    isRepeating: z.boolean().optional().describe("true = repeating tasks only"),
+    completedWithin: z.number().optional().describe("Completed in the last N days (dropped items need droppedWithin). Requires includeCompleted: true"),
+    completedOn: z.number().optional().describe("Completed on day N (0 = today, -1 = yesterday). Requires includeCompleted: true"),
+    droppedWithin: z.number().optional().describe("Dropped in the last N days. Requires includeCompleted: true"),
+    droppedOn: z.number().optional().describe("Dropped on day N (0 = today, -1 = yesterday). Requires includeCompleted: true"),
+    reviewDue: z.boolean().optional().describe("true = projects due for review (projects only)")
+  }).optional().describe("Filters AND together; array filters (tags, status) OR within the array. Date-valued filters (dueWithin, deferredUntil, plannedWithin, dueOn, deferOn, plannedOn) accept a number of days from today, 'today', 'tomorrow', 'this week', 'next week', or 'YYYY-MM-DD'"),
+
+  fields: z.array(z.string()).optional().describe("Only return the listed fields (smaller responses). Tasks: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, dropDate, effectiveDropDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule, modificationDate, creationDate. Projects: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completionDate, dropDate, effectiveDropDate, completedByChildren, containsSingletonActions, taskCount, tasks, nextReviewDate, reviewInterval, modificationDate, creationDate. Folders: id, name, path, parentFolderID, status, projectCount, projects, subfolders"),
+
+  limit: z.number().optional().describe("Max items to return"),
+
+  sortBy: z.string().optional().describe("name, dueDate, deferDate, modificationDate, creationDate, estimatedMinutes, or taskStatus"),
+
+  sortOrder: z.enum(['asc', 'desc']).optional().describe("Default: asc"),
+
+  includeCompleted: z.boolean().optional().describe("Include completed/dropped items (default: false)"),
+
+  summary: z.boolean().optional().describe("Return only the match count")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {

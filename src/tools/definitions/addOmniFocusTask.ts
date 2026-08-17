@@ -3,20 +3,20 @@ import { addOmniFocusTask, AddOmniFocusTaskParams } from '../primitives/addOmniF
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  name: z.string().describe("The name of the task"),
-  note: z.string().optional().describe("Additional notes for the task"),
-  dueDate: z.string().optional().describe("The due date of the task in ISO format (YYYY-MM-DD or full ISO date)"),
-  deferDate: z.string().optional().describe("The defer date of the task in ISO format (YYYY-MM-DD or full ISO date)"),
-  plannedDate: z.string().optional().describe("The planned date of the task in ISO format (YYYY-MM-DD or full ISO date) - indicates intention to work on this task on this date"),
-  flagged: z.boolean().optional().describe("Whether the task is flagged or not"),
-  estimatedMinutes: z.number().optional().describe("Estimated time to complete the task, in minutes"),
-  tags: z.array(z.string()).optional().describe("Tags to assign to the task"),
-  projectId: z.string().optional().describe("The id of the project to add the task to (preferred when the project name is ambiguous — e.g. multiple 'Single Actions' projects across folders). Obtain via query_omnifocus. Takes precedence over projectName when both are supplied."),
-  projectName: z.string().optional().describe("The name or folder path of the project to add the task to (e.g. 'My Project' or 'Work/My Project' to disambiguate by folder). Will add to inbox if not specified. Used when projectId is not supplied; for ambiguous names, prefer projectId. This places a NEWLY created task; to move a task that already exists into a project, use edit_item with newProjectName instead of creating a new task here."),
+  name: z.string().describe("Task name"),
+  note: z.string().optional().describe("Task note"),
+  dueDate: z.string().optional().describe("Due date (YYYY-MM-DD or full ISO)"),
+  deferDate: z.string().optional().describe("Defer date (YYYY-MM-DD or full ISO)"),
+  plannedDate: z.string().optional().describe("Planned date — the day you intend to work on it (YYYY-MM-DD or full ISO)"),
+  flagged: z.boolean().optional().describe("Flag the task"),
+  estimatedMinutes: z.number().optional().describe("Time estimate in minutes"),
+  tags: z.array(z.string()).optional().describe("Tag names to assign"),
+  projectId: z.string().optional().describe("Project id to place the task in; takes precedence over projectName. Prefer when names are ambiguous"),
+  projectName: z.string().optional().describe("Project name or folder path ('Work/My Project') to place the task in; defaults to inbox. To move an EXISTING task, use edit_item with newProjectName instead of creating a duplicate here"),
   // Hierarchy support
-  parentTaskId: z.string().optional().describe("ID of the parent task (preferred for accuracy)"),
-  parentTaskName: z.string().optional().describe("Name of the parent task (used if ID not provided; matched within project or globally if no project)"),
-  hierarchyLevel: z.number().int().min(0).optional().describe("Explicit level indicator for ordering in batch workflows (0=root) - ignored in single add")
+  parentTaskId: z.string().optional().describe("Parent task id (preferred over name)"),
+  parentTaskName: z.string().optional().describe("Parent task name; matched within the project if one is given"),
+  hierarchyLevel: z.number().int().min(0).optional().describe("Ordering hint for batch workflows (0 = root); ignored in single add")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
