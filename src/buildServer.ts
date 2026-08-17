@@ -3,6 +3,7 @@ import { SetLevelRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from './utils/logger.js';
 import { setScriptLogger } from './utils/scriptExecution.js';
 import { registerResources } from './resources/index.js';
+import { withUpgradeNudge } from './daemon/upgradeNudge.js';
 
 // Import tool definitions
 import * as dumpDatabaseTool from './tools/definitions/dumpDatabase.js';
@@ -102,84 +103,84 @@ export function createOmniFocusServer(): BuiltServer {
     "dump_database",
     "Gets the current state of your OmniFocus database",
     dumpDatabaseTool.schema.shape,
-    dumpDatabaseTool.handler
+    withUpgradeNudge(dumpDatabaseTool.handler)
   );
 
   server.tool(
     "add_omnifocus_task",
     "Create a NEW task. If a matching task already exists (e.g. in the Inbox), do NOT create a duplicate — MOVE it with edit_item + newProjectName. When unsure, check with query_omnifocus first.",
     addOmniFocusTaskTool.schema.shape,
-    addOmniFocusTaskTool.handler
+    withUpgradeNudge(addOmniFocusTaskTool.handler)
   );
 
   server.tool(
     "add_project",
     "Add a new project to OmniFocus",
     addProjectTool.schema.shape,
-    addProjectTool.handler
+    withUpgradeNudge(addProjectTool.handler)
   );
 
   server.tool(
     "remove_item",
     "Remove a task or project from OmniFocus",
     removeItemTool.schema.shape,
-    removeItemTool.handler
+    withUpgradeNudge(removeItemTool.handler)
   );
 
   server.tool(
     "edit_item",
     "Edit an existing task or project. Also how you MOVE a task: set newProjectName (or \"\" / \"inbox\"). Prefer moving an existing task over re-creating it — never make duplicates.",
     editItemTool.schema.shape,
-    editItemTool.handler
+    withUpgradeNudge(editItemTool.handler)
   );
 
   server.tool(
     "batch_add_items",
     "Add multiple tasks or projects to OmniFocus in a single operation",
     batchAddItemsTool.schema.shape,
-    batchAddItemsTool.handler
+    withUpgradeNudge(batchAddItemsTool.handler)
   );
 
   server.tool(
     "batch_remove_items",
     "Remove multiple tasks or projects from OmniFocus in a single operation",
     batchRemoveItemsTool.schema.shape,
-    batchRemoveItemsTool.handler
+    withUpgradeNudge(batchRemoveItemsTool.handler)
   );
 
   server.tool(
     "query_omnifocus",
     "Query tasks, projects, or folders with filters (project, folder, tags, status, dates). Much faster and lighter than dump_database for targeted lookups.",
     queryOmniFocusTool.schema.shape,
-    queryOmniFocusTool.handler
+    withUpgradeNudge(queryOmniFocusTool.handler)
   );
 
   server.tool(
     "list_perspectives",
     "List built-in and custom perspectives (custom is a Pro feature)",
     listPerspectivesTool.schema.shape,
-    listPerspectivesTool.handler
+    withUpgradeNudge(listPerspectivesTool.handler)
   );
 
   server.tool(
     "get_perspective_view",
     "Get the items visible in a named OmniFocus perspective",
     getPerspectiveViewTool.schema.shape,
-    getPerspectiveViewTool.handler
+    withUpgradeNudge(getPerspectiveViewTool.handler)
   );
 
   server.tool(
     "list_tags",
     "List all tags with their hierarchy",
     listTagsTool.schema.shape,
-    listTagsTool.handler
+    withUpgradeNudge(listTagsTool.handler)
   );
 
   server.tool(
     "create_tag",
     "Create a new tag in OmniFocus, optionally nested under an existing parent tag",
     createTagTool.schema.shape,
-    createTagTool.handler
+    withUpgradeNudge(createTagTool.handler)
   );
 
   return { server, logger };
