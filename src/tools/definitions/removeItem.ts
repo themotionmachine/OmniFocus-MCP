@@ -42,10 +42,14 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       // Item was removed successfully
       const itemTypeLabel = args.itemType === 'task' ? 'Task' : 'Project';
       
+      // Echo the id (#104): confirms exactly which item was deleted, which
+      // matters most on the name-fallback path.
+      const idText = result.id ? ` (id: ${result.id})` : '';
+
       return {
         content: [{
           type: "text" as const,
-          text: `✅ ${itemTypeLabel} "${result.name}" removed successfully.`
+          text: `✅ ${itemTypeLabel} "${result.name}" removed successfully${idText}.`
         }]
       };
     } else {

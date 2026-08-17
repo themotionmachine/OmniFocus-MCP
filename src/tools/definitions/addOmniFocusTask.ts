@@ -61,10 +61,14 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         placementWarning = `\n⚠️ Parent not found; task created ${placement === 'project' ? 'in project' : 'in inbox'}.`;
       }
 
+      // Echo the id (#104): without it, agents re-query immediately after every
+      // write just to harvest the id for the follow-up edit.
+      const idText = result.taskId ? ` (id: ${result.taskId})` : '';
+
       return {
         content: [{
           type: "text" as const,
-          text: `✅ Task "${args.name}" created successfully ${locationText}${dueDateText}${tagText}.${placementWarning}`
+          text: `✅ Task "${args.name}" created successfully ${locationText}${dueDateText}${tagText}${idText}.${placementWarning}`
         }]
       };
     } else {
