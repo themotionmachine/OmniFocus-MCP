@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { editItem, EditItemParams } from '../primitives/editItem.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { repeatShape } from './repeatSchema.js';
 
 export const schema = z.object({
   id: z.string().optional().describe("Item id (takes precedence over name)"),
@@ -15,6 +16,7 @@ export const schema = z.object({
   newPlannedDate: z.string().optional().describe("New planned date (ISO; \"\" clears; tasks only)"),
   newFlagged: z.boolean().optional().describe("Set flagged status"),
   newEstimatedMinutes: z.number().optional().describe("New time estimate in minutes"),
+  newRepeat: repeatShape.nullable().optional().describe("New repetition rule; null clears it"),
 
   // Task-specific fields
   newStatus: z.enum(['incomplete', 'completed', 'dropped', 'skipped']).optional().describe("New task status. 'skipped' (repeating tasks only) completes the occurrence to trigger the next repeat, then drops the instance"),

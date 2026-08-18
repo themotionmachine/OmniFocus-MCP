@@ -1,5 +1,6 @@
 import { addOmniFocusTask, AddOmniFocusTaskParams } from './addOmniFocusTask.js';
 import { addProject, AddProjectParams } from './addProject.js';
+import type { RepetitionSpec } from '../../utils/repetitionRule.js';
 
 // Define the parameters for the batch operation
 export type BatchAddItemsParams = {
@@ -22,6 +23,7 @@ export type BatchAddItemsParams = {
   hierarchyLevel?: number;
   folderName?: string; // For projects
   sequential?: boolean; // For projects
+  repeat?: RepetitionSpec; // Repetition rule, tasks and projects alike (#116)
 };
 
 // Define the result type for individual operations
@@ -135,7 +137,8 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
               estimatedMinutes: item.estimatedMinutes,
               tags: item.tags,
               folderName: item.folderName,
-              sequential: item.sequential
+              sequential: item.sequential,
+              repeat: item.repeat
             };
 
             const projectResult = await addProject(projectParams);
@@ -188,7 +191,8 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
             projectName,
             parentTaskId,
             parentTaskName: item.parentTaskName,
-            hierarchyLevel: item.hierarchyLevel
+            hierarchyLevel: item.hierarchyLevel,
+            repeat: item.repeat
           };
 
           const taskResult = await addOmniFocusTask(taskParams);
