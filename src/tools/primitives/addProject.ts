@@ -8,6 +8,7 @@ import {
   generateFolderLookupScript,
   JSON_ESCAPE_HANDLER,
 } from '../../utils/appleScriptHelpers.js';
+import { repetitionRuleRecord, type RepetitionSpec } from '../../utils/repetitionRule.js';
 import { runOsascriptFile } from '../../utils/scriptExecution.js';
 
 // Interface for project creation parameters
@@ -21,6 +22,7 @@ export interface AddProjectParams {
   tags?: string[]; // Tag names
   folderName?: string; // Folder name or path (e.g. "Work/Engineering") to add project to
   sequential?: boolean; // Whether tasks should be sequential or parallel
+  repeat?: RepetitionSpec; // Repetition rule (#116)
 }
 
 /**
@@ -88,6 +90,10 @@ export function generateAppleScript(params: AddProjectParams): string {
         ${flagged ? `set flagged of newProject to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newProject to ${estimatedMinutes}` : ''}
         ${`set sequential of newProject to ${sequential}`}
+        ${params.repeat ? `
+          -- Set the repetition rule (#116). Whole-record assignment only; see
+          -- the note in addOmniFocusTask.
+          set repetition rule of newProject to ${repetitionRuleRecord(params.repeat)}` : ''}
 
         -- Get the project ID
         set projectId to id of newProject as string

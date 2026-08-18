@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { addOmniFocusTask, AddOmniFocusTaskParams } from '../primitives/addOmniFocusTask.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { repeatShape } from './repeatSchema.js';
 
 export const schema = z.object({
   name: z.string().describe("Task name"),
@@ -16,7 +17,8 @@ export const schema = z.object({
   // Hierarchy support
   parentTaskId: z.string().optional().describe("Parent task id (preferred over name)"),
   parentTaskName: z.string().optional().describe("Parent task name; matched within the project if one is given"),
-  hierarchyLevel: z.number().int().min(0).optional().describe("Ordering hint for batch workflows (0 = root); ignored in single add")
+  hierarchyLevel: z.number().int().min(0).optional().describe("Ordering hint for batch workflows (0 = root); ignored in single add"),
+  repeat: repeatShape.optional()
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {

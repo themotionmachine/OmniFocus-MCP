@@ -10,6 +10,7 @@ import {
   generateProjectLookupScript,
   JSON_ESCAPE_HANDLER,
 } from '../../utils/appleScriptHelpers.js';
+import { repetitionRuleRecord, type RepetitionSpec } from '../../utils/repetitionRule.js';
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped' | 'skipped';
@@ -29,6 +30,7 @@ export interface EditItemParams {
   newPlannedDate?: string;      // New planned date in ISO format (empty string to clear, tasks only)
   newFlagged?: boolean;         // New flagged status (false to remove flag, true to add flag)
   newEstimatedMinutes?: number; // New estimated minutes
+  newRepeat?: RepetitionSpec | null; // New repetition rule; null clears it (#116)
   
   // Task-specific fields
   newStatus?: TaskStatus;       // New status for tasks (incomplete, completed, dropped, skipped - skipped requires repeating task)
@@ -229,7 +231,29 @@ export function generateAppleScript(params: EditItemParams): string {
         set end of changedProperties to "estimated minutes"
 `;
   }
-  
+
+  // Repetition rule (#116). `null` clears — chosen over the dates' empty-string
+  // convention because the value is an object, so there is no empty form of it.
+  // Applies to tasks and projects alike; both can repeat.
+  if (params.newRepeat !== undefined) {
+    if (params.newRepeat === null) {
+      script += `
+        -- Clear the repetition rule
+        set repetition rule of foundItem to missing value
+        set end of changedProperties to "repetition (cleared)"
+`;
+    } else {
+      script += `
+        -- Update the repetition rule. Whole-record assignment only: setting
+        -- \`recurrence\` or \`repetition method\` as sub-properties fails with
+        -- "Can't make … into type specifier".
+        set repetition rule of foundItem to ${repetitionRuleRecord(params.newRepeat)}
+        set end of changedProperties to "repetition"
+`;
+    }
+  }
+
+
   // Tag operations apply to both tasks and projects (OmniFocus supports tags on
   // projects too). Kept in the common section so project edits aren't a no-op.
   if (params.replaceTags && params.replaceTags.length > 0) {

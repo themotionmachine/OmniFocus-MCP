@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { addProject, AddProjectParams } from '../primitives/addProject.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { repeatShape } from './repeatSchema.js';
 
 export const schema = z.object({
   name: z.string().describe("Project name"),
@@ -11,7 +12,8 @@ export const schema = z.object({
   estimatedMinutes: z.number().optional().describe("Time estimate in minutes"),
   tags: z.array(z.string()).optional().describe("Tag names to assign"),
   folderName: z.string().optional().describe("Folder to place the project in (root if omitted)"),
-  sequential: z.boolean().optional().describe("Make tasks sequential (default: false)")
+  sequential: z.boolean().optional().describe("Make tasks sequential (default: false)"),
+  repeat: repeatShape.optional()
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
