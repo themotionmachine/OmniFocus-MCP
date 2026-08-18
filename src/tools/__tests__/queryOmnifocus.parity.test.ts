@@ -324,3 +324,48 @@ describe('folderName filter seeding (#107)', () => {
     expect(script).not.toContain('_folderIdSet');
   });
 });
+
+/**
+ * Repetition readback (#115): the field used to emit `.toString()`, which for
+ * Task.RepetitionRule is the literal "[object Task.RepetitionRule]" — the
+ * wrapper, never the rule. An agent could see THAT a task repeats and never HOW.
+ */
+describe('repetition rule readback (#115)', () => {
+  it('repetitionRule reads ruleString, not toString()', () => {
+    const mapping = generateFieldMapping('tasks', ['repetitionRule']);
+    expect(mapping).toContain('item.repetitionRule.ruleString');
+    expect(mapping).not.toContain('repetitionRule.toString()');
+  });
+
+  it('repetitionMethod strips the Task.RepetitionMethod wrapper', () => {
+    const mapping = generateFieldMapping('tasks', ['repetitionMethod']);
+    expect(mapping).toContain('item.repetitionRule.method');
+    expect(mapping).toContain('RepetitionMethod');
+    expect(mapping).toContain('replace(');
+  });
+
+  it('both fields yield null for a non-repeating item rather than throwing', () => {
+    for (const field of ['repetitionRule', 'repetitionMethod']) {
+      const mapping = generateFieldMapping('tasks', [field]);
+      expect(mapping, field).toContain('item.repetitionRule ?');
+      expect(mapping, field).toContain(': null');
+    }
+  });
+
+  it('repetitionMethod does not fall through to the generic item.<field> mapping', () => {
+    // The generic branch would emit `repetitionMethod: item.repetitionMethod`,
+    // which is undefined on both Task and Project — silently null forever.
+    const mapping = generateFieldMapping('tasks', ['repetitionMethod']);
+    expect(mapping).not.toContain('item.repetitionMethod');
+  });
+
+  it('isRepeating still reports presence independently of the rule text', () => {
+    const mapping = generateFieldMapping('tasks', ['isRepeating']);
+    expect(mapping).toContain('item.repetitionRule !== null');
+  });
+
+  it('projects expose the same repetition fields (they can repeat too)', () => {
+    expect(generateFieldMapping('projects', ['repetitionRule'])).toContain('ruleString');
+    expect(generateFieldMapping('projects', ['repetitionMethod'])).toContain('RepetitionMethod');
+  });
+});

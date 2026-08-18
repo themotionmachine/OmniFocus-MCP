@@ -45,6 +45,20 @@ const FOLDER_PATH_EXPR =
 // dump_database reported the hierarchy while query_omnifocus flattened it.
 const FOLDER_PARENT_ID_EXPR = 'item.parent ? item.parent.id.primaryKey : null';
 
+/**
+ * Repetition rule readback (issue #115).
+ *
+ * `Task.RepetitionRule` has no useful `toString()` — it renders as the literal
+ * "[object Task.RepetitionRule]", which is what this field emitted before,
+ * telling the caller nothing about the rule. The real data is on two
+ * properties: the ICS recurrence string, and a method constant that
+ * stringifies as "[object Task.RepetitionMethod: DeferUntilDate]". Strip the
+ * wrapper so callers get a bare name they can compare and round-trip.
+ */
+const REPETITION_RULE_EXPR = 'item.repetitionRule ? item.repetitionRule.ruleString : null';
+const REPETITION_METHOD_EXPR =
+  'item.repetitionRule ? String(item.repetitionRule.method).replace(/^\\[object Task\\.RepetitionMethod: |\\]$/g, "") : null';
+
 export interface QueryOmnifocusParams {
   entity: 'tasks' | 'projects' | 'folders';
   filters?: {
@@ -793,7 +807,9 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
     } else if (field === 'isRepeating') {
       return `isRepeating: item.repetitionRule !== null`;
     } else if (field === 'repetitionRule') {
-      return `repetitionRule: item.repetitionRule ? item.repetitionRule.toString() : null`;
+      return `repetitionRule: ${REPETITION_RULE_EXPR}`;
+    } else if (field === 'repetitionMethod') {
+      return `repetitionMethod: ${REPETITION_METHOD_EXPR}`;
     } else if (field === 'sequential') {
       // Both Task and Project expose a `sequential` Boolean in OmniJS. Coerce so an
       // unexpected null/undefined surfaces as false rather than leaking through.
