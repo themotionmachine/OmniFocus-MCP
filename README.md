@@ -121,6 +121,7 @@ Create a new task.
 - `projectName` *(optional)*: project to add the task to (defaults to inbox)
 - `parentTaskId` / `parentTaskName` *(optional)*: nest under an existing task
 - `note`, `dueDate`, `deferDate`, `plannedDate`, `flagged`, `estimatedMinutes`, `tags` *(all optional)*
+- `repeat` *(optional)*: make it recurring — see [Repeating items](#repeating-items)
 
 ### `add_project`
 
@@ -129,7 +130,7 @@ Create a new project.
 - `name`
 - `folderName` *(optional)*: folder to place the project in
 - `sequential` *(optional)*: whether tasks must be completed in order
-- `note`, `dueDate`, `deferDate`, `flagged`, `estimatedMinutes`, `tags` *(all optional)*
+- `note`, `dueDate`, `deferDate`, `flagged`, `estimatedMinutes`, `tags`, `repeat` *(all optional)*
 
 ### `edit_item`
 
@@ -140,6 +141,7 @@ Edit an existing task or project. Also the way to **move** items — set `newPro
 - Common: `newName`, `newNote`, `newDueDate`, `newDeferDate`, `newFlagged`, `newEstimatedMinutes` (dates in ISO format; empty string clears)
 - Tasks: `newStatus` (`incomplete`, `completed`, `dropped`, `skipped` — skipped only for repeating tasks), `addTags`, `removeTags`, `replaceTags`, `newProjectName`, `newPlannedDate`
 - Projects: `newProjectStatus` (`active`, `completed`, `dropped`, `onHold`), `newFolderName`, `newSequential`, `markReviewed` (sets the next review date based on the project's review interval)
+- Repetition: `newRepeat` sets a new rule (same shape as `repeat` on create); `newRepeat: null` clears it
 
 ### `remove_item`
 
@@ -195,6 +197,28 @@ Create a tag, optionally nested under an existing parent.
 
 - `name`
 - `parentTagName` / `parentTagID` *(optional; ID takes precedence)*
+
+### Repeating items
+
+`add_omnifocus_task`, `add_project`, and each item in `batch_add_items` accept a `repeat` object; `edit_item` accepts `newRepeat`. You describe the schedule and the server compiles the ICS recurrence rule, so you never hand-write an RRULE.
+
+| Field | Description |
+|---|---|
+| `method` | `start-after-completion` (counts from when it's actually done), `fixed` (counts from the calendar regardless), or `due-after-completion` |
+| `unit` | `day`, `week`, `month`, or `year` |
+| `steps` *(optional)* | Repeat every N units (default 1) |
+| `weekdays` *(optional)* | Specific days, e.g. `["MO","WE","FR"]`. Requires `unit: "week"` |
+
+```json
+{ "name": "Weekly review", "repeat": { "method": "start-after-completion", "unit": "week" } }
+{ "name": "Strength work", "repeat": { "method": "fixed", "unit": "week", "weekdays": ["TU","TH"] } }
+```
+
+**Pick `method` deliberately** — it's the field most often set wrong by hand. With `fixed`, occurrences appear on schedule whether or not the last one was done, so a missed week leaves a backlog to clear. With `start-after-completion`, the next occurrence is scheduled from when you actually complete it, so the habit simply resumes.
+
+Read a rule back with `query_omnifocus` using the `repetitionRule` (ICS string) and `repetitionMethod` fields, or filter with `isRepeating`.
+
+Not currently supported: positional monthly rules ("third Tuesday"), specific month days, and end conditions (`COUNT`/`UNTIL`). Set those in OmniFocus directly.
 
 ## Resources
 

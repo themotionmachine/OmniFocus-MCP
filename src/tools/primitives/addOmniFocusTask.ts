@@ -9,6 +9,7 @@ import {
   generateProjectLookupScript,
   JSON_ESCAPE_HANDLER,
 } from '../../utils/appleScriptHelpers.js';
+import { repetitionRuleRecord, type RepetitionSpec } from '../../utils/repetitionRule.js';
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -22,6 +23,7 @@ export interface AddOmniFocusTaskParams {
   tags?: string[]; // Tag names
   projectId?: string; // Project id to add task to (preferred when disambiguation is needed)
   projectName?: string; // Project name to add task to (used when projectId is not supplied)
+  repeat?: RepetitionSpec; // Repetition rule (#116)
   // Hierarchy support
   parentTaskId?: string;
   parentTaskName?: string;
@@ -171,6 +173,11 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
           set planned date of newTask to ` + plannedDateVar : ''}
         ${flagged ? `set flagged of newTask to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newTask to ${estimatedMinutes}` : ''}
+        ${params.repeat ? `
+          -- Set the repetition rule (#116). Assigned as a whole record: setting
+          -- \`recurrence\` or \`repetition method\` as sub-properties fails with
+          -- "Can't make … into type specifier".
+          set repetition rule of newTask to ${repetitionRuleRecord(params.repeat)}` : ''}
         
         -- Derive placement from container; distinguish real parent vs project root task
         try
