@@ -39,7 +39,7 @@ export const schema = z.object({
     reviewDue: z.boolean().optional().describe("true = projects due for review (projects only)")
   }).optional().describe("Filters AND together; array filters (tags, status) OR within the array. Date-valued filters (dueWithin, deferredUntil, plannedWithin, dueOn, deferOn, plannedOn) accept a number of days from today, 'today', 'tomorrow', 'this week', 'next week', or 'YYYY-MM-DD'"),
 
-  fields: z.array(z.string()).optional().describe("Only return the listed fields (smaller responses). Tasks: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, dropDate, effectiveDropDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule, modificationDate, creationDate. Projects: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completionDate, dropDate, effectiveDropDate, completedByChildren, containsSingletonActions, taskCount, tasks, nextReviewDate, reviewInterval, modificationDate, creationDate. Folders: id, name, path, parentFolderID, status, projectCount, projects, subfolders"),
+  fields: z.array(z.string()).optional().describe("Only return the listed fields (smaller responses). Tasks: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, dropDate, effectiveDropDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule (ICS, e.g. FREQ=WEEKLY;INTERVAL=2), repetitionMethod (Fixed | DeferUntilDate | DueDate), modificationDate, creationDate. Projects: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completionDate, dropDate, effectiveDropDate, completedByChildren, containsSingletonActions, taskCount, tasks, nextReviewDate, reviewInterval, modificationDate, creationDate. Folders: id, name, path, parentFolderID, status, projectCount, projects, subfolders"),
 
   limit: z.number().optional().describe("Max items to return"),
 
@@ -200,9 +200,16 @@ function formatTasks(tasks: any[]): string {
       parts.push(task.isRepeating ? '[repeating]' : '[not repeating]');
     }
     
-    // Repetition rule
+    // Repetition rule. Before #115 this rendered the literal string
+    // "[object Task.RepetitionRule]"; it now carries the ICS rule, and the
+    // method rides alongside it because "every 2 weeks" means something
+    // different depending on whether it counts from the calendar or from
+    // completion.
     if (task.repetitionRule) {
-      parts.push(`[rule: ${task.repetitionRule}]`);
+      const method = task.repetitionMethod ? ` ${task.repetitionMethod}` : '';
+      parts.push(`[rule: ${task.repetitionRule}${method}]`);
+    } else if (task.repetitionMethod) {
+      parts.push(`[rule method: ${task.repetitionMethod}]`);
     }
 
     // Hierarchy info
