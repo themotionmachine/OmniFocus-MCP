@@ -60,20 +60,124 @@ export class Semaphore {
 const osascriptSemaphore = new Semaphore(MAX_CONCURRENT_OSASCRIPT);
 
 /**
- * A -1712 AppleEvent timeout, or a Node-level kill of a stuck osascript, is
- * transient contention and safe to retry for reads. Genuine script errors are
- * not (and must not be retried).
+ * Classify an osascript failure (issue #121).
+ *
+ * These two cases look similar and are opposite signals:
+ *
+ * - `app-timeout` — the app ANSWERED, with `-1712`. It is alive and contended.
+ *   Retrying is reasonable.
+ * - `client-kill` — our own Node timeout SIGTERMed the child because the app
+ *   never answered at all. The app is wedged, and a process sample of a wedged
+ *   OmniFocus shows why retrying is actively harmful: every osascript we kill
+ *   leaves a `receiveFrom-<pid>` AppleEvent dispatch queue inside the app,
+ *   blocked forever on ownership it will never get. Eight such orphaned queues
+ *   were counted in one snapshot — four from a concurrency burst, four from
+ *   retries. Nothing on our side can release them; only killing the app can.
+ *
+ * Our timeout (60s) is shorter than the AppleEvent default (~120s), so the kill
+ * fires first in practice — which made `client-kill` the dominant case on the
+ * retry path it is least safe for.
+ */
+export type OsascriptFailureClass = 'app-timeout' | 'client-kill' | 'other';
+
+export function classifyOsascriptError(err: unknown): OsascriptFailureClass {
+  const e = err as { message?: string; stderr?: string; killed?: boolean; signal?: string };
+  if (e?.killed === true || e?.signal === 'SIGTERM') return 'client-kill';
+  const text = `${e?.message ?? ''} ${e?.stderr ?? ''}`;
+  if (text.includes('-1712') || text.includes('AppleEvent timed out') || text.includes('timed out')) {
+    return 'app-timeout';
+  }
+  return 'other';
+}
+
+/**
+ * The union of both transient classes.
+ *
+ * Retained for callers that just want "was this transient?", but do NOT use it
+ * as a retry gate: retrying a `client-kill` is what amplifies a wedge (#121).
+ * Gate on `classifyOsascriptError(err) === 'app-timeout'` instead.
  */
 export function isRetryableOsascriptError(err: unknown): boolean {
-  const e = err as { message?: string; stderr?: string; killed?: boolean; signal?: string };
-  const text = `${e?.message ?? ''} ${e?.stderr ?? ''}`;
-  return (
-    e?.killed === true ||
-    e?.signal === 'SIGTERM' ||
-    text.includes('-1712') ||
-    text.includes('AppleEvent timed out') ||
-    text.includes('timed out')
-  );
+  return classifyOsascriptError(err) !== 'other';
+}
+
+// --- app health circuit breaker (issue #121) ----------------------------------
+// Once the app has failed to answer at all, further dispatches make things
+// strictly worse. Hold that state process-wide so queued queries fail fast
+// instead of each burning a full timeout (and each leaving another orphaned
+// queue) against a target already known to be dead.
+
+const UNRESPONSIVE_COOLDOWN_MS = resolvePositiveIntEnv(
+  'OMNIFOCUS_MCP_UNRESPONSIVE_COOLDOWN_MS',
+  30_000
+);
+const PROBE_TIMEOUT_MS = resolvePositiveIntEnv('OMNIFOCUS_MCP_PROBE_TIMEOUT_MS', 5_000);
+
+export class AppUnresponsiveError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AppUnresponsiveError';
+  }
+}
+
+const UNRESPONSIVE_MESSAGE =
+  'OmniFocus is not responding to AppleEvents. Requests are paused to avoid making it worse. ' +
+  'If this persists, quit every omnifocus-mcp process and then restart OmniFocus (in that order).';
+
+let unresponsiveSince: number | null = null;
+
+/** Test hook: clear the breaker. */
+export function _resetAppHealth(): void {
+  unresponsiveSince = null;
+}
+
+export function markAppUnresponsive(now: number = Date.now()): void {
+  if (unresponsiveSince === null) {
+    _logger?.error(
+      'scriptExecution',
+      'OmniFocus did not answer before the timeout; pausing dispatch (issue #121).'
+    );
+  }
+  unresponsiveSince = now;
+}
+
+export function markAppResponsive(): void {
+  if (unresponsiveSince !== null) {
+    _logger?.info('scriptExecution', 'OmniFocus is answering again; resuming dispatch.');
+  }
+  unresponsiveSince = null;
+}
+
+/** True while the breaker is open and still inside its cooldown. */
+export function isAppKnownUnresponsive(now: number = Date.now()): boolean {
+  return unresponsiveSince !== null && now - unresponsiveSince < UNRESPONSIVE_COOLDOWN_MS;
+}
+
+/** True when the breaker is open but the cooldown has elapsed — probe once. */
+export function shouldProbeAppHealth(now: number = Date.now()): boolean {
+  return unresponsiveSince !== null && now - unresponsiveSince >= UNRESPONSIVE_COOLDOWN_MS;
+}
+
+/**
+ * One cheap AppleEvent with a short timeout, used to decide whether the app has
+ * recovered. Deliberately does NOT go through the semaphore: if wedged queries
+ * are holding every slot, the probe must still be able to run. It is also the
+ * only thing we send while the breaker is open, so at most one transaction per
+ * cooldown is risked against a possibly-wedged app.
+ */
+export async function probeOmniFocusAlive(
+  execFn: (cmd: string, opts: any) => Promise<unknown> = execAsync as any,
+  timeoutMs: number = PROBE_TIMEOUT_MS
+): Promise<boolean> {
+  try {
+    await execFn(
+      `osascript -e 'tell application "OmniFocus" to get name of default document'`,
+      { timeout: timeoutMs, killSignal: 'SIGTERM', maxBuffer: 64 * 1024 }
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -90,7 +194,9 @@ export async function withOsascriptRetry<T>(
     sleepFn?: (ms: number) => Promise<void>;
   }
 ): Promise<T> {
-  const backoffs = opts.backoffsMs ?? [500, 1500];
+  // Backoffs lengthened from [500, 1500] (#121): sub-2s gaps gave a contended
+  // app no room to drain before the next full query landed on it.
+  const backoffs = opts.backoffsMs ?? [2000, 6000];
   const doSleep = opts.sleepFn ?? sleep;
   let i = 0;
   for (;;) {
@@ -131,13 +237,49 @@ export async function runOsascriptFile(
   const langFlag = language === 'JavaScript' ? '-l JavaScript ' : '';
   const cmd = `osascript ${langFlag}"${tempFile}"`;
 
+  // Circuit breaker (#121). While the app is known unresponsive, dispatch
+  // nothing at all — every osascript we send and then kill leaves a permanently
+  // blocked AppleEvent queue inside the app. Failing fast here is not just
+  // faster, it avoids inflicting further damage.
+  if (isAppKnownUnresponsive()) {
+    throw new AppUnresponsiveError(UNRESPONSIVE_MESSAGE);
+  }
+  if (shouldProbeAppHealth()) {
+    if (await probeOmniFocusAlive()) {
+      markAppResponsive();
+    } else {
+      markAppUnresponsive();
+      throw new AppUnresponsiveError(UNRESPONSIVE_MESSAGE);
+    }
+  }
+
   const attempt = () =>
     osascriptSemaphore.run(() =>
       execAsync(cmd, { maxBuffer, timeout: timeoutMs, killSignal: 'SIGTERM' })
     );
 
-  if (!retryOnTimeout) return attempt();
-  return withOsascriptRetry(attempt, { shouldRetry: isRetryableOsascriptError });
+  // A client-kill means the app never answered. Do not retry it — trip the
+  // breaker and surface an honest error instead. Only an app-reported timeout
+  // (-1712), which proves the app is alive and merely contended, is retried.
+  const run = async (): Promise<{ stdout: string; stderr: string }> => {
+    try {
+      const out = retryOnTimeout
+        ? await withOsascriptRetry(attempt, {
+            shouldRetry: (err) => classifyOsascriptError(err) === 'app-timeout',
+          })
+        : await attempt();
+      markAppResponsive();
+      return out;
+    } catch (err) {
+      if (classifyOsascriptError(err) === 'client-kill') {
+        markAppUnresponsive();
+        throw new AppUnresponsiveError(UNRESPONSIVE_MESSAGE);
+      }
+      throw err;
+    }
+  };
+
+  return run();
 }
 
 // Helper function to execute OmniFocus scripts
