@@ -1,8 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   Semaphore,
   isRetryableOsascriptError,
+  classifyOsascriptError,
   withOsascriptRetry,
+  markAppUnresponsive,
+  markAppResponsive,
+  isAppKnownUnresponsive,
+  shouldProbeAppHealth,
+  probeOmniFocusAlive,
+  _resetAppHealth,
 } from './scriptExecution.js';
 
 describe('Semaphore', () => {
@@ -110,5 +117,143 @@ describe('withOsascriptRetry', () => {
     ).rejects.toMatchObject({ message: '-1712' });
     // initial try + 2 backoff retries = 3 attempts
     expect(attempt).toHaveBeenCalledTimes(3);
+  });
+});
+
+/**
+ * Issue #121: retrying a client-kill replays a full query into an app that
+ * never answered, and every killed osascript leaves a permanently blocked
+ * AppleEvent queue inside OmniFocus (eight were counted in one process sample).
+ * The retry policy must distinguish "app answered, busy" from "app is gone".
+ */
+describe('classifyOsascriptError (#121)', () => {
+  it('classifies an app-reported timeout as app-timeout — the app answered', () => {
+    expect(classifyOsascriptError({ message: 'AppleEvent timed out (-1712)' })).toBe('app-timeout');
+    expect(classifyOsascriptError({ stderr: 'execution error: -1712' })).toBe('app-timeout');
+  });
+
+  it('classifies our own kill as client-kill — the app never answered', () => {
+    expect(classifyOsascriptError({ killed: true })).toBe('client-kill');
+    expect(classifyOsascriptError({ signal: 'SIGTERM' })).toBe('client-kill');
+  });
+
+  it('prefers client-kill when a killed process also carries timeout text', () => {
+    // execAsync sets killed AND a "timed out" message on a Node-level timeout.
+    // Reading that as app-timeout would put us straight back on the retry path
+    // this issue exists to close.
+    expect(classifyOsascriptError({ killed: true, message: 'Command failed: timed out' })).toBe(
+      'client-kill'
+    );
+  });
+
+  it('leaves genuine script errors unclassified', () => {
+    expect(classifyOsascriptError({ message: 'syntax error: Expected end of line' })).toBe('other');
+    expect(classifyOsascriptError(undefined)).toBe('other');
+  });
+
+  it('isRetryableOsascriptError remains the union of both transient classes', () => {
+    expect(isRetryableOsascriptError({ killed: true })).toBe(true);
+    expect(isRetryableOsascriptError({ message: '-1712' })).toBe(true);
+    expect(isRetryableOsascriptError({ message: 'syntax error' })).toBe(false);
+  });
+});
+
+describe('retry gating on failure class (#121)', () => {
+  const noSleep = () => Promise.resolve();
+  const gate = (err: unknown) => classifyOsascriptError(err) === 'app-timeout';
+
+  it('retries an app-reported timeout', async () => {
+    const attempt = vi.fn().mockRejectedValueOnce({ message: '-1712' }).mockResolvedValue('ok');
+    const out = await withOsascriptRetry(attempt, {
+      shouldRetry: gate,
+      backoffsMs: [1, 1],
+      sleepFn: noSleep,
+    });
+    expect(out).toBe('ok');
+    expect(attempt).toHaveBeenCalledTimes(2);
+  });
+
+  it('never retries a client-kill — one attempt only', async () => {
+    // The property this whole issue turns on: each extra attempt would leave
+    // another orphaned AppleEvent queue in the app.
+    const attempt = vi.fn().mockRejectedValue({ killed: true, signal: 'SIGTERM' });
+    await expect(
+      withOsascriptRetry(attempt, { shouldRetry: gate, backoffsMs: [1, 1], sleepFn: noSleep })
+    ).rejects.toBeDefined();
+    expect(attempt).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses backoffs long enough to let a contended app drain', async () => {
+    // [500, 1500] gave an app no room; anything under a second is not a backoff.
+    const slept: number[] = [];
+    const attempt = vi.fn().mockRejectedValue({ message: '-1712' });
+    await expect(
+      withOsascriptRetry(attempt, {
+        shouldRetry: gate,
+        sleepFn: async (ms) => { slept.push(ms); },
+      })
+    ).rejects.toBeDefined();
+    expect(slept.length).toBeGreaterThan(0);
+    expect(Math.min(...slept)).toBeGreaterThanOrEqual(1000);
+  });
+});
+
+describe('app health circuit breaker (#121)', () => {
+  beforeEach(() => _resetAppHealth());
+
+  it('starts closed', () => {
+    expect(isAppKnownUnresponsive()).toBe(false);
+    expect(shouldProbeAppHealth()).toBe(false);
+  });
+
+  it('opens on an unresponsive mark and blocks dispatch during cooldown', () => {
+    const t = 1_000_000;
+    markAppUnresponsive(t);
+    expect(isAppKnownUnresponsive(t + 1_000)).toBe(true);
+    expect(shouldProbeAppHealth(t + 1_000)).toBe(false);
+  });
+
+  it('switches from blocking to probing once the cooldown elapses', () => {
+    const t = 1_000_000;
+    markAppUnresponsive(t);
+    expect(isAppKnownUnresponsive(t + 31_000)).toBe(false);
+    expect(shouldProbeAppHealth(t + 31_000)).toBe(true);
+  });
+
+  it('closes again when the app is marked responsive', () => {
+    markAppUnresponsive(1_000_000);
+    markAppResponsive();
+    expect(isAppKnownUnresponsive(1_000_001)).toBe(false);
+    expect(shouldProbeAppHealth(1_000_001)).toBe(false);
+  });
+
+  it('is process-wide, so queued callers see one breaker rather than each probing', () => {
+    markAppUnresponsive(1_000_000);
+    const observed = [1, 2, 3].map(() => isAppKnownUnresponsive(1_000_500));
+    expect(observed).toEqual([true, true, true]);
+  });
+});
+
+describe('probeOmniFocusAlive (#121)', () => {
+  it('reports alive when the cheap AppleEvent answers', async () => {
+    const exec = vi.fn().mockResolvedValue({ stdout: 'OmniFocus', stderr: '' });
+    expect(await probeOmniFocusAlive(exec as any)).toBe(true);
+  });
+
+  it('reports dead — not throwing — when it times out', async () => {
+    const exec = vi.fn().mockRejectedValue({ killed: true });
+    expect(await probeOmniFocusAlive(exec as any)).toBe(false);
+  });
+
+  it('uses a short timeout, not the 60s query timeout', async () => {
+    const exec = vi.fn().mockResolvedValue({ stdout: '', stderr: '' });
+    await probeOmniFocusAlive(exec as any);
+    expect(exec.mock.calls[0][1].timeout).toBeLessThanOrEqual(10_000);
+  });
+
+  it('asks for something cheap rather than running a real query', async () => {
+    const exec = vi.fn().mockResolvedValue({ stdout: '', stderr: '' });
+    await probeOmniFocusAlive(exec as any);
+    expect(exec.mock.calls[0][0]).toContain('name of default document');
   });
 });
