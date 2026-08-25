@@ -8,6 +8,7 @@ import {
   escapeForJsonInAppleScript,
   generateFolderLookupScript,
   generateProjectLookupScript,
+  generateOccurrenceGuardScript,
   JSON_ESCAPE_HANDLER,
 } from '../../utils/appleScriptHelpers.js';
 import { repetitionRuleRecord, type RepetitionSpec } from '../../utils/repetitionRule.js';
@@ -44,6 +45,7 @@ export interface EditItemParams {
   newFolderName?: string;       // New folder to move the project to
   newProjectStatus?: ProjectStatus; // New status for projects
   markReviewed?: boolean;       // Mark the project as reviewed (advances next review date)
+  allowPastOccurrence?: boolean; // Opt in to mutating a completed repeat occurrence (#124)
 }
 
 /**
@@ -172,6 +174,7 @@ export function generateAppleScript(params: EditItemParams): string {
         set itemName to name of foundItem
         set itemId to id of foundItem as string
         set changedProperties to {}
+        ${params.allowPastOccurrence ? '' : generateOccurrenceGuardScript('foundItem', `{\\"success\\":false,\\"error\\":\\"This is a completed occurrence of a repeating item, not a duplicate. Mutating it can cascade through the live repeat chain. Query without includeCompleted to get the live occurrence, or pass allowPastOccurrence: true if you really mean this one.\\"}`)}
 `;
   
   // Common property updates for both tasks and projects

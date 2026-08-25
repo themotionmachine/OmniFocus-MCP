@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { resolveSocketPath, resolveLockDir, SOCKET_DIR_MODE } from './socketPath.js';
 import { tryAcquireLock } from './lock.js';
 import { resolveIdleTimeoutMinutes, installIdleTimeout } from '../utils/idleTimeout.js';
+import { SessionTracker } from './sessionReplay.js';
 
 /**
  * The client-facing half of the daemon (issue #80).
@@ -29,6 +30,8 @@ import { resolveIdleTimeoutMinutes, installIdleTimeout } from '../utils/idleTime
 /** How long to wait for a freshly spawned daemon to start accepting. */
 export const DAEMON_START_TIMEOUT_MS = 10_000;
 const CONNECT_RETRY_INTERVAL_MS = 50;
+/** How many daemon restarts one shim will transparently survive (#123). */
+const MAX_RECONNECTS = 5;
 
 export interface RunShimOptions {
   socketPath?: string;
@@ -181,21 +184,86 @@ export async function runShim(options: RunShimOptions = {}): Promise<void> {
     return;
   }
 
+  // Session state that has to survive a daemon restart (#123). Observing only —
+  // the pipe below stays byte-for-byte.
+  const session = new SessionTracker();
+  let active: Socket = socket;
+  let clientClosed = false;
+  let reconnecting = false;
+  let reconnectsLeft = MAX_RECONNECTS;
+
   // Nothing has touched stdin until now, so it is still paused and no client
   // bytes have been dropped while we were connecting.
-  process.stdin.pipe(socket);
-  socket.pipe(process.stdout);
+  process.stdin.on('data', (chunk: Buffer) => {
+    session.observeOutbound(chunk.toString('utf8'));
+    active.write(chunk);
+  });
+
+  const attachSocket = (sock: Socket): void => {
+    active = sock;
+    sock.on('data', (chunk: Buffer) => {
+      session.observeInbound(chunk.toString('utf8'));
+      process.stdout.write(chunk);
+    });
+    sock.on('close', onSocketGone);
+    sock.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code !== 'ECONNRESET' && err.code !== 'EPIPE') {
+        console.error(`[omnifocus-mcp] daemon connection error: ${err.message}`);
+      }
+      onSocketGone();
+    });
+  };
 
   const exit = (): void => {
-    socket.destroy();
+    active.destroy();
     process.exit(0);
   };
+
+  /**
+   * The daemon went away. Historically this exited, on the assumption the client
+   * would relaunch — which is false for clients that treat a stdio exit as
+   * terminal (#123). Try to rebuild the session on a new daemon instead, and only
+   * exit if that cannot be done.
+   */
+  async function onSocketGone(): Promise<void> {
+    if (clientClosed || reconnecting) return;
+    reconnecting = true;
+    try {
+      if (!session.canReplay || reconnectsLeft <= 0) {
+        exit();
+        return;
+      }
+      reconnectsLeft--;
+      let next: Socket | null = null;
+      try {
+        next = await obtainConnection(socketPath, spawnDaemon, startTimeoutMs);
+      } catch {
+        next = null;
+      }
+      if (!next) {
+        console.error('[omnifocus-mcp] daemon gone and not recoverable; exiting.');
+        exit();
+        return;
+      }
+      console.error('[omnifocus-mcp] daemon restarted; re-establishing session (#123).');
+      attachSocket(next);
+      // Rebuild server-side session state before anything else reaches it.
+      for (const line of session.replayLines()) next.write(line + '\n');
+      // Fail in-flight requests explicitly rather than letting the client hang
+      // on responses that died with the old daemon.
+      for (const line of session.orphanedResponses()) process.stdout.write(line + '\n');
+      session.clearPending();
+    } finally {
+      reconnecting = false;
+    }
+  }
 
   // A client that closes its end of the pipes is a disconnect, not a fault. With
   // no handler, node's default for an 'error' event is to rethrow, so a client
   // exiting mid-response killed the shim with an EPIPE stack trace on the way
   // out — noise that looks like a server crash and buries the real cause.
   const onPipeError = (err: NodeJS.ErrnoException): void => {
+    clientClosed = true;
     if (err.code !== 'EPIPE' && err.code !== 'ERR_STREAM_DESTROYED') {
       console.error(`[omnifocus-mcp] stdio error: ${err.message}`);
     }
@@ -204,16 +272,12 @@ export async function runShim(options: RunShimOptions = {}): Promise<void> {
   process.stdout.on('error', onPipeError);
   process.stdin.on('error', onPipeError);
 
-  socket.on('close', exit);
-  socket.on('error', (err: NodeJS.ErrnoException) => {
-    // The daemon exiting under us is not a crash — the client will relaunch.
-    if (err.code !== 'ECONNRESET' && err.code !== 'EPIPE') {
-      console.error(`[omnifocus-mcp] daemon connection error: ${err.message}`);
-    }
-    exit();
-  });
+  attachSocket(socket);
 
-  process.stdin.on('end', () => socket.end());
+  process.stdin.on('end', () => {
+    clientClosed = true;
+    active.end();
+  });
   process.on('SIGTERM', exit);
   process.on('SIGHUP', exit);
   process.on('SIGINT', exit);

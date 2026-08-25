@@ -613,3 +613,24 @@ describe('formatQueryResults - no argument echo (#106)', () => {
     );
   });
 });
+
+describe('past-occurrence marking (#124)', () => {
+  it('labels a completed repeat occurrence so it does not read as a duplicate', () => {
+    const out = formatTasks([
+      { name: 'Morning routine', id: 'abc.0', taskStatus: 'Completed', isPastOccurrence: true },
+      { name: 'Morning routine', id: 'abc', taskStatus: 'DueSoon', isPastOccurrence: false },
+    ]);
+    const [hist, live] = out.split('\n');
+    expect(hist).toContain('past occurrence');
+    expect(live).not.toContain('past occurrence');
+  });
+
+  it('labels past project occurrences too', () => {
+    const out = formatProjects([{ name: 'Daily review', id: 'p.116.43', isPastOccurrence: true }]);
+    expect(out).toContain('past occurrence');
+  });
+
+  it('says nothing when the field was not requested', () => {
+    expect(formatTasks([{ name: 'x', id: 'y' }])).not.toContain('past occurrence');
+  });
+});

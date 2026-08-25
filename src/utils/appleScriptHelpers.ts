@@ -213,3 +213,48 @@ export function generateProjectLookupScript(
           return "${errorReturnJson}"
         end if`;
 }
+
+/**
+ * AppleScript guard against mutating a completed occurrence of a repeating item
+ * (issue #124).
+ *
+ * OmniFocus 4 keeps each completed occurrence of a repeating item as its own row,
+ * carrying the same name and the same repetition rule as the live one. A query
+ * that includes completed items therefore returns rows that look like duplicates,
+ * and mutating one cascades through the live repeat chain — this produced real
+ * data loss (8 targeted drops became ~15 dropped rows, including a future
+ * occurrence of a daily task).
+ *
+ * The check is deliberately NOT on id shape. A repeating project's *live* id is
+ * itself dotted (`bY_WHmMzWfC.116` is Active; `.116.43` is history), so refusing
+ * dotted ids would make repeating projects uneditable. What actually separates
+ * them is: belongs to a repeating series, and has already reached a terminal
+ * status. Completing or editing the live occurrence — the common, correct
+ * operation — is unaffected, because the live one is neither completed nor
+ * dropped.
+ *
+ * Emit inside `tell front document`, after `foundItem` resolves. `varName` is the
+ * resolved item; `errorReturnJson` is returned when the guard trips.
+ */
+export function generateOccurrenceGuardScript(
+  varName: string,
+  errorReturnJson: string
+): string {
+  return `try
+          if (repetition rule of ${varName}) is not missing value then
+            set _isDone to false
+            try
+              if completed of ${varName} then set _isDone to true
+            end try
+            try
+              if (status of ${varName}) is done status or (status of ${varName}) is dropped status then set _isDone to true
+            end try
+            try
+              if dropped of ${varName} then set _isDone to true
+            end try
+            if _isDone then
+              return "${errorReturnJson}"
+            end if
+          end if
+        end try`;
+}

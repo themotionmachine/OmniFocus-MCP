@@ -55,6 +55,25 @@ const FOLDER_PARENT_ID_EXPR = 'item.parent ? item.parent.id.primaryKey : null';
  * stringifies as "[object Task.RepetitionMethod: DeferUntilDate]". Strip the
  * wrapper so callers get a bare name they can compare and round-trip.
  */
+/**
+ * Historical occurrence of a repeating series (issue #124).
+ *
+ * OmniFocus 4 keeps completed occurrences of a repeating item as separate rows
+ * with positional ids (`abc.5`, `abc.116.43`). They carry the same name AND the
+ * same repetitionRule as the live item, so a query that includes completed items
+ * returns rows that are indistinguishable from duplicates — which is exactly how
+ * one was read, leading to mutations that cascaded through a live repeat chain.
+ *
+ * Id shape is NOT the discriminator: a repeating *project's* live id is itself
+ * dotted (`bY_WHmMzWfC.116` is the Active project; `.116.43` is history), so
+ * refusing dotted ids would make repeating projects uneditable. The honest
+ * signal is "belongs to a repeating series AND has reached a terminal status".
+ */
+const IS_PAST_OCCURRENCE_TASK_EXPR =
+  '(item.repetitionRule !== null && (item.taskStatus === Task.Status.Completed || item.taskStatus === Task.Status.Dropped))';
+const IS_PAST_OCCURRENCE_PROJECT_EXPR =
+  '(item.repetitionRule !== null && (item.status === Project.Status.Done || item.status === Project.Status.Dropped))';
+
 const REPETITION_RULE_EXPR = 'item.repetitionRule ? item.repetitionRule.ruleString : null';
 const REPETITION_METHOD_EXPR =
   'item.repetitionRule ? String(item.repetitionRule.method).replace(/^\\[object Task\\.RepetitionMethod: |\\]$/g, "") : null';
@@ -690,7 +709,8 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
           tagNames: item.tags ? item.tags.map(t => t.name) : [],
           projectName: item.containingProject ? item.containingProject.name : (item.inInbox ? "Inbox" : null),
           estimatedMinutes: item.estimatedMinutes || null,
-          note: item.note || ""
+          note: item.note || "",
+          isPastOccurrence: ${IS_PAST_OCCURRENCE_TASK_EXPR}
         };
         return obj;
       `;
@@ -709,7 +729,8 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
           deferDate: formatDate(item.deferDate),
           note: item.note || "",
           nextReviewDate: formatDate(item.nextReviewDate),
-          reviewInterval: formatReviewInterval(item.reviewInterval)
+          reviewInterval: formatReviewInterval(item.reviewInterval),
+          isPastOccurrence: ${IS_PAST_OCCURRENCE_PROJECT_EXPR}
         };
       `;
     } else if (entity === 'folders') {
@@ -810,6 +831,8 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `repetitionRule: ${REPETITION_RULE_EXPR}`;
     } else if (field === 'repetitionMethod') {
       return `repetitionMethod: ${REPETITION_METHOD_EXPR}`;
+    } else if (field === 'isPastOccurrence') {
+      return `isPastOccurrence: ${entity === 'projects' ? IS_PAST_OCCURRENCE_PROJECT_EXPR : IS_PAST_OCCURRENCE_TASK_EXPR}`;
     } else if (field === 'sequential') {
       // Both Task and Project expose a `sequential` Boolean in OmniJS. Coerce so an
       // unexpected null/undefined surfaces as false rather than leaking through.

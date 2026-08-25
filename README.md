@@ -255,7 +255,17 @@ The daemon listens on a Unix domain socket in a `0700` directory (`~/.omnifocus-
 
 The socket name carries the package version so that upgrading can never leave you talking to the previous version's daemon. Right after an upgrade you may briefly see two daemons: the old one keeps serving the clients already attached to it and exits once the last of them disconnects. Clients still attached to the old daemon are told about it in-band — while a newer daemon is serving, every tool result carries a one-line upgrade notice, so nobody has to remember to reconnect.
 
+If the daemon dies while clients are attached — a crash, or a manual kill during troubleshooting — each shim now reconnects, replays its client's `initialize` handshake to the new daemon, and fails any in-flight requests with a retryable error rather than leaving the client waiting. Previously the shim exited, which cost clients their tools for the rest of the session.
+
 Nothing about client configuration changes. If the daemon can't be started — an unusual sandbox, a read-only home directory — the shim falls back to running a standalone server in-process, exactly as earlier versions did.
+
+### Repeating items and occurrence safety
+
+OmniFocus keeps each completed occurrence of a repeating item as its own row, carrying the same name and the same repetition rule as the live one. A query with `includeCompleted: true` therefore returns rows that look like duplicates but are history.
+
+`query_omnifocus` marks them — `⟲ past occurrence — not a duplicate` — via an `isPastOccurrence` field included in the default projection. `edit_item` and `remove_item` refuse to mutate one by default, because doing so cascades through the live repeat chain; pass `allowPastOccurrence: true` if you genuinely mean the historical row.
+
+Note that the check is on *repeating item plus terminal status*, not on the shape of the id. A repeating project's live identifier is itself dotted (`abc.116` can be the active project while `abc.116.43` is history), so refusing dotted ids would make repeating projects uneditable.
 
 ### Environment variables
 

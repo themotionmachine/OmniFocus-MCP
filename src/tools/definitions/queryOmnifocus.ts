@@ -39,7 +39,7 @@ export const schema = z.object({
     reviewDue: z.boolean().optional().describe("true = projects due for review (projects only)")
   }).optional().describe("Filters AND together; array filters (tags, status) OR within the array. Date-valued filters (dueWithin, deferredUntil, plannedWithin, dueOn, deferOn, plannedOn) accept a number of days from today, 'today', 'tomorrow', 'this week', 'next week', or 'YYYY-MM-DD'"),
 
-  fields: z.array(z.string()).optional().describe("Only return the listed fields (smaller responses). Tasks: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, dropDate, effectiveDropDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule (ICS, e.g. FREQ=WEEKLY;INTERVAL=2), repetitionMethod (Fixed | DeferUntilDate | DueDate), modificationDate, creationDate. Projects: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completionDate, dropDate, effectiveDropDate, completedByChildren, containsSingletonActions, taskCount, tasks, nextReviewDate, reviewInterval, modificationDate, creationDate. Folders: id, name, path, parentFolderID, status, projectCount, projects, subfolders"),
+  fields: z.array(z.string()).optional().describe("Only return the listed fields (smaller responses). Tasks: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, dropDate, effectiveDropDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule (ICS, e.g. FREQ=WEEKLY;INTERVAL=2), repetitionMethod (Fixed | DeferUntilDate | DueDate), isPastOccurrence, modificationDate, creationDate. Projects: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completionDate, dropDate, effectiveDropDate, completedByChildren, containsSingletonActions, taskCount, tasks, nextReviewDate, reviewInterval, modificationDate, creationDate. Folders: id, name, path, parentFolderID, status, projectCount, projects, subfolders"),
 
   limit: z.number().optional().describe("Max items to return"),
 
@@ -195,6 +195,13 @@ function formatTasks(tasks: any[]): string {
       parts.push(`#${task.taskStatus.toLowerCase()}`);
     }
 
+    // A completed occurrence of a repeating item is not a duplicate (#124).
+    // Two rows, same name, different ids, read as duplication unless the history
+    // is labelled — which is how one agent "cleaned up" a live repeat chain.
+    if (task.isPastOccurrence) {
+      parts.push('⟲ past occurrence — not a duplicate');
+    }
+
     // Repeating
     if (task.isRepeating !== undefined) {
       parts.push(task.isRepeating ? '[repeating]' : '[not repeating]');
@@ -269,7 +276,9 @@ function formatProjects(projects: any[]): string {
     const id = project.id ? ` [${project.id}]` : '';
     const tags = project.tagNames?.length > 0 ? ` <${project.tagNames.join(',')}>` : '';
 
-    let result = `P: ${flagged}${project.name}${id}${status}${due}${review}${reviewInterval}${sequencing}${folder}${taskCount}${tags}`;
+    const pastOccurrence = project.isPastOccurrence ? ' ⟲ past occurrence — not a duplicate' : '';
+
+    let result = `P: ${flagged}${project.name}${id}${status}${due}${review}${reviewInterval}${sequencing}${folder}${taskCount}${tags}${pastOccurrence}`;
 
     // Add note on a new line if present
     if (project.note) {

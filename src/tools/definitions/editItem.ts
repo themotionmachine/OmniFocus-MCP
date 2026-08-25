@@ -29,7 +29,8 @@ export const schema = z.object({
   newSequential: z.boolean().optional().describe("Make the project sequential"),
   newFolderName: z.string().optional().describe("Move the project to this folder"),
   newProjectStatus: z.enum(['active', 'completed', 'dropped', 'onHold']).optional().describe("New project status"),
-  markReviewed: z.boolean().optional().describe("true marks the project reviewed, scheduling the next review from its review interval (projects only)")
+  markReviewed: z.boolean().optional().describe("true marks the project reviewed, scheduling the next review from its review interval (projects only)"),
+  allowPastOccurrence: z.boolean().optional().describe("Allow mutating a completed occurrence of a repeating item (refused by default — it can cascade through the live repeat chain)")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {

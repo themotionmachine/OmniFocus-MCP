@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { generateAppleScript as addTask } from './addOmniFocusTask.js';
 import { generateAppleScript as addProject } from './addProject.js';
 import { generateAppleScript as editItem } from './editItem.js';
+import { generateAppleScript as removeItem } from './removeItem.js';
 import { schema as addTaskSchema } from '../definitions/addOmniFocusTask.js';
 import { schema as addProjectSchema } from '../definitions/addProject.js';
 import { schema as editItemSchema } from '../definitions/editItem.js';
@@ -78,7 +79,9 @@ describe('repetition rule on edit (#116)', () => {
     // `undefined` must be a no-op — otherwise every unrelated edit would wipe
     // the item's repeat.
     const untouched = editItem({ id: 'abc', itemType: 'task', newName: 'Renamed' });
-    expect(untouched).not.toContain('repetition rule of foundItem');
+    // The #124 guard *reads* the repetition rule on every edit, so assert on the
+    // assignment specifically rather than any mention of it.
+    expect(untouched).not.toContain('set repetition rule of foundItem to');
   });
 
   it('works on projects as well as tasks', () => {
@@ -128,5 +131,46 @@ describe('repeat is accepted by every write schema (#116)', () => {
     expect(() =>
       addTaskSchema.parse({ name: 'x', repeat: { method: 'fixed', unit: 'week', weekdays: ['MON'] } })
     ).toThrow();
+  });
+});
+
+/**
+ * Occurrence safety (#124). OmniFocus 4 keeps completed occurrences of a
+ * repeating item as separate rows carrying the same name AND rule as the live
+ * one, so they read as duplicates. Mutating one cascades through the live chain.
+ */
+describe('past-occurrence guard (#124)', () => {
+  it('guards edit_item by default', () => {
+    const script = editItem({ id: 'abc.5', itemType: 'task', newStatus: 'dropped' });
+    expect(script).toContain('repetition rule of foundItem');
+    expect(script).toContain('completed occurrence of a repeating item');
+  });
+
+  it('guards remove_item by default', () => {
+    const script = removeItem({ id: 'abc.5', itemType: 'task' });
+    expect(script).toContain('completed occurrence of a repeating item');
+  });
+
+  it('is opt-out-able for the rare deliberate case', () => {
+    const script = editItem({
+      id: 'abc.5', itemType: 'task', newStatus: 'dropped', allowPastOccurrence: true,
+    });
+    expect(script).not.toContain('completed occurrence of a repeating item');
+  });
+
+  it('keys on repeating-plus-terminal-status, never on id shape', () => {
+    // A repeating PROJECT's live id is itself dotted (bY_WHmMzWfC.116 is Active),
+    // so refusing dotted ids would make repeating projects uneditable.
+    const script = editItem({ id: 'bY_WHmMzWfC.116', itemType: 'project', newName: 'x' });
+    expect(script).not.toMatch(/id contains "\."/);
+    expect(script).toContain('repetition rule of foundItem');
+    expect(script).toMatch(/completed of foundItem|status of foundItem/);
+  });
+
+  it('lets a non-repeating item through untouched', () => {
+    // The guard only trips when BOTH conditions hold; it must not add a status
+    // check that blocks ordinary completed one-shots.
+    const script = editItem({ id: 'plain', itemType: 'task', newName: 'x' });
+    expect(script).toContain('if (repetition rule of foundItem) is not missing value then');
   });
 });

@@ -1,7 +1,11 @@
 import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { escapeAppleScriptString, JSON_ESCAPE_HANDLER } from '../../utils/appleScriptHelpers.js';
+import {
+  escapeAppleScriptString,
+  generateOccurrenceGuardScript,
+  JSON_ESCAPE_HANDLER,
+} from '../../utils/appleScriptHelpers.js';
 import { runOsascriptFile } from '../../utils/scriptExecution.js';
 
 // Interface for item removal parameters
@@ -9,6 +13,7 @@ export interface RemoveItemParams {
   id?: string;          // ID of the task or project to remove
   name?: string;        // Name of the task or project to remove (as fallback if ID not provided)
   itemType: 'task' | 'project'; // Type of item to remove
+  allowPastOccurrence?: boolean; // Opt in to removing a completed repeat occurrence (#124)
 }
 
 /**
@@ -98,6 +103,7 @@ export function generateAppleScript(params: RemoveItemParams): string {
         if foundItem is not missing value then
           set itemName to name of foundItem
           set itemId to id of foundItem as string
+          ${params.allowPastOccurrence ? '' : generateOccurrenceGuardScript('foundItem', `{\\"success\\":false,\\"error\\":\\"This is a completed occurrence of a repeating item, not a duplicate. Mutating it can cascade through the live repeat chain. Query without includeCompleted to get the live occurrence, or pass allowPastOccurrence: true if you really mean this one.\\"}`)}
 
           -- Delete the item
           delete foundItem
