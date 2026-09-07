@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { _testExports as primitives } from '../primitives/queryOmnifocus.js';
+import { _testExports as primitives, queryOmnifocus } from '../primitives/queryOmnifocus.js';
 import { _testExports as definitions } from '../definitions/queryOmnifocus.js';
 
-const { escapeJXA, generateFilterConditions, generateFieldMapping } = primitives;
+const { escapeJXA, generateFilterConditions, generateFieldMapping, validateFields } = primitives;
 const { formatTasks, formatProjects, formatFolders, formatQueryResults } = definitions;
 
 // ============================================================
@@ -595,6 +595,30 @@ describe('formatProjects - status guard (#106)', () => {
   });
 });
 
+describe('generateQueryScript - container-dropped projects', () => {
+  const { generateQueryScript } = primitives;
+
+  it('rejects projects whose containing folder is dropped or under a dropped folder', () => {
+    const script = generateQueryScript({ entity: 'projects', filters: {} });
+    // Set seeded by walking DOWN from every folder whose OWN status is Dropped.
+    expect(script).toContain('Folder.Status.Dropped');
+    expect(script).toContain('collectDescendantFolderIds(flattenedFolders');
+    expect(script).toMatch(/_droppedFolderIds\.has\(\s*project\.parentFolder\.id\.primaryKey\s*\)/);
+    expect(script).toContain('isInDroppedFolder(item)');
+  });
+
+  it('does NOT rely on an upward folder.parentFolder walk (unreliable when flattened)', () => {
+    const script = generateQueryScript({ entity: 'projects', filters: {} });
+    expect(script).not.toContain('isAncestorFolderDropped');
+    expect(script).not.toMatch(/folder\s*=\s*folder\.parentFolder/);
+  });
+
+  it('applies the same exclusion to a folders query', () => {
+    const script = generateQueryScript({ entity: 'folders', filters: {} });
+    expect(script).toMatch(/_droppedFolderIds\.has\(item\.id\.primaryKey\)/);
+  });
+});
+
 describe('formatQueryResults - no argument echo (#106)', () => {
   it('opens with a bare count line, not a markdown header', () => {
     const output = formatQueryResults([{ name: 'Task', id: 't1' }], 'tasks');
@@ -611,6 +635,66 @@ describe('formatQueryResults - no argument echo (#106)', () => {
     expect(formatQueryResults([], 'projects')).toBe(
       'No projects found matching the specified criteria.'
     );
+  });
+});
+
+// ============================================================
+// validateFields - allowlist per entity
+// ============================================================
+describe('validateFields', () => {
+  it('returns no invalid fields when fields is undefined', () => {
+    expect(validateFields('tasks', undefined)).toEqual([]);
+  });
+
+  it('returns no invalid fields when all requested task fields are known', () => {
+    expect(validateFields('tasks', ['id', 'name', 'dueDate', 'tagNames', 'repetitionMethod', 'isPastOccurrence'])).toEqual([]);
+  });
+
+  it('flags a single unknown field', () => {
+    expect(validateFields('tasks', ['id', 'bogusField'])).toEqual(['bogusField']);
+  });
+
+  it('flags multiple unknown fields', () => {
+    expect(validateFields('tasks', ['nope', 'alsoNope'])).toEqual(['nope', 'alsoNope']);
+  });
+
+  it('accepts the modified/added date aliases', () => {
+    expect(validateFields('tasks', ['modified', 'added'])).toEqual([]);
+  });
+
+  it('validates against the projects field set', () => {
+    expect(validateFields('projects', ['folderName', 'reviewInterval', 'tagNames', 'flagged', 'isPastOccurrence'])).toEqual([]);
+  });
+
+  it('flags a task-only field when queried against projects', () => {
+    expect(validateFields('projects', ['plannedDate'])).toEqual(['plannedDate']);
+  });
+
+  it('validates against the folders field set', () => {
+    expect(validateFields('folders', ['path', 'projectCount', 'parentFolderID', 'status'])).toEqual([]);
+  });
+});
+
+// ============================================================
+// queryOmnifocus (primitive) - fields validation applies to every caller,
+// not just the query_omnifocus tool handler. Resources (project.ts, flagged.ts,
+// inbox.ts, today.ts) call this primitive directly with their own hardcoded
+// `fields` arrays, bypassing any check that lived only in the tool handler.
+// ============================================================
+describe('queryOmnifocus - fields validation applies to direct callers', () => {
+  it('rejects an invalid field before generating or running any script', async () => {
+    // No OmniFocus/osascript involved: an invalid field must short-circuit
+    // before generateQueryScript / executeOmniFocusScript are ever reached,
+    // which is what makes this safely testable without a live OmniFocus.
+    const result = await queryOmnifocus({ entity: 'tasks', fields: ['bogusField'] });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('bogusField');
+  });
+
+  it('names the valid fields for the entity in the error', async () => {
+    const result = await queryOmnifocus({ entity: 'projects', fields: ['nope'] });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('folderName');
   });
 });
 

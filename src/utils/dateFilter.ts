@@ -12,7 +12,7 @@ const NAMED_DATES: Record<string, number> = {
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-export function resolveDateFilter(input: number | string): number {
+export function resolveDateFilter(input: number | string, direction: 'future' | 'past' = 'future'): number {
   if (typeof input === 'number') {
     return input;
   }
@@ -31,7 +31,10 @@ export function resolveDateFilter(input: number | string): number {
     const target = new Date(normalized + 'T00:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const daysFromNow = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    // Backward-looking filters (e.g. addedWithin) expect an unsigned "days ago"
+    // count, which is the negation of the forward "days from now" offset.
+    return direction === 'past' ? -daysFromNow : daysFromNow;
   }
 
   throw new Error(`Unrecognized date filter value: "${input}". Use a number, "today", "tomorrow", "this week", "next week", or an ISO date (YYYY-MM-DD).`);
