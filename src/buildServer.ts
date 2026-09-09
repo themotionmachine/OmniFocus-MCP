@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { SetLevelRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from './utils/logger.js';
 import { setScriptLogger } from './utils/scriptExecution.js';
@@ -183,5 +184,33 @@ export function createOmniFocusServer(): BuiltServer {
     withUpgradeNudge(createTagTool.handler)
   );
 
+  rejectUnknownArguments(server);
+
   return { server, logger };
+}
+
+/**
+ * Make every registered tool refuse unrecognized argument keys.
+ *
+ * `server.tool()` wraps each shape in a plain `z.object`, which silently strips
+ * unknown keys before the handler runs. That is how `edit_item` called with
+ * `note` instead of `newNote` reported "updated successfully" for a write that
+ * never happened: the typo was dropped and the handler saw nothing to change.
+ * A wrong field name should fail loudly, with the key named in the error, on
+ * every tool — not only on the one that happened to bite.
+ *
+ * The SDK offers no public way to pass a strict object to `tool()`, so this
+ * reaches into `_registeredTools` and swaps each `inputSchema` for its
+ * `.strict()` form. `buildServer.test.ts` drives a real client through the
+ * result; an SDK bump that renames the field turns the test red rather than
+ * quietly restoring the silent-strip behavior.
+ */
+export function rejectUnknownArguments(server: McpServer): void {
+  const registered = (server as unknown as { _registeredTools?: Record<string, { inputSchema?: unknown }> })._registeredTools;
+  if (!registered) return;
+  for (const tool of Object.values(registered)) {
+    if (tool.inputSchema instanceof z.ZodObject) {
+      tool.inputSchema = tool.inputSchema.strict();
+    }
+  }
 }
