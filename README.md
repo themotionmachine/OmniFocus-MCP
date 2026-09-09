@@ -143,6 +143,8 @@ Edit an existing task or project. Also the way to **move** items — set `newPro
 - Projects: `newProjectStatus` (`active`, `completed`, `dropped`, `onHold`), `newFolderName`, `newSequential`, `markReviewed` (sets the next review date based on the project's review interval)
 - Repetition: `newRepeat` sets a new rule (same shape as `repeat` on create); `newRepeat: null` clears it
 
+At least one editable field is required — a call with only `id`/`name`/`itemType` is refused rather than reported as a successful no-op. Unrecognized argument keys (a `note` typo for `newNote`, say) are rejected by every tool with the key named in the error, instead of being silently dropped.
+
 ### `remove_item`
 
 Remove a task or project.

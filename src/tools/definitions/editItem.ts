@@ -33,6 +33,27 @@ export const schema = z.object({
   allowPastOccurrence: z.boolean().optional().describe("Allow mutating a completed occurrence of a repeating item (refused by default — it can cascade through the live repeat chain)")
 });
 
+/**
+ * Keys that select or qualify the target rather than change it. Everything else
+ * in the schema is an update field.
+ */
+const SELECTOR_KEYS = new Set(['id', 'name', 'itemType', 'allowPastOccurrence']);
+
+/** Every field that actually changes something, derived from the schema so it can't drift. */
+export const UPDATE_FIELDS = Object.keys(schema.shape).filter(k => !SELECTOR_KEYS.has(k));
+
+/**
+ * An edit_item call with a target but nothing to change is almost always a
+ * misspelled field: the SDK strips unknown keys before the handler runs, so
+ * `note` (instead of `newNote`) arrived here as no fields at all, and the tool
+ * answered "updated successfully" for a write that never happened. Same failure
+ * class as #57 — a success line for work not done. Refuse instead, naming what
+ * would have been accepted.
+ */
+export function updateFieldsProvided(args: Record<string, unknown>): string[] {
+  return UPDATE_FIELDS.filter(k => args[k] !== undefined);
+}
+
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
   try {
     // Validate that either id or name is provided
@@ -45,7 +66,18 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         isError: true
       };
     }
-    
+
+    if (updateFieldsProvided(args).length === 0) {
+      return {
+        content: [{
+          type: "text" as const,
+          text: `Nothing to update: no editable field was provided, so no change was made. ` +
+            `Check the field name — accepted fields are: ${UPDATE_FIELDS.join(', ')}.`
+        }],
+        isError: true
+      };
+    }
+
     // Call the editItem function 
     const result = await editItem(args as EditItemParams);
     
