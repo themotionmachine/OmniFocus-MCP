@@ -78,3 +78,57 @@ describe('tool arguments are strict', () => {
     expect(result.content[0].text).toContain('Either id or name');
   });
 });
+
+describe('nested objects are strict too', () => {
+  it('query_omnifocus rejects a misspelled filter instead of running unfiltered', async () => {
+    const client = await connectedClient();
+    await expect(
+      client.callTool({
+        name: 'query_omnifocus',
+        arguments: { entity: 'tasks', filters: { inInbox: true }, summary: true },
+      })
+    ).rejects.toThrow(/inInbox/);
+  });
+
+  it('batch_add_items rejects an unknown key inside an item, and inside its repeat', async () => {
+    const client = await connectedClient();
+    await expect(
+      client.callTool({
+        name: 'batch_add_items',
+        arguments: { items: [{ type: 'task', name: 'x', note: 'ok', dueDat: 'typo' }] },
+      })
+    ).rejects.toThrow(/dueDat/);
+    await expect(
+      client.callTool({
+        name: 'batch_add_items',
+        arguments: { items: [{ type: 'task', name: 'x', repeat: { every: 'week', bogus: 1 } }] },
+      })
+    ).rejects.toThrow(/bogus/);
+  });
+
+  it('the advertised JSON schema carries additionalProperties: false at depth', async () => {
+    const client = await connectedClient();
+    const { tools } = await client.listTools();
+    const query = tools.find(t => t.name === 'query_omnifocus')!;
+    const filters = (query.inputSchema.properties as any).filters;
+    expect(filters.additionalProperties).toBe(false);
+    const batch = tools.find(t => t.name === 'batch_add_items')!;
+    const item = (batch.inputSchema.properties as any).items.items;
+    expect(item.additionalProperties).toBe(false);
+  });
+
+  it('descriptions, optionality and nullability survive the rebuild', async () => {
+    const client = await connectedClient();
+    const { tools } = await client.listTools();
+    const edit = tools.find(t => t.name === 'edit_item')!;
+    const props = edit.inputSchema.properties as any;
+    expect(props.newNote.description).toBe('New note');
+    expect(edit.inputSchema.required).toEqual(['itemType']);
+    // newRepeat is nullable().optional(): null must still clear, not be rejected
+    const r = (await client.callTool({
+      name: 'edit_item',
+      arguments: { itemType: 'task', newRepeat: null },
+    })) as any;
+    expect(r.content[0].text).toContain('Either id or name');
+  });
+});
