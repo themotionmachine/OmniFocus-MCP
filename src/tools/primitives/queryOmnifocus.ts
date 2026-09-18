@@ -236,15 +236,28 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
         }
       }
 
-      // Check if any ancestor folder is dropped.
-      // OmniJS doesn't expose effectivelyDropped on projects, so we walk up manually.
-      function isAncestorFolderDropped(project) {
-        var folder = project.parentFolder;
-        while (folder) {
-          if (folder.status === Folder.Status.Dropped) return true;
-          folder = folder.parentFolder;
+      // Set of every folder ID that is dropped, or nested anywhere under a
+      // dropped folder. Two OmniJS quirks make the obvious upward walk wrong:
+      //   1. folder.status is the folder's OWN status — a folder that is
+      //      "dropped with container" still reports Active.
+      //   2. folder.parentFolder is unreliable on the flattened collection, so
+      //      walking up from a project stops at its own folder and never sees a
+      //      dropped grandparent.
+      // Walking DOWN from each dropped folder via .folders (the reliable pattern
+      // collectDescendantFolderIds already uses for folder scoping) avoids both.
+      const _droppedFolderIds = new Set();
+      for (var _dfi = 0; _dfi < flattenedFolders.length; _dfi++) {
+        if (flattenedFolders[_dfi].status === Folder.Status.Dropped) {
+          collectDescendantFolderIds(flattenedFolders[_dfi], _droppedFolderIds);
         }
-        return false;
+      }
+
+      // A project whose own status is still Active is nonetheless effectively
+      // dropped when its containing folder is dropped or sits under one.
+      function isInDroppedFolder(project) {
+        return project.parentFolder
+          ? _droppedFolderIds.has(project.parentFolder.id.primaryKey)
+          : false;
       }
 
       // Get the appropriate collection based on entity type
@@ -293,7 +306,11 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
           } else if (entityType === "projects") {
             if (item.status === Project.Status.Done ||
                 item.status === Project.Status.Dropped ||
-                isAncestorFolderDropped(item)) {
+                isInDroppedFolder(item)) {
+              return false;
+            }
+          } else if (entityType === "folders") {
+            if (_droppedFolderIds.has(item.id.primaryKey)) {
               return false;
             }
           }

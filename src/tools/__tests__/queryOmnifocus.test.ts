@@ -595,6 +595,30 @@ describe('formatProjects - status guard (#106)', () => {
   });
 });
 
+describe('generateQueryScript - container-dropped projects', () => {
+  const { generateQueryScript } = primitives;
+
+  it('rejects projects whose containing folder is dropped or under a dropped folder', () => {
+    const script = generateQueryScript({ entity: 'projects', filters: {} });
+    // Set seeded by walking DOWN from every folder whose OWN status is Dropped.
+    expect(script).toContain('Folder.Status.Dropped');
+    expect(script).toContain('collectDescendantFolderIds(flattenedFolders');
+    expect(script).toMatch(/_droppedFolderIds\.has\(\s*project\.parentFolder\.id\.primaryKey\s*\)/);
+    expect(script).toContain('isInDroppedFolder(item)');
+  });
+
+  it('does NOT rely on an upward folder.parentFolder walk (unreliable when flattened)', () => {
+    const script = generateQueryScript({ entity: 'projects', filters: {} });
+    expect(script).not.toContain('isAncestorFolderDropped');
+    expect(script).not.toMatch(/folder\s*=\s*folder\.parentFolder/);
+  });
+
+  it('applies the same exclusion to a folders query', () => {
+    const script = generateQueryScript({ entity: 'folders', filters: {} });
+    expect(script).toMatch(/_droppedFolderIds\.has\(item\.id\.primaryKey\)/);
+  });
+});
+
 describe('formatQueryResults - no argument echo (#106)', () => {
   it('opens with a bare count line, not a markdown header', () => {
     const output = formatQueryResults([{ name: 'Task', id: 't1' }], 'tasks');

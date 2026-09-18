@@ -14,6 +14,15 @@
         const tagId = tag.id.primaryKey;
         const parentTagID = tag.parent ? tag.parent.id.primaryKey : null;
 
+        // `tag.active` is the tag's OWN flag: a tag nested under a dropped or
+        // on-hold parent still reports active:true, so it leaks into the default
+        // (non-dropped) listing. `tag.effectiveActive` folds in ancestor status
+        // the way OmniFocus does in the sidebar. Fall back to `tag.active` only
+        // if the effective flag is somehow unavailable.
+        const effectiveActive = typeof tag.effectiveActive === "boolean"
+          ? tag.effectiveActive
+          : tag.active;
+
         // Count remaining (non-completed, non-dropped) tasks for this tag
         let taskCount = 0;
         try {
@@ -35,7 +44,7 @@
           name: tag.name,
           parentTagID: parentTagID,
           parentName: parentTagID ? (parentNameMap[parentTagID] || null) : null,
-          active: tag.active,
+          active: effectiveActive,
           allowsNextAction: tag.allowsNextAction,
           taskCount: taskCount
         });
