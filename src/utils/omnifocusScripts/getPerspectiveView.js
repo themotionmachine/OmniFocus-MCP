@@ -50,20 +50,27 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
 
     var evaluateActionAvailability = (task, value) => {
       let result;
+      // task.completed is unreliable for repeating tasks: a completed occurrence
+      // reads back completed:false while task.taskStatus is Completed (the next
+      // occurrence hasn't been generated yet). taskStatus is the source of truth
+      // for whether an action is finished — keying "remaining"/"completed"/
+      // "available" off task.completed let every past occurrence of a repeating
+      // task slip through "Availability: Available" and flood perspectives.
+      const isFinished =
+        task.taskStatus === Task.Status.Completed ||
+        task.taskStatus === Task.Status.Dropped;
       if (value === "remaining") {
-        result = !task.completed && task.taskStatus !== Task.Status.Dropped;
+        result = !isFinished;
       } else if (value === "completed") {
-        result = task.completed;
+        result = task.taskStatus === Task.Status.Completed;
       } else if (value === "dropped") {
         result = task.taskStatus === Task.Status.Dropped;
       } else if (value === "available") {
         // "available" is defined here: https://support.omnigroup.com/documentation/omnifocus/universal/4.3.3/en/glossary/#view-options
-        const isActive =
-          !task.completed && task.taskStatus !== Task.Status.Dropped;
         const isAvailable =
           task.taskStatus !== Task.Status.Blocked &&
           (!task.deferDate || task.deferDate <= new Date());
-        result = isActive && isAvailable;
+        result = !isFinished && isAvailable;
       } else if (value === "firstAvailable") {
         // "firstAvailable" specifically means the Available status
         result = task.taskStatus === Task.Status.Available;
@@ -105,13 +112,31 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       (task.repetitionRule !== null) === value;
     var evaluateActionIsUntagged = (task, value) =>
       (task.tags.length === 0) === value;
+    // The adverb-form names Tag.effectivelyDropped/effectivelyActive/
+    // effectivelyOnHold do NOT exist (verified against
+    // app.getTypeScriptDeclarations() — zero matches — and by probing a live
+    // tag; all read back as undefined). The adjective-form `effectiveActive`
+    // DOES exist (inherited from ActiveObject) but is the wrong tool here: for a
+    // Tag it only tracks "not dropped" — a live probe shows an on-hold tag
+    // reads effectiveActive:true. The perspective editor treats Active and
+    // On Hold as distinct rule values (that's why "remaining" — meaning "not
+    // dropped" — is a separate value), so we need the real Tag.Status, folded
+    // up the parent chain. `tag.parent` and `tag.status` are both real
+    // properties; Tag.Status members are Active, Dropped, OnHold.
+    var tagAncestryHasStatus = (tag, status) => {
+      for (var t = tag; t; t = t.parent) {
+        if (t.status === status) return true;
+      }
+      return false;
+    };
     var evaluateActionHasTagWithStatus = (task, value) => {
       return task.tags.some((tag) => {
-        // Map OmniFocus tag status values
-        if (value === "remaining") return !tag.effectivelyDropped;
-        if (value === "active") return tag.effectivelyActive;
-        if (value === "onHold") return tag.effectivelyOnHold;
-        if (value === "dropped") return tag.effectivelyDropped;
+        const droppedInChain = tagAncestryHasStatus(tag, Tag.Status.Dropped);
+        if (value === "dropped") return droppedInChain;
+        if (value === "remaining") return !droppedInChain;
+        const onHoldInChain = tagAncestryHasStatus(tag, Tag.Status.OnHold);
+        if (value === "onHold") return !droppedInChain && onHoldInChain;
+        if (value === "active") return !droppedInChain && !onHoldInChain;
         return false;
       });
     };
@@ -119,24 +144,114 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       (!task.children || task.children.length === 0) === value;
     var evaluateActionHasNoProject = (task, value) =>
       (task.containingProject === null) === value;
+    // Project.Status has no `SingleActions` member (only Active/Done/Dropped/
+    // OnHold), so this always compared against `undefined` and never matched.
+    // Being in a single actions list is its own boolean property.
     var evaluateActionIsInSingleActionsList = (task, value) => {
       const project = task.containingProject;
       if (!project) return false;
-      return (project.status === Project.Status.SingleActions) === value;
+      return Boolean(project.containsSingletonActions) === value;
     };
+    // Project.effectivelyCompleted/effectivelyDropped do not exist (same class
+    // of bug as the tag statuses above); "remaining" was always true, "completed"
+    // and "dropped" were always false. "stalled" and "pending" mapped to
+    // Project.Status.Stalled/.Pending, which also don't exist — Project.Status
+    // has only Active/Done/Dropped/OnHold, so both always evaluated false.
+    //
+    // OmniFocus's own glossary confirms "Stalled" and "Pending" are legacy names
+    // for compound conditions, not literal statuses:
+    //   Stalled -> "Has an active project which has no remaining actions"
+    //   Pending -> "Has an active project which has a future defer date"
+    // (https://support.omnigroup.com/documentation/omnifocus/universal/4.8.11/en/glossary/#stalled,
+    //  .../#pending — unchanged since 4.3.3.)
+    //
+    // The glossary's "no remaining actions" reading is self-contradictory once you
+    // account for how this rule is actually used: every real perspective pairs
+    // {actionHasProjectWithStatus: "stalled"} with {actionAvailability: "remaining"}
+    // at the TASK level (AND'd together). A task can't be "remaining" while its own
+    // project has zero remaining tasks — it would be one. Verified live: that literal
+    // reading matched 25 active projects, almost all placeholder projects with zero
+    // tasks; the classic GTD reading below ("has work left, but none of it is
+    // currently actionable") matched 3 real in-progress projects and is what makes
+    // the paired rule non-vacuous.
+    // OmniJS doesn't expose an "effectively active" flag on Project — a project's
+    // own `.status` stays Active even when a containing folder has been dropped,
+    // which hides it from the app despite the field never changing. Walk `.parent`
+    // (not `.parentFolder`, which only exists on Project, not Folder itself) to
+    // check the whole chain.
+    function isAncestorFolderDropped(project) {
+      var folder = project.parentFolder;
+      while (folder) {
+        if (folder.status === Folder.Status.Dropped) return true;
+        folder = folder.parent;
+      }
+      return false;
+    }
+
+    // Memoized per project id for the lifetime of this getPerspectiveViewByName
+    // call: {actionHasProjectWithStatus: "stalled"} is typically paired with
+    // {actionAvailability: "remaining"} at the task level, so evaluateTask calls
+    // into this once per remaining task in a project, not once per project —
+    // without the cache, an N-task stalled project re-scans its own M-task list
+    // N times.
+    var _stalledProjectCache = new Map();
+    function isProjectStalled(project) {
+      const key = project.id.primaryKey;
+      if (_stalledProjectCache.has(key)) return _stalledProjectCache.get(key);
+      const remaining = project.flattenedTasks.filter(
+        (t) => !t.completed && t.taskStatus !== Task.Status.Dropped
+      );
+      const hasActionableTask = remaining.some(
+        (t) =>
+          t.taskStatus === Task.Status.Available ||
+          t.taskStatus === Task.Status.Next ||
+          t.taskStatus === Task.Status.DueSoon ||
+          t.taskStatus === Task.Status.Overdue
+      );
+      const result =
+        project.status === Project.Status.Active &&
+        !isAncestorFolderDropped(project) &&
+        remaining.length > 0 &&
+        !hasActionableTask;
+      _stalledProjectCache.set(key, result);
+      return result;
+    }
+
     var evaluateActionHasProjectWithStatus = (task, value) => {
       const project = task.containingProject;
       if (!project) return false;
+      // Project is not an ActiveObject and exposes no effective status, so a
+      // project inside a dropped folder keeps status:Active. Fold the folder
+      // chain in by hand — consistently, not just for stalled/pending.
+      const folderDropped = isAncestorFolderDropped(project);
       if (value === "remaining") {
-        return !project.effectivelyCompleted && !project.effectivelyDropped;
+        return (
+          !project.completed &&
+          project.status !== Project.Status.Dropped &&
+          !folderDropped
+        );
       }
-      if (value === "completed") return project.effectivelyCompleted;
-      if (value === "dropped") return project.effectivelyDropped;
+      if (value === "stalled") {
+        return isProjectStalled(project);
+      }
+      if (value === "pending") {
+        const deferDate = project.effectiveDeferDate;
+        return (
+          project.status === Project.Status.Active &&
+          !folderDropped &&
+          deferDate !== null &&
+          deferDate > new Date()
+        );
+      }
+      if (value === "dropped") {
+        return project.status === Project.Status.Dropped || folderDropped;
+      }
+      if (value === "active") {
+        return project.status === Project.Status.Active && !folderDropped;
+      }
       const statusMap = {
-        active: Project.Status.Active,
         onHold: Project.Status.OnHold,
-        stalled: Project.Status.Stalled,
-        pending: Project.Status.Pending,
+        completed: Project.Status.Done,
       };
       return project.status === statusMap[value];
     };
@@ -189,14 +304,26 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       return value.some((term) => searchText.includes(term.toLowerCase()));
     };
 
-    // OmniFocus stores "completed" as the field name but the JS property is completionDate.
-    var normalizeDateFieldName = (dateField) => {
-      const map = { completed: "completion" };
-      return map[dateField] || dateField;
+    // Perspective rules name date fields as "due"/"defer"/"completed"/"dropped"/
+    // "added"/"changed" (https://omni-automation.com/omnifocus/perspective.html),
+    // but the real OmniJS Task properties don't follow one consistent "<field>Date"
+    // pattern: "dropped" is dropDate (not droppedDate), and "added"/"changed" have
+    // no Date suffix at all (added, modified). The old suffix-concatenation
+    // approach silently produced a nonexistent property name for those three,
+    // so any rule filtering on drop/added/changed date never matched anything.
+    var DATE_FIELD_PROPERTY = {
+      due: "dueDate",
+      defer: "deferDate",
+      planned: "plannedDate",
+      completed: "completionDate",
+      dropped: "dropDate",
+      added: "added",
+      changed: "modified",
     };
 
     var getTaskDateField = (task, dateField) => {
-      return task[normalizeDateFieldName(dateField) + "Date"];
+      const prop = DATE_FIELD_PROPERTY[dateField];
+      return prop ? task[prop] : undefined;
     };
 
     var evaluateActionDateIsToday = (task, dateField) => {
@@ -222,6 +349,23 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       return fieldDate.toDateString() === tomorrow.toDateString();
     };
 
+    // Shared by evaluateActionDateIsInThePast/InTheNext, which are identical
+    // apart from the offset's sign and which side of `now` the window falls on.
+    // Keeping the hour/day/week/month/year cases in one place means a future
+    // fix (a new component, a unit bug) can't be applied to one side and
+    // forgotten on the other — exactly the class of bug this file was already
+    // full of.
+    function applyRelativeOffset(date, amount, component, sign) {
+      const delta = sign * amount;
+      if (component === "hour") date.setHours(date.getHours() + delta);
+      else if (component === "day") date.setDate(date.getDate() + delta);
+      else if (component === "week") date.setDate(date.getDate() + delta * 7);
+      else if (component === "month") date.setMonth(date.getMonth() + delta);
+      else if (component === "year") date.setFullYear(date.getFullYear() + delta);
+      else return null;
+      return date;
+    }
+
     var evaluateActionDateIsInThePast = (task, dateField, value) => {
       const fieldDate = getTaskDateField(task, dateField);
       if (!fieldDate) return false;
@@ -237,19 +381,33 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
         return fieldDate <= now;
       }
 
-      const cutoff = new Date();
-      if (relativeComponent === "day") {
-        cutoff.setDate(cutoff.getDate() - relativeBeforeAmount);
-      } else if (relativeComponent === "week") {
-        cutoff.setDate(cutoff.getDate() - relativeBeforeAmount * 7);
-      } else if (relativeComponent === "month") {
-        cutoff.setMonth(cutoff.getMonth() - relativeBeforeAmount);
-      } else if (relativeComponent === "year") {
-        cutoff.setFullYear(cutoff.getFullYear() - relativeBeforeAmount);
-      } else {
-        return fieldDate <= now;
-      }
+      const cutoff = applyRelativeOffset(new Date(), relativeBeforeAmount, relativeComponent, -1);
+      if (!cutoff) return fieldDate <= now;
       return fieldDate >= cutoff && fieldDate <= now;
+    };
+
+    // Forward-looking counterpart to actionDateIsInThePast, documented at
+    // https://omni-automation.com/omnifocus/perspective.html but never
+    // implemented — any rule using it fell through to unknownRuleTypes and
+    // matched nothing, silently, since a date-field rule short-circuits the
+    // whole evaluateRule branch once it recognizes `rule.actionDateField`.
+    var evaluateActionDateIsInTheNext = (task, dateField, value) => {
+      const fieldDate = getTaskDateField(task, dateField);
+      if (!fieldDate) return false;
+      const now = new Date();
+
+      if (typeof value !== "object" || value === null) {
+        return fieldDate >= now;
+      }
+
+      const { relativeAfterAmount, relativeComponent } = value;
+      if (relativeAfterAmount === undefined || relativeComponent === undefined) {
+        return fieldDate >= now;
+      }
+
+      const cutoff = applyRelativeOffset(new Date(), relativeAfterAmount, relativeComponent, 1);
+      if (!cutoff) return fieldDate >= now;
+      return fieldDate <= cutoff && fieldDate >= now;
     };
 
     // filter rules and values are defined here: https://omni-automation.com/omnifocus/perspective.html
@@ -294,9 +452,12 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
         if (rule.actionDateIsInThePast) {
           return evaluateActionDateIsInThePast(task, dateField, rule.actionDateIsInThePast);
         }
+        if (rule.actionDateIsInTheNext) {
+          return evaluateActionDateIsInTheNext(task, dateField, rule.actionDateIsInTheNext);
+        }
 
         // Record any unrecognised date conditions so callers can diagnose gaps
-        const knownDateKeys = new Set(["actionDateField", "actionDateIsToday", "actionDateIsYesterday", "actionDateIsTomorrow", "actionDateIsInThePast"]);
+        const knownDateKeys = new Set(["actionDateField", "actionDateIsToday", "actionDateIsYesterday", "actionDateIsTomorrow", "actionDateIsInThePast", "actionDateIsInTheNext"]);
         Object.keys(rule).forEach((k) => {
           if (!knownDateKeys.has(k)) {
             const entry = k + "(field=" + dateField + ", value=" + JSON.stringify(rule[k]) + ")";
