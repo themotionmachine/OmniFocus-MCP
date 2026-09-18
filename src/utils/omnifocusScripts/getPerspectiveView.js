@@ -50,20 +50,27 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
 
     var evaluateActionAvailability = (task, value) => {
       let result;
+      // task.completed is unreliable for repeating tasks: a completed occurrence
+      // reads back completed:false while task.taskStatus is Completed (the next
+      // occurrence hasn't been generated yet). taskStatus is the source of truth
+      // for whether an action is finished — keying "remaining"/"completed"/
+      // "available" off task.completed let every past occurrence of a repeating
+      // task slip through "Availability: Available" and flood perspectives.
+      const isFinished =
+        task.taskStatus === Task.Status.Completed ||
+        task.taskStatus === Task.Status.Dropped;
       if (value === "remaining") {
-        result = !task.completed && task.taskStatus !== Task.Status.Dropped;
+        result = !isFinished;
       } else if (value === "completed") {
-        result = task.completed;
+        result = task.taskStatus === Task.Status.Completed;
       } else if (value === "dropped") {
         result = task.taskStatus === Task.Status.Dropped;
       } else if (value === "available") {
         // "available" is defined here: https://support.omnigroup.com/documentation/omnifocus/universal/4.3.3/en/glossary/#view-options
-        const isActive =
-          !task.completed && task.taskStatus !== Task.Status.Dropped;
         const isAvailable =
           task.taskStatus !== Task.Status.Blocked &&
           (!task.deferDate || task.deferDate <= new Date());
-        result = isActive && isAvailable;
+        result = !isFinished && isAvailable;
       } else if (value === "firstAvailable") {
         // "firstAvailable" specifically means the Available status
         result = task.taskStatus === Task.Status.Available;
@@ -105,18 +112,31 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
       (task.repetitionRule !== null) === value;
     var evaluateActionIsUntagged = (task, value) =>
       (task.tags.length === 0) === value;
-    // Tag.effectivelyDropped/effectivelyActive/effectivelyOnHold do not exist on
-    // the OmniJS Tag class (verified against app.getTypeScriptDeclarations() and
-    // by probing a live tag — all three read back as undefined). Every branch
-    // here silently evaluated to a fixed wrong value: "remaining" was always
-    // true (!undefined), the rest were always false. Tag.Status has exactly
-    // three real members: Active, Dropped, OnHold.
+    // The adverb-form names Tag.effectivelyDropped/effectivelyActive/
+    // effectivelyOnHold do NOT exist (verified against
+    // app.getTypeScriptDeclarations() — zero matches — and by probing a live
+    // tag; all read back as undefined). The adjective-form `effectiveActive`
+    // DOES exist (inherited from ActiveObject) but is the wrong tool here: for a
+    // Tag it only tracks "not dropped" — a live probe shows an on-hold tag
+    // reads effectiveActive:true. The perspective editor treats Active and
+    // On Hold as distinct rule values (that's why "remaining" — meaning "not
+    // dropped" — is a separate value), so we need the real Tag.Status, folded
+    // up the parent chain. `tag.parent` and `tag.status` are both real
+    // properties; Tag.Status members are Active, Dropped, OnHold.
+    var tagAncestryHasStatus = (tag, status) => {
+      for (var t = tag; t; t = t.parent) {
+        if (t.status === status) return true;
+      }
+      return false;
+    };
     var evaluateActionHasTagWithStatus = (task, value) => {
       return task.tags.some((tag) => {
-        if (value === "remaining") return tag.status !== Tag.Status.Dropped;
-        if (value === "active") return tag.status === Tag.Status.Active;
-        if (value === "onHold") return tag.status === Tag.Status.OnHold;
-        if (value === "dropped") return tag.status === Tag.Status.Dropped;
+        const droppedInChain = tagAncestryHasStatus(tag, Tag.Status.Dropped);
+        if (value === "dropped") return droppedInChain;
+        if (value === "remaining") return !droppedInChain;
+        const onHoldInChain = tagAncestryHasStatus(tag, Tag.Status.OnHold);
+        if (value === "onHold") return !droppedInChain && onHoldInChain;
+        if (value === "active") return !droppedInChain && !onHoldInChain;
         return false;
       });
     };

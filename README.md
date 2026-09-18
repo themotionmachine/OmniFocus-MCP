@@ -143,6 +143,8 @@ Edit an existing task or project. Also the way to **move** items — set `newPro
 - Projects: `newProjectStatus` (`active`, `completed`, `dropped`, `onHold`), `newFolderName`, `newSequential`, `markReviewed` (sets the next review date based on the project's review interval)
 - Repetition: `newRepeat` sets a new rule (same shape as `repeat` on create); `newRepeat: null` clears it
 
+At least one editable field is required — a call with only `id`/`name`/`itemType` is refused rather than reported as a successful no-op. Unrecognized argument keys (a `note` typo for `newNote`, say) are rejected by every tool with the key named in the error, instead of being silently dropped.
+
 ### `remove_item`
 
 Remove a task or project.
@@ -255,6 +257,8 @@ The daemon listens on a Unix domain socket in a `0700` directory (`~/.omnifocus-
 
 The socket name carries the package version so that upgrading can never leave you talking to the previous version's daemon. Right after an upgrade you may briefly see two daemons: the old one keeps serving the clients already attached to it and exits once the last of them disconnects. Clients still attached to the old daemon are told about it in-band — while a newer daemon is serving, every tool result carries a one-line upgrade notice, so nobody has to remember to reconnect.
 
+A session that simply goes quiet is no longer disconnected: when the idle window passes with no traffic, the shim pings the client and keeps the session if it answers, so long-lived sessions (Claude Code and similar) keep their tools across long quiet stretches. Only a client that never answers is treated as gone.
+
 If the daemon dies while clients are attached — a crash, or a manual kill during troubleshooting — each shim now reconnects, replays its client's `initialize` handshake to the new daemon, and fails any in-flight requests with a retryable error rather than leaving the client waiting. Previously the shim exited, which cost clients their tools for the rest of the session.
 
 Nothing about client configuration changes. If the daemon can't be started — an unusual sandbox, a read-only home directory — the shim falls back to running a standalone server in-process, exactly as earlier versions did.
@@ -273,7 +277,7 @@ Note that the check is on *repeating item plus terminal status*, not on the shap
 |---|---|---|
 | `OMNIFOCUS_MCP_NO_DAEMON` | unset | Set to `1` to skip the daemon entirely and run a dedicated server per client (the pre-daemon behavior). First thing to try if you suspect the daemon. |
 | `OMNIFOCUS_MCP_SOCKET` | `~/.omnifocus-mcp/daemon-<version>.sock` | Override the socket path, e.g. to run an isolated instance. |
-| `OMNIFOCUS_MCP_IDLE_TIMEOUT_MINUTES` | `30` | Exit after this long with no client traffic. `0` disables the timeout. |
+| `OMNIFOCUS_MCP_IDLE_TIMEOUT_MINUTES` | `30` | Idle window after which the server pings the client and exits only if it gets no answer. `0` disables the check. |
 | `OMNIFOCUS_MCP_MAX_CONCURRENT_OSASCRIPT` | `4` | Maximum concurrent `osascript` calls. Lower it if you still see AppleEvent timeouts. |
 
 ## Roadmap
