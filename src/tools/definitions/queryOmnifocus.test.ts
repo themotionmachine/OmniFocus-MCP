@@ -3,7 +3,10 @@ import { schema } from './queryOmnifocus.js';
 
 describe('queryOmnifocus schema', () => {
   describe('date filter union types', () => {
-    const dateFields = ['dueWithin', 'deferredUntil', 'plannedWithin', 'dueOn', 'deferOn', 'plannedOn'];
+    const dateFields = [
+      'dueWithin', 'deferredUntil', 'plannedWithin', 'dueOn', 'deferOn', 'plannedOn',
+      'addedWithin', 'addedOn', 'completedWithin', 'completedOn', 'droppedWithin', 'droppedOn',
+    ];
 
     for (const field of dateFields) {
       it(`${field} accepts a number`, () => {
@@ -47,6 +50,32 @@ describe('queryOmnifocus schema', () => {
 
     it('rejects non-boolean types', () => {
       const input = { entity: 'projects', filters: { reviewDue: 'yes' } };
+      const result = schema.safeParse(input);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('status filter enum', () => {
+    it('accepts valid task status values', () => {
+      const input = { entity: 'tasks', filters: { status: ['Next', 'Available', 'Overdue'] } };
+      const result = schema.safeParse(input);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts valid project status values', () => {
+      const input = { entity: 'projects', filters: { status: ['Active', 'OnHold', 'Done', 'Dropped'] } };
+      const result = schema.safeParse(input);
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects a misspelled status value', () => {
+      const input = { entity: 'tasks', filters: { status: ['NextAction'] } };
+      const result = schema.safeParse(input);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a lowercase status value (case matters)', () => {
+      const input = { entity: 'tasks', filters: { status: ['next'] } };
       const result = schema.safeParse(input);
       expect(result.success).toBe(false);
     });

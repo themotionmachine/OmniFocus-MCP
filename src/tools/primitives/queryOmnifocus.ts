@@ -121,7 +121,50 @@ interface QueryResult {
   error?: string;
 }
 
+// Fields queryOmnifocus can actually populate for each entity. Kept in sync with
+// generateFieldMapping below. An unrecognized field silently returns null rather
+// than erroring (raw property access on the underlying OmniJS object), so this is
+// checked here — in the primitive itself, not just the query_omnifocus tool
+// handler — so every caller gets it, including resources (project.ts, flagged.ts,
+// inbox.ts, today.ts) that call this function directly with their own field lists.
+const VALID_FIELDS: Record<'tasks' | 'projects' | 'folders', string[]> = {
+  tasks: [
+    'id', 'name', 'note', 'flagged', 'taskStatus', 'dueDate', 'deferDate', 'plannedDate',
+    'effectiveDueDate', 'effectiveDeferDate', 'effectivePlannedDate', 'completionDate',
+    'dropDate', 'effectiveDropDate', 'estimatedMinutes', 'tagNames', 'tags', 'projectName',
+    'projectId', 'parentId', 'childIds', 'hasChildren', 'sequential', 'completedByChildren',
+    'inInbox', 'isRepeating', 'repetitionRule', 'repetitionMethod', 'isPastOccurrence',
+    'modificationDate', 'modified', 'creationDate', 'added',
+  ],
+  projects: [
+    'id', 'name', 'status', 'note', 'flagged', 'folderName', 'folderID', 'sequential',
+    'dueDate', 'deferDate', 'effectiveDueDate', 'effectiveDeferDate', 'completionDate',
+    'dropDate', 'effectiveDropDate', 'completedByChildren', 'containsSingletonActions',
+    'taskCount', 'tasks', 'tagNames', 'isPastOccurrence', 'nextReviewDate', 'reviewInterval',
+    'modificationDate', 'modified', 'creationDate', 'added',
+  ],
+  folders: [
+    'id', 'name', 'path', 'parentFolderID', 'status', 'projectCount', 'projects', 'subfolders',
+  ],
+};
+
+export function validateFields(entity: 'tasks' | 'projects' | 'folders', fields?: string[]): string[] {
+  if (!fields || fields.length === 0) return [];
+  const allowed = new Set(VALID_FIELDS[entity]);
+  return fields.filter(f => !allowed.has(f));
+}
+
 export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<QueryResult> {
+  if (params.fields && params.fields.length > 0) {
+    const invalidFields = validateFields(params.entity, params.fields);
+    if (invalidFields.length > 0) {
+      return {
+        success: false,
+        error: `Invalid field(s) for entity "${params.entity}": ${invalidFields.join(', ')}. Valid fields: ${VALID_FIELDS[params.entity].join(', ')}.`
+      };
+    }
+  }
+
   try {
     // Create JXA script for the query
     const jxaScript = generateQueryScript(params);
@@ -225,7 +268,16 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
         [Project.Status.Dropped]: "Dropped",
         [Project.Status.OnHold]: "OnHold"
       };
-      
+
+      // Folder.Status is its own enum (Active/Dropped only) — distinct from
+      // Project.Status. The status field mapping used to run every entity's
+      // status through projectStatusMap, so a folder's status looked up a
+      // Project.Status key against Folder.Status values and silently missed.
+      const folderStatusMap = {
+        [Folder.Status.Active]: "Active",
+        [Folder.Status.Dropped]: "Dropped"
+      };
+
       // Helper to collect all descendant folder IDs by walking down from a folder.
       // parentFolder is unreliable on flattenedFolders, so we walk children instead.
       function collectDescendantFolderIds(folder, idSet) {
@@ -777,7 +829,9 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
     } else if (field === 'taskStatus') {
       return `taskStatus: taskStatusMap[item.taskStatus]`;
     } else if (field === 'status') {
-      return `status: projectStatusMap[item.status]`;
+      return entity === 'folders'
+        ? `status: folderStatusMap[item.status]`
+        : `status: projectStatusMap[item.status]`;
     } else if (field === 'modificationDate' || field === 'modified') {
       return entity === 'projects'
         ? `modificationDate: formatDate(${PROJECT_MODIFIED_EXPR})`
@@ -881,4 +935,5 @@ export const _testExports = {
   generateFilterConditions,
   generateFieldMapping,
   generateQueryScript,
+  validateFields,
 };

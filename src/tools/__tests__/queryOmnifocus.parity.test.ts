@@ -276,6 +276,30 @@ describe('query_omnifocus folder property routing (#95)', () => {
 });
 
 /**
+ * Folder `status` field routing. `Folder` and `Project` are separate OmniJS
+ * classes with separate status enums — Folder.Status only has Active/Dropped,
+ * while Project.Status also has Done/OnHold. generateFieldMapping's `status`
+ * case was written once for projects and never branched by entity, so
+ * requesting `fields: ['status']` against folders ran the folder's
+ * Folder.Status value through projectStatusMap, whose keys are Project.Status
+ * values — a lookup miss that returns undefined for every folder. Documented
+ * as a valid folder field the whole time (fields description lists `status`
+ * for folders), so a caller had no reason to suspect the mapping was wrong.
+ */
+describe('query_omnifocus folder status routing', () => {
+  it('folder status reads Folder.Status through its own map, not projectStatusMap', () => {
+    const emitted = generateFieldMapping('folders', ['status']);
+    expect(emitted).toContain('folderStatusMap[item.status]');
+    expect(emitted).not.toContain('projectStatusMap[item.status]');
+  });
+
+  it('leaves project status routing on projectStatusMap', () => {
+    const emitted = generateFieldMapping('projects', ['status']);
+    expect(emitted).toContain('projectStatusMap[item.status]');
+  });
+});
+
+/**
  * folderName filter (#107): "all tasks in the Barochory folder" used to cost a
  * folders query to find the id, then a folderId query — or, worse, dead
  * projectName guesses. folderName seeds the same descendant-folder set as

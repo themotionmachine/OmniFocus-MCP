@@ -75,4 +75,37 @@ describe('resolveDateFilter', () => {
       expect(() => resolveDateFilter('not-a-date')).toThrow();
     });
   });
+
+  describe('direction parameter (for backward-looking filters like addedWithin)', () => {
+    it('numbers pass through unchanged regardless of direction', () => {
+      expect(resolveDateFilter(5, 'past')).toBe(5);
+      expect(resolveDateFilter(-5, 'past')).toBe(-5);
+    });
+
+    it('named strings resolve the same regardless of direction', () => {
+      expect(resolveDateFilter('today', 'past')).toBe(0);
+      expect(resolveDateFilter('this week', 'past')).toBe(7);
+    });
+
+    it('resolves a past ISO date to a positive "days ago" count under past direction', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-26T12:00:00'));
+
+      expect(resolveDateFilter('2026-03-25', 'past')).toBe(1);
+    });
+
+    it('resolves a future ISO date to a negative count under past direction', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-26T12:00:00'));
+
+      expect(resolveDateFilter('2026-04-02', 'past')).toBe(-7);
+    });
+
+    it('defaults to future direction when omitted (unchanged behavior)', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-26T12:00:00'));
+
+      expect(resolveDateFilter('2026-03-25')).toBe(-1);
+    });
+  });
 });
