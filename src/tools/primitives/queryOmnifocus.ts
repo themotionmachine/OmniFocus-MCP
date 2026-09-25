@@ -77,6 +77,16 @@ const IS_PAST_OCCURRENCE_PROJECT_EXPR =
 const REPETITION_RULE_EXPR = 'item.repetitionRule ? item.repetitionRule.ruleString : null';
 const REPETITION_METHOD_EXPR =
   'item.repetitionRule ? String(item.repetitionRule.method).replace(/^\\[object Task\\.RepetitionMethod: |\\]$/g, "") : null';
+// OmniFocus 4.7 split a repeat into schedule type + anchor date. `method` alone
+// reports "Fixed" for both a due-anchored and a defer-anchored fixed rule, which
+// behave very differently on an item with no due date (the due-anchored one
+// grows a due date on completion), so the anchor is exposed on its own.
+const REPETITION_ANCHOR_EXPR =
+  'item.repetitionRule && item.repetitionRule.anchorDateKey ? String(item.repetitionRule.anchorDateKey).replace(/^\\[object Task\\.AnchorDateKey: |\\]$/g, "") : null';
+const REPETITION_SCHEDULE_EXPR =
+  'item.repetitionRule && item.repetitionRule.scheduleType ? String(item.repetitionRule.scheduleType).replace(/^\\[object Task\\.RepetitionScheduleType: |\\]$/g, "") : null';
+const CATCH_UP_EXPR =
+  'item.repetitionRule && typeof item.repetitionRule.catchUpAutomatically === "boolean" ? item.repetitionRule.catchUpAutomatically : null';
 
 export interface QueryOmnifocusParams {
   entity: 'tasks' | 'projects' | 'folders';
@@ -133,7 +143,8 @@ const VALID_FIELDS: Record<'tasks' | 'projects' | 'folders', string[]> = {
     'effectiveDueDate', 'effectiveDeferDate', 'effectivePlannedDate', 'completionDate',
     'dropDate', 'effectiveDropDate', 'estimatedMinutes', 'tagNames', 'tags', 'projectName',
     'projectId', 'parentId', 'childIds', 'hasChildren', 'sequential', 'completedByChildren',
-    'inInbox', 'isRepeating', 'repetitionRule', 'repetitionMethod', 'isPastOccurrence',
+    'inInbox', 'isRepeating', 'repetitionRule', 'repetitionMethod', 'repetitionAnchor',
+    'repetitionSchedule', 'catchUpAutomatically', 'isPastOccurrence',
     'modificationDate', 'modified', 'creationDate', 'added',
   ],
   projects: [
@@ -141,6 +152,8 @@ const VALID_FIELDS: Record<'tasks' | 'projects' | 'folders', string[]> = {
     'dueDate', 'deferDate', 'effectiveDueDate', 'effectiveDeferDate', 'completionDate',
     'dropDate', 'effectiveDropDate', 'completedByChildren', 'containsSingletonActions',
     'taskCount', 'tasks', 'tagNames', 'isPastOccurrence', 'nextReviewDate', 'reviewInterval',
+    'isRepeating', 'repetitionRule', 'repetitionMethod', 'repetitionAnchor', 'repetitionSchedule',
+    'catchUpAutomatically',
     'modificationDate', 'modified', 'creationDate', 'added',
   ],
   folders: [
@@ -902,6 +915,12 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       return `repetitionRule: ${REPETITION_RULE_EXPR}`;
     } else if (field === 'repetitionMethod') {
       return `repetitionMethod: ${REPETITION_METHOD_EXPR}`;
+    } else if (field === 'repetitionAnchor') {
+      return `repetitionAnchor: ${REPETITION_ANCHOR_EXPR}`;
+    } else if (field === 'repetitionSchedule') {
+      return `repetitionSchedule: ${REPETITION_SCHEDULE_EXPR}`;
+    } else if (field === 'catchUpAutomatically') {
+      return `catchUpAutomatically: ${CATCH_UP_EXPR}`;
     } else if (field === 'isPastOccurrence') {
       return `isPastOccurrence: ${entity === 'projects' ? IS_PAST_OCCURRENCE_PROJECT_EXPR : IS_PAST_OCCURRENCE_TASK_EXPR}`;
     } else if (field === 'sequential') {

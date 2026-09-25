@@ -31,5 +31,10 @@ export const repeatShape = z
       .array(z.enum(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']))
       .optional()
       .describe("Specific days, e.g. ['MO','WE','FR']; requires unit 'week'"),
+    anchor: z
+      .enum(['defer', 'due', 'planned'])
+      .optional()
+      .describe("fixed only: date it counts from. Default: due if set, else defer"),
+    catchUp: z.boolean().optional().describe("fixed only: catch up automatically"),
   })
   .describe('Repetition rule');

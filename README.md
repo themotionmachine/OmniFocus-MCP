@@ -210,15 +210,20 @@ Create a tag, optionally nested under an existing parent.
 | `unit` | `day`, `week`, `month`, or `year` |
 | `steps` *(optional)* | Repeat every N units (default 1) |
 | `weekdays` *(optional)* | Specific days, e.g. `["MO","WE","FR"]`. Requires `unit: "week"` |
+| `anchor` *(optional, `fixed` only)* | Which date the schedule counts from: `defer`, `due`, or `planned`. Default: the due date if the item has one, otherwise the defer date |
+| `catchUp` *(optional, `fixed` only)* | OmniFocus's "catch up automatically" (default `false`) |
 
 ```json
 { "name": "Weekly review", "repeat": { "method": "start-after-completion", "unit": "week" } }
 { "name": "Strength work", "repeat": { "method": "fixed", "unit": "week", "weekdays": ["TU","TH"] } }
+{ "name": "Friday review", "deferDate": "2026-10-02", "repeat": { "method": "fixed", "unit": "week", "weekdays": ["FR"], "anchor": "defer" } }
 ```
 
 **Pick `method` deliberately** — it's the field most often set wrong by hand. With `fixed`, occurrences appear on schedule whether or not the last one was done, so a missed week leaves a backlog to clear. With `start-after-completion`, the next occurrence is scheduled from when you actually complete it, so the habit simply resumes.
 
-Read a rule back with `query_omnifocus` using the `repetitionRule` (ICS string) and `repetitionMethod` fields, or filter with `isRepeating`.
+**Mind the anchor on `fixed` repeats.** A fixed repeat counts from one of the item's dates. If it counts from the due date and the item has no due date, OmniFocus gives it one on completion — a start-date-only habit turns into a deadline. Before v1.17.0 every fixed repeat written through this server was anchored on the due date; now the default follows the item's dates, and `anchor` makes it explicit. The `edit_item` result reports the anchor it stored, e.g. `repetition (fixed, from defer date)`. Setting a repeat requires OmniFocus 4.7 or later.
+
+Read a rule back with `query_omnifocus` using the `repetitionRule` (ICS string), `repetitionMethod`, `repetitionAnchor`, `repetitionSchedule`, and `catchUpAutomatically` fields, or filter with `isRepeating`. `repetitionMethod` alone reports `Fixed` for both due- and defer-anchored rules; `repetitionAnchor` tells them apart.
 
 Not currently supported: positional monthly rules ("third Tuesday"), specific month days, and end conditions (`COUNT`/`UNTIL`). Set those in OmniFocus directly.
 

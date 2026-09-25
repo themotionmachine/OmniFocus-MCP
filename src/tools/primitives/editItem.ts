@@ -11,7 +11,11 @@ import {
   generateOccurrenceGuardScript,
   JSON_ESCAPE_HANDLER,
 } from '../../utils/appleScriptHelpers.js';
-import { repetitionRuleRecord, type RepetitionSpec } from '../../utils/repetitionRule.js';
+import {
+  repetitionRuleScript,
+  repetitionChangeLabel,
+  type RepetitionSpec,
+} from '../../utils/repetitionRule.js';
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped' | 'skipped';
@@ -247,11 +251,11 @@ export function generateAppleScript(params: EditItemParams): string {
 `;
     } else {
       script += `
-        -- Update the repetition rule. Whole-record assignment only: setting
-        -- \`recurrence\` or \`repetition method\` as sub-properties fails with
-        -- "Can't make … into type specifier".
-        set repetition rule of foundItem to ${repetitionRuleRecord(params.newRepeat)}
-        set end of changedProperties to "repetition"
+        -- Update the repetition rule through Omni Automation, after the date
+        -- edits above, so a defaulted fixed anchor sees the dates as they now
+        -- stand. See repetitionRuleScript for why not the AppleScript record.
+        ${repetitionRuleScript('foundItem', params.newRepeat, { isProject: itemType === 'project' })}
+        set end of changedProperties to ${repetitionChangeLabel(params.newRepeat)}
 `;
     }
   }

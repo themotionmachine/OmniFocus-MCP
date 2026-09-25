@@ -9,42 +9,57 @@ import { schema as editItemSchema } from '../definitions/editItem.js';
 import { schema as batchSchema } from '../definitions/batchAddItems.js';
 
 /**
- * Repetition writes (#116). The AppleScript layer accepts a repetition rule only
- * as a WHOLE record — sub-property assignment fails with "Can't make … into type
- * specifier" — so these tests pin the record form at each write site.
+ * Repetition writes (#116). Rules are written through Omni Automation
+ * (`repetitionRuleScript`), because the AppleScript record has no anchor field
+ * and stored every fixed repeat as due-anchored. These tests pin that each write
+ * site uses that path, on the right variable, AFTER its date writes.
  */
 describe('repetition rule on create (#116)', () => {
-  it('add_omnifocus_task emits the record with method and recurrence', () => {
+  it('add_omnifocus_task writes through Omni Automation on newTask', () => {
     const script = addTask({
       name: 'Weekly review',
       repeat: { method: 'start-after-completion', unit: 'week' },
     });
-    expect(script).toContain(
-      'set repetition rule of newTask to {repetition method:start after completion, recurrence:"FREQ=WEEKLY"}'
-    );
+    expect(script).toContain('set _repetitionId to id of newTask as string');
+    expect(script).toContain("new Task.RepetitionRule('FREQ=WEEKLY'");
+    expect(script).toContain('Task.RepetitionScheduleType.FromCompletion');
+    expect(script).not.toContain('{repetition method:');
   });
 
-  it('add_project emits the record too (projects can repeat)', () => {
+  it('add_project writes on newProject (projects can repeat)', () => {
     const script = addProject({
       name: 'Monthly close',
       repeat: { method: 'fixed', unit: 'month', steps: 3 },
     });
-    expect(script).toContain(
-      'set repetition rule of newProject to {repetition method:fixed repetition, recurrence:"FREQ=MONTHLY;INTERVAL=3"}'
-    );
+    expect(script).toContain('set _repetitionId to id of newProject as string');
+    expect(script).toContain("'FREQ=MONTHLY;INTERVAL=3'");
+    // Projects have no planned date, so the default chain must not consult one.
+    expect(script).not.toContain('x.plannedDate');
+  });
+
+  it('writes the rule after the dates, so a defaulted anchor sees them', () => {
+    const script = addTask({
+      name: 'Fri review',
+      deferDate: '2026-10-02',
+      dueDate: '2026-10-09',
+      repeat: { method: 'fixed', unit: 'week', weekdays: ['FR'] },
+    });
+    const rule = script.indexOf('set _repetitionId');
+    expect(rule).toBeGreaterThan(script.indexOf('set defer date of newTask'));
+    expect(rule).toBeGreaterThan(script.indexOf('set due date of newTask'));
   });
 
   it('emits no repetition statement when no repeat is requested', () => {
-    expect(addTask({ name: 'One-shot' })).not.toContain('repetition rule');
-    expect(addProject({ name: 'One-shot' })).not.toContain('repetition rule');
+    expect(addTask({ name: 'One-shot' })).not.toContain('RepetitionRule');
+    expect(addProject({ name: 'One-shot' })).not.toContain('RepetitionRule');
   });
 
-  it('compiles weekday sets through to the record', () => {
+  it('compiles weekday sets through', () => {
     const script = addTask({
       name: 'Strength',
       repeat: { method: 'fixed', unit: 'week', weekdays: ['TU', 'TH'] },
     });
-    expect(script).toContain('recurrence:"FREQ=WEEKLY;BYDAY=TU,TH"');
+    expect(script).toContain("'FREQ=WEEKLY;BYDAY=TU,TH'");
   });
 
   it('throws rather than creating a task with a silently-dropped repeat', () => {
@@ -57,16 +72,37 @@ describe('repetition rule on create (#116)', () => {
 });
 
 describe('repetition rule on edit (#116)', () => {
-  it('sets a new rule as a whole record', () => {
+  it('sets a new rule through Omni Automation and labels what was stored', () => {
     const script = editItem({
       id: 'abc',
       itemType: 'task',
       newRepeat: { method: 'due-after-completion', unit: 'day', steps: 5 },
     });
-    expect(script).toContain(
-      'set repetition rule of foundItem to {repetition method:due after completion, recurrence:"FREQ=DAILY;INTERVAL=5"}'
-    );
-    expect(script).toContain('set end of changedProperties to "repetition"');
+    expect(script).toContain('set _repetitionId to id of foundItem as string');
+    expect(script).toContain("'FREQ=DAILY;INTERVAL=5'");
+    expect(script).toContain('set end of changedProperties to "repetition (due after completion)"');
+  });
+
+  it('reports a fixed rule with the anchor actually stored', () => {
+    const script = editItem({
+      id: 'abc',
+      itemType: 'task',
+      newRepeat: { method: 'fixed', unit: 'week', weekdays: ['FR'], anchor: 'defer' },
+    });
+    expect(script).toContain('"repetition (fixed, from " & _repetitionAnchor & " date)"');
+  });
+
+  it('writes the rule after any date edits in the same call', () => {
+    const script = editItem({
+      id: 'abc',
+      itemType: 'task',
+      newDeferDate: '2026-10-02',
+      newDueDate: '',
+      newRepeat: { method: 'fixed', unit: 'week' },
+    });
+    const rule = script.indexOf('set _repetitionId');
+    expect(rule).toBeGreaterThan(script.indexOf('defer date'));
+    expect(rule).toBeGreaterThan(script.indexOf('due date'));
   });
 
   it('clears the rule when newRepeat is null', () => {
@@ -90,8 +126,9 @@ describe('repetition rule on edit (#116)', () => {
       itemType: 'project',
       newRepeat: { method: 'fixed', unit: 'year' },
     });
-    expect(script).toContain('set repetition rule of foundItem to');
-    expect(script).toContain('FREQ=YEARLY');
+    expect(script).toContain('set _repetitionId to id of foundItem as string');
+    expect(script).toContain("'FREQ=YEARLY'");
+    expect(script).not.toContain('x.plannedDate');
   });
 });
 

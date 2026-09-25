@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   compileRecurrence,
-  repetitionRuleRecord,
+  repetitionRuleScript,
+  repetitionChangeLabel,
   describeRepetition,
   RepetitionSpecError,
   OMNIJS_METHOD,
@@ -87,37 +88,193 @@ describe('compileRecurrence (#116)', () => {
   });
 });
 
-describe('repetitionRuleRecord (#116)', () => {
-  it('builds the AppleScript record with the right method constant', () => {
-    expect(repetitionRuleRecord({ method: 'fixed', unit: 'week' })).toBe(
-      '{repetition method:fixed repetition, recurrence:"FREQ=WEEKLY"}'
-    );
-    expect(repetitionRuleRecord({ method: 'start-after-completion', unit: 'day', steps: 3 })).toBe(
-      '{repetition method:start after completion, recurrence:"FREQ=DAILY;INTERVAL=3"}'
-    );
-    expect(repetitionRuleRecord({ method: 'due-after-completion', unit: 'month' })).toBe(
-      '{repetition method:due after completion, recurrence:"FREQ=MONTHLY"}'
-    );
+/**
+ * Run the JS that repetitionRuleScript embeds against a minimal fake of the
+ * OmniJS surface it touches. String-matching the script would pin its spelling;
+ * executing it pins what it DOES — which anchor it picks for which dates, and
+ * that it refuses a rule that reads back differently.
+ */
+function runRuleScript(
+  spec: RepetitionSpec,
+  dates: { dueDate?: Date | null; deferDate?: Date | null; plannedDate?: Date | null },
+  options: { isProject?: boolean; tamper?: (rule: any) => void } = {}
+) {
+  const script = repetitionRuleScript('x', spec, { isProject: options.isProject ?? false });
+  const m = script.match(/evaluate javascript "(.*)"\)$/m);
+  if (!m) throw new Error('no evaluate javascript call in:\n' + script);
+  const js = m[1].replace('" & _repetitionId & "', 'ID1');
+
+  const K = { DeferDate: { k: 'DeferDate' }, DueDate: { k: 'DueDate' }, PlannedDate: { k: 'PlannedDate' } };
+  const S = { Regularly: { s: 'Regularly' }, FromCompletion: { s: 'FromCompletion' } };
+  class RepetitionRule {
+    constructor(
+      public ruleString: string,
+      public method: unknown,
+      public scheduleType: unknown,
+      public anchorDateKey: unknown,
+      public catchUpAutomatically: boolean
+    ) {}
+  }
+  let stored: any = null;
+  const target = {
+    dueDate: dates.dueDate ?? null,
+    deferDate: dates.deferDate ?? null,
+    plannedDate: dates.plannedDate ?? null,
+    get repetitionRule() { return stored; },
+    set repetitionRule(r: any) { stored = r; options.tamper?.(r); },
+  };
+  const rootTask = options.isProject ? { project: target } : null;
+  const Task = {
+    byIdentifier: (id: string) => (id === 'ID1' ? (rootTask ?? Object.assign(target, { project: null })) : null),
+    AnchorDateKey: K,
+    RepetitionScheduleType: S,
+    RepetitionRule,
+  };
+  const anchor = new Function('Task', `return ${js}`)(Task) as string;
+  const keyName = (v: unknown) => Object.entries(K).find(([, o]) => o === v)?.[0];
+  const schedName = (v: unknown) => Object.entries(S).find(([, o]) => o === v)?.[0];
+  return {
+    anchor,
+    stored: {
+      ruleString: stored.ruleString,
+      schedule: schedName(stored.scheduleType),
+      anchorKey: keyName(stored.anchorDateKey),
+      catchUp: stored.catchUpAutomatically,
+    },
+  };
+}
+
+const D = new Date('2026-10-02T12:00:00Z');
+
+describe('repetitionRuleScript: which date a fixed repeat counts from', () => {
+  const fixedWeekly: RepetitionSpec = { method: 'fixed', unit: 'week', weekdays: ['FR'] };
+
+  // The bug this replaces: the AppleScript record always stored DueDate, so an
+  // item with no due date grew one on completion.
+  it.each([
+    ['due only', { dueDate: D }, 'DueDate'],
+    ['defer only', { deferDate: D }, 'DeferDate'],
+    ['due and defer', { dueDate: D, deferDate: D }, 'DueDate'],
+    ['planned only', { plannedDate: D }, 'PlannedDate'],
+    ['no dates at all', {}, 'DeferDate'],
+  ] as const)('defaults sensibly for a task with %s', (_label, dates, expected) => {
+    const { stored } = runRuleScript(fixedWeekly, dates);
+    expect(stored.anchorKey).toBe(expected);
+    expect(stored.schedule).toBe('Regularly');
+    expect(stored.ruleString).toBe('FREQ=WEEKLY;BYDAY=FR');
+    expect(stored.catchUp).toBe(false);
   });
 
-  it('propagates spec errors instead of emitting a broken record', () => {
-    expect(() => repetitionRuleRecord({ method: 'fixed', unit: 'week', steps: 0 })).toThrow(
+  it('honors an explicit anchor over the default, whatever dates exist', () => {
+    const { stored, anchor } = runRuleScript({ ...fixedWeekly, anchor: 'defer' }, { dueDate: D, deferDate: D });
+    expect(stored.anchorKey).toBe('DeferDate');
+    expect(anchor).toBe('defer');
+  });
+
+  it('reports the anchor it actually stored, so a default is never silent', () => {
+    expect(runRuleScript(fixedWeekly, { deferDate: D }).anchor).toBe('defer');
+    expect(runRuleScript(fixedWeekly, { dueDate: D }).anchor).toBe('due');
+    expect(runRuleScript(fixedWeekly, { plannedDate: D }).anchor).toBe('planned');
+  });
+
+  it('passes catchUp through', () => {
+    expect(runRuleScript({ ...fixedWeekly, catchUp: true }, { deferDate: D }).stored.catchUp).toBe(true);
+  });
+
+  it('never defaults a project to the planned date (projects have none)', () => {
+    const { stored } = runRuleScript(fixedWeekly, { plannedDate: D }, { isProject: true });
+    expect(stored.anchorKey).toBe('DeferDate');
+  });
+
+  it('sets the rule on the project, not its root task', () => {
+    const { stored } = runRuleScript({ method: 'fixed', unit: 'month' }, { dueDate: D }, { isProject: true });
+    expect(stored.anchorKey).toBe('DueDate');
+  });
+});
+
+describe('repetitionRuleScript: after-completion methods', () => {
+  it.each([
+    ['start-after-completion', 'DeferDate', 'defer'],
+    ['due-after-completion', 'DueDate', 'due'],
+  ] as const)('%s writes FromCompletion anchored on %s regardless of dates', (method, key, word) => {
+    for (const dates of [{}, { dueDate: D }, { deferDate: D }, { dueDate: D, deferDate: D }]) {
+      const { stored, anchor } = runRuleScript({ method, unit: 'month', steps: 3 }, dates);
+      expect(stored.schedule).toBe('FromCompletion');
+      expect(stored.anchorKey).toBe(key);
+      expect(stored.ruleString).toBe('FREQ=MONTHLY;INTERVAL=3');
+      expect(anchor).toBe(word);
+    }
+  });
+});
+
+describe('repetitionRuleScript: failing loudly', () => {
+  it('throws if OmniFocus stores something other than what was asked', () => {
+    expect(() =>
+      runRuleScript({ method: 'fixed', unit: 'week' }, { deferDate: D }, {
+        tamper: r => { r.ruleString = 'FREQ=DAILY'; },
+      })
+    ).toThrow(/did not read back as written/);
+  });
+
+  it('rejects anchor or catchUp on an after-completion method (they imply their anchor)', () => {
+    expect(() =>
+      repetitionRuleScript('x', { method: 'start-after-completion', unit: 'week', anchor: 'due' }, { isProject: false })
+    ).toThrow(/only apply to method "fixed"/);
+    expect(() =>
+      repetitionRuleScript('x', { method: 'due-after-completion', unit: 'week', catchUp: true }, { isProject: false })
+    ).toThrow(/only apply to method "fixed"/);
+  });
+
+  it('rejects a planned anchor on a project', () => {
+    expect(() =>
+      repetitionRuleScript('x', { method: 'fixed', unit: 'week', anchor: 'planned' }, { isProject: true })
+    ).toThrow(/projects/);
+  });
+
+  it('propagates spec errors instead of emitting a broken script', () => {
+    expect(() => repetitionRuleScript('x', { method: 'fixed', unit: 'week', steps: 0 }, { isProject: false })).toThrow(
       RepetitionSpecError
     );
   });
 
-  it('covers every method name with a distinct AppleScript constant', () => {
-    const records = (['fixed', 'start-after-completion', 'due-after-completion'] as const).map(m =>
-      repetitionRuleRecord({ method: m, unit: 'week' })
+  it('keeps the embedded JS free of characters that would break the AppleScript string', () => {
+    for (const spec of [
+      { method: 'fixed', unit: 'week', weekdays: ['MO', 'FR'], anchor: 'planned', catchUp: true },
+      { method: 'start-after-completion', unit: 'day', steps: 2 },
+    ] as RepetitionSpec[]) {
+      const js = repetitionRuleScript('x', spec, { isProject: false })
+        .match(/evaluate javascript "(.*)"\)$/m)![1]
+        .replace('" & _repetitionId & "', '');
+      expect(js).not.toMatch(/["\\]/);
+    }
+  });
+
+  it('names the version requirement rather than failing obscurely on old OmniFocus', () => {
+    expect(repetitionRuleScript('x', { method: 'fixed', unit: 'week' }, { isProject: false })).toContain(
+      'requires OmniFocus 4.7 or later'
     );
-    expect(new Set(records).size).toBe(3);
+  });
+});
+
+describe('repetitionChangeLabel', () => {
+  it('splices the stored anchor into the fixed label at runtime', () => {
+    expect(repetitionChangeLabel({ method: 'fixed', unit: 'week' })).toBe(
+      '"repetition (fixed, from " & _repetitionAnchor & " date)"'
+    );
+    expect(repetitionChangeLabel({ method: 'fixed', unit: 'week', catchUp: true })).toContain('catch up');
+  });
+
+  it('uses a static label for after-completion methods', () => {
+    expect(repetitionChangeLabel({ method: 'start-after-completion', unit: 'week' })).toBe(
+      '"repetition (start after completion)"'
+    );
   });
 });
 
 describe('OMNIJS_METHOD (#116)', () => {
   it('maps each API method to the name query_omnifocus reports back (#115)', () => {
-    // This is the round-trip contract: write via AppleScript constant, read back
-    // via repetitionMethod. Verified live against OmniFocus.
+    // The round-trip contract: write through Omni Automation, read back via
+    // repetitionMethod. Verified live against OmniFocus.
     expect(OMNIJS_METHOD.fixed).toBe('Fixed');
     expect(OMNIJS_METHOD['start-after-completion']).toBe('DeferUntilDate');
     expect(OMNIJS_METHOD['due-after-completion']).toBe('DueDate');
@@ -131,7 +288,10 @@ describe('describeRepetition (#116)', () => {
     );
     expect(
       describeRepetition({ method: 'fixed', unit: 'week', steps: 2, weekdays: ['TU', 'TH'] })
-    ).toBe('every 2 weeks on TU, TH, on a fixed schedule');
+    ).toBe('every 2 weeks on TU, TH, on a fixed schedule from the due date (or defer date if none)');
+    expect(describeRepetition({ method: 'fixed', unit: 'week', anchor: 'defer' })).toBe(
+      'every week, on a fixed schedule from the defer date'
+    );
     expect(describeRepetition({ method: 'due-after-completion', unit: 'day', steps: 3 })).toBe(
       'every 3 days, due after completion'
     );

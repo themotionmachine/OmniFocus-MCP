@@ -8,7 +8,7 @@ import {
   generateFolderLookupScript,
   JSON_ESCAPE_HANDLER,
 } from '../../utils/appleScriptHelpers.js';
-import { repetitionRuleRecord, type RepetitionSpec } from '../../utils/repetitionRule.js';
+import { repetitionRuleScript, type RepetitionSpec } from '../../utils/repetitionRule.js';
 import { runOsascriptFile } from '../../utils/scriptExecution.js';
 
 // Interface for project creation parameters
@@ -91,9 +91,8 @@ export function generateAppleScript(params: AddProjectParams): string {
         ${estimatedMinutes ? `set estimated minutes of newProject to ${estimatedMinutes}` : ''}
         ${`set sequential of newProject to ${sequential}`}
         ${params.repeat ? `
-          -- Set the repetition rule (#116). Whole-record assignment only; see
-          -- the note in addOmniFocusTask.
-          set repetition rule of newProject to ${repetitionRuleRecord(params.repeat)}` : ''}
+          -- Set the repetition rule (#116) after the dates; see repetitionRuleScript.
+          ${repetitionRuleScript('newProject', params.repeat, { isProject: true })}` : ''}
 
         -- Get the project ID
         set projectId to id of newProject as string
