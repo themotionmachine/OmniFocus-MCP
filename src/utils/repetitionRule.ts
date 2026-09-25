@@ -23,7 +23,17 @@ export interface RepetitionSpec {
   steps?: number;
   /** Week-unit only; compiles to BYDAY. */
   weekdays?: Weekday[];
+  /**
+   * `fixed` only: which date the schedule counts from. Omitted, it is the due
+   * date if the item has one, else the defer date, else the planned date — see
+   * `repetitionRuleScript` for why that default matters.
+   */
+  anchor?: RepetitionAnchor;
+  /** `fixed` only: OmniFocus's "catch up automatically". Default false. */
+  catchUp?: boolean;
 }
+
+export type RepetitionAnchor = 'defer' | 'due' | 'planned';
 
 const FREQ_BY_UNIT: Record<RepetitionUnit, string> = {
   day: 'DAILY',
@@ -33,14 +43,27 @@ const FREQ_BY_UNIT: Record<RepetitionUnit, string> = {
 };
 
 /**
- * AppleScript enum constants. These are the literal tokens the OmniFocus
- * dictionary expects — verified by round-trip against OmniJS, which reports them
- * back as Fixed / DeferUntilDate / DueDate respectively.
+ * How each method is written through Omni Automation. OmniFocus 4.7 split the
+ * old single "method" into a schedule type plus an anchor date; the two
+ * after-completion methods imply their anchor, `fixed` needs one chosen.
+ * Verified by round-trip: each combination reads back as the OMNIJS_METHOD
+ * value below.
  */
-const APPLESCRIPT_METHOD: Record<RepetitionMethodName, string> = {
-  fixed: 'fixed repetition',
-  'start-after-completion': 'start after completion',
-  'due-after-completion': 'due after completion',
+const SCHEDULE: Record<RepetitionMethodName, 'Regularly' | 'FromCompletion'> = {
+  fixed: 'Regularly',
+  'start-after-completion': 'FromCompletion',
+  'due-after-completion': 'FromCompletion',
+};
+
+const ANCHOR_KEY: Record<RepetitionAnchor, string> = {
+  defer: 'DeferDate',
+  due: 'DueDate',
+  planned: 'PlannedDate',
+};
+
+const IMPLIED_ANCHOR: Partial<Record<RepetitionMethodName, RepetitionAnchor>> = {
+  'start-after-completion': 'defer',
+  'due-after-completion': 'due',
 };
 
 /** How the method reads back from query_omnifocus (#115), for verification. */
@@ -69,9 +92,21 @@ export function compileRecurrence(spec: RepetitionSpec): string {
       `Invalid repeat unit "${spec.unit}". Expected one of: day, week, month, year.`
     );
   }
-  if (!(spec.method in APPLESCRIPT_METHOD)) {
+  if (!(spec.method in SCHEDULE)) {
     throw new RepetitionSpecError(
       `Invalid repeat method "${spec.method}". Expected one of: fixed, start-after-completion, due-after-completion.`
+    );
+  }
+
+  if (spec.method !== 'fixed' && (spec.anchor !== undefined || spec.catchUp !== undefined)) {
+    throw new RepetitionSpecError(
+      `anchor and catchUp only apply to method "fixed"; "${spec.method}" already implies its ` +
+        `anchor (${IMPLIED_ANCHOR[spec.method]} date, counted from completion).`
+    );
+  }
+  if (spec.anchor !== undefined && !(spec.anchor in ANCHOR_KEY)) {
+    throw new RepetitionSpecError(
+      `Invalid repeat anchor "${spec.anchor}". Expected one of: defer, due, planned.`
     );
   }
 
@@ -117,16 +152,81 @@ export function compileRecurrence(spec: RepetitionSpec): string {
 }
 
 /**
- * The AppleScript record literal for a repetition rule, ready to interpolate
- * into `set repetition rule of X to …` or a `make new …with properties` list.
+ * AppleScript that sets `targetVar`'s repetition rule and leaves the anchor it
+ * was stored with ('defer' | 'due' | 'planned') in the AppleScript variable
+ * `_repetitionAnchor`. Emit inside `tell front document`, after the item's dates
+ * have been written, so the default anchor sees the dates as they now stand.
  *
- * NOTE for anyone extending this: only assigning the WHOLE record works.
- * Setting `recurrence` or `repetition method` as sub-properties fails with
- * "Can't make … into type specifier". Verified empirically.
+ * Why not `set repetition rule of X to {repetition method:…, recurrence:…}`:
+ * that record has no anchor field, and OmniFocus stores every `fixed
+ * repetition` written that way as anchored on the DUE date — whatever dates the
+ * item actually has. A due-anchored repeat on an item with no due date grows
+ * one on completion; one live case came back deferred past its own new due
+ * date. So the rule is built through Omni Automation instead, where schedule
+ * type and anchor are explicit constructor arguments.
+ *
+ * The id is resolved with `Task.byIdentifier`: AppleScript's id for a project is
+ * its root task's id (the two-namespace landmine from #77), and a root task's
+ * `.project` is the project itself, so one lookup covers both item types.
+ *
+ * The stored rule is read back and compared; a mismatch throws, which the
+ * caller's `on error` turns into a failure result. A repeat that silently lands
+ * as something other than what was asked is the failure this module exists to
+ * remove.
  */
-export function repetitionRuleRecord(spec: RepetitionSpec): string {
+export function repetitionRuleScript(
+  targetVar: string,
+  spec: RepetitionSpec,
+  options: { isProject: boolean }
+): string {
   const recurrence = compileRecurrence(spec);
-  return `{repetition method:${APPLESCRIPT_METHOD[spec.method]}, recurrence:"${recurrence}"}`;
+  if (options.isProject && spec.anchor === 'planned') {
+    throw new RepetitionSpecError(
+      'anchor "planned" is not available for projects (projects have no planned date). Use "defer" or "due".'
+    );
+  }
+
+  const schedule = SCHEDULE[spec.method];
+  const catchUp = spec.method === 'fixed' && spec.catchUp === true;
+  const fixedAnchor = spec.anchor ?? IMPLIED_ANCHOR[spec.method];
+  // The default is evaluated at write time against the item's current dates.
+  const anchorExpr = fixedAnchor
+    ? `K.${ANCHOR_KEY[fixedAnchor]}`
+    : options.isProject
+      ? '(x.dueDate ? K.DueDate : K.DeferDate)'
+      : '(x.dueDate ? K.DueDate : x.deferDate ? K.DeferDate : x.plannedDate ? K.PlannedDate : K.DeferDate)';
+
+  // Single-quoted JS only: this is spliced into a double-quoted AppleScript
+  // string. Every interpolated value is a compiled RRULE or a fixed identifier.
+  const js =
+    `(function(){var t=Task.byIdentifier('" & _repetitionId & "');` +
+    `if(!t)throw new Error('repetition: item not found');` +
+    `if(!Task.AnchorDateKey)throw new Error('repetition: setting a repeat requires OmniFocus 4.7 or later');` +
+    `var x=t.project?t.project:t;var K=Task.AnchorDateKey;var S=Task.RepetitionScheduleType.${schedule};` +
+    `var a=${anchorExpr};` +
+    `x.repetitionRule=new Task.RepetitionRule('${recurrence}',null,S,a,${catchUp});` +
+    `var r=x.repetitionRule;` +
+    `if(!r||r.ruleString!=='${recurrence}'||r.scheduleType!==S||r.anchorDateKey!==a||r.catchUpAutomatically!==${catchUp})` +
+    `throw new Error('repetition: rule did not read back as written');` +
+    `return a===K.DueDate?'due':a===K.DeferDate?'defer':'planned';})()`;
+
+  return `set _repetitionId to id of ${targetVar} as string
+          tell application "OmniFocus" to set _repetitionAnchor to (evaluate javascript "${js}")`;
+}
+
+/**
+ * The changedProperties label for an edit, built at script runtime so a
+ * defaulted anchor is reported as the one actually stored — the caller should
+ * never have to re-query to learn which date a fixed repeat counts from.
+ */
+export function repetitionChangeLabel(spec: RepetitionSpec): string {
+  if (spec.method === 'fixed') {
+    const catchUp = spec.catchUp ? ', catch up' : '';
+    return `"repetition (fixed, from " & _repetitionAnchor & " date${catchUp})"`;
+  }
+  return spec.method === 'start-after-completion'
+    ? '"repetition (start after completion)"'
+    : '"repetition (due after completion)"';
 }
 
 /**
@@ -142,7 +242,9 @@ export function describeRepetition(spec: RepetitionSpec): string {
       : '';
   const from =
     spec.method === 'fixed'
-      ? 'on a fixed schedule'
+      ? spec.anchor
+        ? `on a fixed schedule from the ${spec.anchor} date`
+        : 'on a fixed schedule from the due date (or defer date if none)'
       : spec.method === 'start-after-completion'
         ? 'starting after completion'
         : 'due after completion';

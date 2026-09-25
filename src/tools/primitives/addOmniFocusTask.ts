@@ -9,7 +9,7 @@ import {
   generateProjectLookupScript,
   JSON_ESCAPE_HANDLER,
 } from '../../utils/appleScriptHelpers.js';
-import { repetitionRuleRecord, type RepetitionSpec } from '../../utils/repetitionRule.js';
+import { repetitionRuleScript, type RepetitionSpec } from '../../utils/repetitionRule.js';
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -174,10 +174,9 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
         ${flagged ? `set flagged of newTask to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newTask to ${estimatedMinutes}` : ''}
         ${params.repeat ? `
-          -- Set the repetition rule (#116). Assigned as a whole record: setting
-          -- \`recurrence\` or \`repetition method\` as sub-properties fails with
-          -- "Can't make … into type specifier".
-          set repetition rule of newTask to ${repetitionRuleRecord(params.repeat)}` : ''}
+          -- Set the repetition rule (#116) after the dates, so a defaulted fixed
+          -- anchor sees them. See repetitionRuleScript.
+          ${repetitionRuleScript('newTask', params.repeat, { isProject: false })}` : ''}
         
         -- Derive placement from container; distinguish real parent vs project root task
         try
