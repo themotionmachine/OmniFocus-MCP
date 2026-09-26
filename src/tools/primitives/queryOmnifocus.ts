@@ -388,7 +388,7 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
       });
       
       // Apply sorting if specified
-      ${sortBy ? generateSortLogic(sortBy, sortOrder) : ''}
+      ${sortBy ? generateSortLogic(sortBy, sortOrder, entity) : ''}
       
       // Apply limit if specified
       ${limit ? `filtered = filtered.slice(0, ${limit});` : ''}
@@ -750,19 +750,61 @@ function generateFilterConditions(entity: string, filters: any): string {
   return conditions.join('\n');
 }
 
-function generateSortLogic(sortBy: string, sortOrder?: string): string {
+/**
+ * Sort keys, each mapped to a fixed OmniJS expression over `item`.
+ *
+ * `sortBy` used to be spliced into the generated script verbatim (`a.${sortBy}`)
+ * from an unvalidated string, which let any caller run arbitrary Omni Automation
+ * inside OmniFocus — including things no tool permits, such as `URL.fetch`.
+ * It also sorted on the raw OmniJS property rather than the output field, so
+ * `modificationDate` and `creationDate` (which OmniJS calls `modified` and
+ * `added`) silently did nothing, and `taskStatus` compared enum objects. Keys are
+ * now a closed set, and nothing from the caller reaches the script.
+ */
+export const SORT_KEYS = [
+  'name', 'dueDate', 'deferDate', 'plannedDate', 'modificationDate', 'creationDate',
+  'estimatedMinutes', 'taskStatus',
+] as const;
+export type SortKey = (typeof SORT_KEYS)[number];
+
+function sortKeyExpr(sortBy: SortKey, entity: string): string {
+  switch (sortBy) {
+    case 'name': return 'item.name';
+    case 'dueDate': return 'item.dueDate';
+    case 'deferDate': return 'item.deferDate';
+    case 'plannedDate': return 'item.plannedDate';
+    case 'estimatedMinutes': return 'item.estimatedMinutes';
+    case 'modificationDate':
+      return entity === 'projects' ? PROJECT_MODIFIED_EXPR : 'item.modified';
+    case 'creationDate':
+      return entity === 'projects' ? PROJECT_ADDED_EXPR : 'item.added';
+    case 'taskStatus':
+      // Urgency order, not enum identity. For projects, the project's status.
+      return entity === 'projects'
+        ? '({[Project.Status.Active]: 0, [Project.Status.OnHold]: 1, [Project.Status.Done]: 2, [Project.Status.Dropped]: 3})[item.status]'
+        : '({[Task.Status.Overdue]: 0, [Task.Status.DueSoon]: 1, [Task.Status.Next]: 2, [Task.Status.Available]: 3, [Task.Status.Blocked]: 4, [Task.Status.Completed]: 5, [Task.Status.Dropped]: 6})[item.taskStatus]';
+  }
+}
+
+function generateSortLogic(sortBy: string, sortOrder: string | undefined, entity: string): string {
+  // The tool schema already restricts sortBy; this guards direct callers of the
+  // primitive, since the value would otherwise reach the script.
+  if (!(SORT_KEYS as readonly string[]).includes(sortBy)) {
+    throw new Error(`Invalid sortBy "${sortBy}". Expected one of: ${SORT_KEYS.join(', ')}.`);
+  }
   const order = sortOrder === 'desc' ? -1 : 1;
-  
+
   return `
+    const _sortKey = (item) => { const v = ${sortKeyExpr(sortBy as SortKey, entity)}; return v === undefined ? null : v; };
     filtered.sort((a, b) => {
-      let aVal = a.${sortBy};
-      let bVal = b.${sortBy};
-      
-      // Handle null/undefined values
+      let aVal = _sortKey(a);
+      let bVal = _sortKey(b);
+
+      // Handle null/undefined values: always last, whatever the direction
       if (aVal == null && bVal == null) return 0;
       if (aVal == null) return 1;
       if (bVal == null) return -1;
-      
+
       // Compare based on type
       if (typeof aVal === 'string') {
         return aVal.localeCompare(bVal) * ${order};

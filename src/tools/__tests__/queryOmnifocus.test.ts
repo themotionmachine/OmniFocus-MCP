@@ -718,3 +718,44 @@ describe('past-occurrence marking (#124)', () => {
     expect(formatTasks([{ name: 'x', id: 'y' }])).not.toContain('past occurrence');
   });
 });
+
+describe('sortBy is a closed set (script injection)', () => {
+  const { generateQueryScript } = primitives;
+
+  it('rejects anything but a known key at the schema', async () => {
+    const { schema } = await import('../definitions/queryOmnifocus.js');
+    const attack = 'name; URL.fetch("https://example.invalid"); a.name';
+    expect(schema.safeParse({ entity: 'tasks', sortBy: attack }).success).toBe(false);
+    expect(schema.safeParse({ entity: 'tasks', sortBy: 'nam' }).success).toBe(false);
+    expect(schema.safeParse({ entity: 'tasks', sortBy: 'modificationDate' }).success).toBe(true);
+  });
+
+  it('refuses an unknown key from a direct caller instead of splicing it into the script', () => {
+    expect(() =>
+      generateQueryScript({ entity: 'tasks', sortBy: 'name; URL.fetch("x")' } as any)
+    ).toThrow(/Invalid sortBy/);
+  });
+
+  it('sorts on the real OmniJS property, not the output field name', () => {
+    expect(generateQueryScript({ entity: 'tasks', sortBy: 'modificationDate' })).toContain('item.modified');
+    expect(generateQueryScript({ entity: 'tasks', sortBy: 'creationDate' })).toContain('item.added');
+    const proj = generateQueryScript({ entity: 'projects', sortBy: 'modificationDate' });
+    expect(proj).toContain('item.task ? item.task.modified');
+    expect(proj).not.toMatch(/a\.modificationDate/);
+  });
+
+  it('ranks taskStatus by urgency rather than comparing enum objects', () => {
+    const script = generateQueryScript({ entity: 'tasks', sortBy: 'taskStatus' });
+    expect(script).toContain('[Task.Status.Overdue]: 0');
+    expect(script).toContain('[Task.Status.Dropped]: 6');
+  });
+});
+
+describe('limit validation', () => {
+  it('rejects negative and fractional limits (a negative limit silently dropped results)', async () => {
+    const { schema } = await import('../definitions/queryOmnifocus.js');
+    expect(schema.safeParse({ entity: 'tasks', limit: -3 }).success).toBe(false);
+    expect(schema.safeParse({ entity: 'tasks', limit: 2.5 }).success).toBe(false);
+    expect(schema.safeParse({ entity: 'tasks', limit: 0 }).success).toBe(true);
+  });
+});
