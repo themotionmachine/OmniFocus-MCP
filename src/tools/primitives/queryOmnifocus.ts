@@ -167,7 +167,61 @@ export function validateFields(entity: 'tasks' | 'projects' | 'folders', fields?
   return fields.filter(f => !allowed.has(f));
 }
 
+// Which filters each entity actually applies. A filter outside its entity's
+// list used to be silently ignored — `isRepeating` on projects, every filter on
+// folders — so the query ran unfiltered and the whole set came back as if it
+// were the answer. It is now refused, naming the filters that do apply.
+const ALL_TASK_FILTERS = [
+  'projectId', 'projectName', 'taskName', 'folderId', 'folderName', 'tags', 'status',
+  'flagged', 'dueWithin', 'deferredUntil', 'plannedWithin', 'hasNote', 'inbox', 'dueOn',
+  'deferOn', 'plannedOn', 'addedWithin', 'addedOn', 'isRepeating', 'completedWithin',
+  'completedOn', 'droppedWithin', 'droppedOn',
+];
+export const FILTERS_BY_ENTITY: Record<'tasks' | 'projects' | 'folders', string[]> = {
+  tasks: ALL_TASK_FILTERS,
+  // Projects have no planned date, are never in the inbox, and are matched by
+  // projectName rather than taskName.
+  projects: ALL_TASK_FILTERS.filter(
+    f => !['taskName', 'plannedWithin', 'plannedOn', 'inbox'].includes(f)
+  ).concat('reviewDue'),
+  folders: ['folderId', 'folderName', 'status'],
+};
+
+export const STATUS_BY_ENTITY: Record<'tasks' | 'projects' | 'folders', string[]> = {
+  tasks: ['Next', 'Available', 'Blocked', 'DueSoon', 'Overdue', 'Completed', 'Dropped'],
+  projects: ['Active', 'OnHold', 'Done', 'Dropped'],
+  folders: ['Active', 'Dropped'],
+};
+
+/** An error message if a filter doesn't apply to the entity, or null. */
+export function validateFilters(
+  entity: 'tasks' | 'projects' | 'folders',
+  filters?: Record<string, unknown>
+): string | null {
+  if (!filters) return null;
+  const allowed = FILTERS_BY_ENTITY[entity];
+  const inapplicable = Object.keys(filters).filter(k => filters[k] !== undefined && !allowed.includes(k));
+  if (inapplicable.length > 0) {
+    return `Filter(s) not applicable to ${entity}: ${inapplicable.join(', ')}. ` +
+      `Filters for ${entity}: ${allowed.join(', ')}.`;
+  }
+  const status = filters.status as string[] | undefined;
+  if (status && status.length > 0) {
+    const bad = status.filter(v => !STATUS_BY_ENTITY[entity].includes(v));
+    if (bad.length > 0) {
+      return `Status value(s) not valid for ${entity}: ${bad.join(', ')}. ` +
+        `Status values for ${entity}: ${STATUS_BY_ENTITY[entity].join(', ')}.`;
+    }
+  }
+  return null;
+}
+
 export async function queryOmnifocus(params: QueryOmnifocusParams): Promise<QueryResult> {
+  const filterError = validateFilters(params.entity, params.filters as Record<string, unknown> | undefined);
+  if (filterError) {
+    return { success: false, error: filterError };
+  }
+
   if (params.fields && params.fields.length > 0) {
     const invalidFields = validateFields(params.entity, params.fields);
     if (invalidFields.length > 0) {
@@ -752,6 +806,27 @@ function generateFilterConditions(entity: string, filters: any): string {
     }
   }
 
+  if (entity === 'projects' && filters.isRepeating !== undefined) {
+    conditions.push(filters.isRepeating
+      ? `if (item.repetitionRule === null) return false;`
+      : `if (item.repetitionRule !== null) return false;`);
+  }
+
+  if (entity === 'folders') {
+    if (filters.folderId || filters.folderName) {
+      // The folder itself or any folder under it (_folderIdSet is seeded with
+      // descendants, same as for tasks and projects).
+      conditions.push(`if (!_folderIdSet.has(item.id.primaryKey)) return false;`);
+    }
+
+    if (filters.status && filters.status.length > 0) {
+      const statusCondition = filters.status.map((status: string) =>
+        `folderStatusMap[item.status] === "${escapeJXA(status)}"`
+      ).join(' || ');
+      conditions.push(`if (!(${statusCondition})) return false;`);
+    }
+  }
+
   return conditions.join('\n');
 }
 
@@ -1002,4 +1077,5 @@ export const _testExports = {
   generateFieldMapping,
   generateQueryScript,
   validateFields,
+  validateFilters,
 };

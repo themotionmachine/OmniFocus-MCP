@@ -21,7 +21,7 @@ Every parameter, filter, field and allowed value of the `query_omnifocus` tool, 
 
 Input is strict at every level. A misspelled or invented key, whether at the top level or inside `filters`, fails validation and the error names the key. Passing a field name as a filter (`"filters": {"inInbox": true}`) fails this way, where older versions silently ignored it and ran the query unfiltered.
 
-A filter that is valid for some entity but does not apply to the one being queried (for example `reviewDue` on tasks) is **not** rejected. It is silently ignored. Check the [applicability table](#which-filters-apply-to-which-entity).
+A filter that exists but does not apply to the entity being queried (for example `reviewDue` on tasks, or `taskName` on projects) is **also rejected**, and the error lists the filters that do apply. So is a `status` value that belongs to another entity (`"Active"` on tasks). Before v1.17.0 these were silently ignored and the query ran as if the filter weren't there. See the [applicability table](#which-filters-apply-to-which-entity).
 
 ## Filters
 
@@ -44,30 +44,30 @@ This returns flagged tasks that are (Next or Available) and tagged (home or erra
 
 | Filter | Type | Tasks | Projects | Folders |
 |---|---|:-:|:-:|:-:|
-| `projectId` | string | yes | yes | ignored |
-| `projectName` | string | yes | yes | ignored |
-| `taskName` | string | yes | ignored | ignored |
-| `folderId` | string | yes | yes | ignored |
-| `folderName` | string | yes | yes | ignored |
-| `tags` | string[] | yes | yes | ignored |
-| `status` | enum[] | yes | yes | ignored |
-| `flagged` | boolean | yes | yes | ignored |
-| `hasNote` | boolean | yes | yes | ignored |
-| `inbox` | boolean | yes | ignored | ignored |
-| `isRepeating` | boolean | yes | ignored | ignored |
-| `reviewDue` | boolean | ignored | yes | ignored |
-| `dueWithin` | date value | yes | yes | ignored |
-| `deferredUntil` | date value | yes | yes | ignored |
-| `plannedWithin` | date value | yes | ignored | ignored |
-| `dueOn` | date value | yes | yes | ignored |
-| `deferOn` | date value | yes | yes | ignored |
-| `plannedOn` | date value | yes | ignored | ignored |
-| `addedWithin` | date value | yes | yes | ignored |
-| `addedOn` | date value | yes | yes | ignored |
-| `completedWithin` | date value | yes | yes | ignored |
-| `completedOn` | date value | yes | yes | ignored |
-| `droppedWithin` | date value | yes | yes | ignored |
-| `droppedOn` | date value | yes | yes | ignored |
+| `projectId` | string | yes | yes | rejected |
+| `projectName` | string | yes | yes | rejected |
+| `taskName` | string | yes | rejected | rejected |
+| `folderId` | string | yes | yes | yes |
+| `folderName` | string | yes | yes | yes |
+| `tags` | string[] | yes | yes | rejected |
+| `status` | enum[] | yes | yes | yes |
+| `flagged` | boolean | yes | yes | rejected |
+| `hasNote` | boolean | yes | yes | rejected |
+| `inbox` | boolean | yes | rejected | rejected |
+| `isRepeating` | boolean | yes | yes | rejected |
+| `reviewDue` | boolean | rejected | yes | rejected |
+| `dueWithin` | date value | yes | yes | rejected |
+| `deferredUntil` | date value | yes | yes | rejected |
+| `plannedWithin` | date value | yes | rejected | rejected |
+| `dueOn` | date value | yes | yes | rejected |
+| `deferOn` | date value | yes | yes | rejected |
+| `plannedOn` | date value | yes | rejected | rejected |
+| `addedWithin` | date value | yes | yes | rejected |
+| `addedOn` | date value | yes | yes | rejected |
+| `completedWithin` | date value | yes | yes | rejected |
+| `completedOn` | date value | yes | yes | rejected |
+| `droppedWithin` | date value | yes | yes | rejected |
+| `droppedOn` | date value | yes | yes | rejected |
 
 No filter applies to `entity: "folders"`. A folder query returns every folder, minus dropped ones unless `includeCompleted` is true, and then `sortBy` and `limit` shape it.
 
@@ -81,7 +81,7 @@ No filter applies to `entity: "folders"`. A folder query returns every folder, m
 
 **`taskName`** (tasks only): case-insensitive substring match on the task name.
 
-**`folderId`**: exact folder id. It matches items in that folder **and every subfolder below it**. Projects match on the folder that contains them; tasks match on their containing project's folder, so inbox tasks never match. An id that doesn't exist matches nothing. It returns no error.
+**`folderId`**: exact folder id. It matches items in that folder **and every subfolder below it**. Projects match on the folder that contains them; tasks match on their containing project's folder, so inbox tasks never match; folders match if they are that folder or under it. An id that doesn't exist matches nothing. It returns no error.
 
 **`folderName`**: case-insensitive substring match on folder names. Every matching folder counts, each with its subfolders, so `"work"` can pull in several folder trees. If `folderId` is also given, `folderName` is ignored.
 
@@ -108,7 +108,7 @@ The schema accepts one combined enum. A value outside it (`"next"`, `"Waiting"`)
 | `Completed` | Completed |
 | `Dropped` | Dropped |
 
-Folders have their own status (`Active`, `Dropped`), which is available as a field. No filter applies to folders, so it can't be filtered on.
+Folders have their own status: `Active` and `Dropped`. Dropped folders are excluded unless `includeCompleted: true`, so `status: ["Dropped"]` on folders needs it. Status values are checked against the entity: `"Active"` on tasks, or `"Next"` on projects, is rejected.
 
 **`flagged`**: `true` returns only items whose own flag is set. `false` returns only unflagged items.
 
@@ -116,7 +116,7 @@ Folders have their own status (`Active`, `Dropped`), which is available as a fie
 
 **`inbox`** (tasks only): `true` returns only inbox tasks. `false` returns only tasks that are not in the inbox.
 
-**`isRepeating`** (tasks only): `true` returns only tasks with a repetition rule. `false` returns only tasks without one. It is ignored on projects, even though projects can repeat.
+**`isRepeating`** (tasks and projects): `true` returns only items with a repetition rule. `false` returns only items without one.
 
 **`reviewDue`** (projects only): `true` returns projects whose next review date is set and falls on or before the end of today. `false` returns projects with no review date or a review date after today.
 
@@ -159,7 +159,7 @@ The item's date is set and falls **on or before the end of day N** (local time; 
 
 `addedWithin`, `completedWithin`, `droppedWithin`.
 
-The item's date is set and falls **on or after local midnight N days ago**, with no upper bound. `0` means since midnight today. `7` or `"this week"` means since midnight seven days ago. An ISO date means on or after that date. Named strings are not negated: `"tomorrow"` here means since midnight yesterday.
+The item's date is set and falls **on or after local midnight N days ago**, with no upper bound. `0` means since midnight today. `7` or `"this week"` means since midnight seven days ago. An ISO date means on or after that date. Future values are rejected: `"tomorrow"`, `"next week"`, a negative number, or a date after today. (Before v1.17.0, `"tomorrow"` here silently meant since midnight yesterday.)
 
 #### Which date each filter reads
 

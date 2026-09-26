@@ -787,3 +787,52 @@ describe('forward *Within filters cut off at the end of the day', () => {
     expect(checkDateFilter(at(-10, 9), 0)).toBe(true);
   });
 });
+
+describe('filters that do not apply to the entity are refused, not ignored', () => {
+  const { validateFilters, generateQueryScript } = primitives;
+
+  it.each([
+    ['projects', { isRepeating: true }, null],
+    ['projects', { taskName: 'x' }, /taskName/],
+    ['projects', { plannedOn: 0 }, /plannedOn/],
+    ['projects', { inbox: true }, /inbox/],
+    ['tasks', { reviewDue: true }, /reviewDue/],
+    ['folders', { flagged: true }, /flagged/],
+    ['folders', { folderName: 'Work', status: ['Active'] }, null],
+  ] as const)('%s with %j', (entity, filters, expected) => {
+    const err = validateFilters(entity, filters as any);
+    if (expected === null) expect(err).toBeNull();
+    else {
+      expect(err).toMatch(expected);
+      expect(err).toContain(`Filters for ${entity}:`);
+    }
+  });
+
+  it('checks status values against the entity', () => {
+    expect(validateFilters('tasks', { status: ['Active'] })).toMatch(/not valid for tasks: Active/);
+    expect(validateFilters('projects', { status: ['Next'] })).toMatch(/not valid for projects: Next/);
+    expect(validateFilters('folders', { status: ['OnHold'] })).toMatch(/not valid for folders: OnHold/);
+    expect(validateFilters('projects', { status: ['OnHold'] })).toBeNull();
+  });
+
+  it('ignores filter keys whose value is undefined', () => {
+    expect(validateFilters('folders', { flagged: undefined, status: ['Active'] })).toBeNull();
+  });
+
+  it('refuses before running any script', async () => {
+    const r = await queryOmnifocus({ entity: 'projects', filters: { taskName: 'x' } });
+    expect(r.success).toBe(false);
+    expect(r.error).toMatch(/not applicable to projects: taskName/);
+  });
+
+  it('applies isRepeating to projects', () => {
+    const script = generateQueryScript({ entity: 'projects', filters: { isRepeating: true } });
+    expect(script).toContain('if (item.repetitionRule === null) return false;');
+  });
+
+  it('applies folder filters to folders', () => {
+    const script = generateQueryScript({ entity: 'folders', filters: { folderName: 'Work', status: ['Dropped'] } });
+    expect(script).toContain('if (!_folderIdSet.has(item.id.primaryKey)) return false;');
+    expect(script).toContain('folderStatusMap[item.status] === "Dropped"');
+  });
+});

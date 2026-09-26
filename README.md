@@ -106,7 +106,7 @@ Available filters:
 - **Dates, backward-looking**: `addedWithin`, `addedOn`, `completedWithin`, `completedOn`, `droppedWithin`, `droppedOn` (same value forms; completed/dropped filters require `includeCompleted: true`)
 - **Flags & misc**: `flagged`, `inbox`, `hasNote`, `isRepeating` (tasks only), `reviewDue` (projects only)
 
-Filter names are not field names: the filter is `inbox`, the field is `inInbox`. Unknown filter keys are rejected. Filters don't apply to `entity: "folders"`. See the reference for per-entity applicability and exact date semantics.
+Filter names are not field names: the filter is `inbox`, the field is `inInbox`. Unknown filter keys are rejected, and so are filters or `status` values that don't apply to the queried entity (folders take only `folderId`, `folderName` and `status`). See the reference for per-entity applicability and exact date semantics.
 
 ### `dump_database`
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { _testExports as primitives } from '../primitives/queryOmnifocus.js';
+import { _testExports as primitives, FILTERS_BY_ENTITY } from '../primitives/queryOmnifocus.js';
 import { schema } from '../definitions/queryOmnifocus.js';
 
 const { generateFilterConditions, generateFieldMapping } = primitives;
@@ -16,45 +16,15 @@ const { generateFilterConditions, generateFieldMapping } = primitives;
  * a user querying live data.
  */
 
-// Ideal applicability: for each documented filter, which entities SHOULD support
-// it, based on the properties the entity actually has. (`plannedDate`, `inInbox`,
-// repetition, and `taskName` are task-only; `reviewDue` is project-only.)
-const FILTER_SPEC: Record<string, { tasks: boolean; projects: boolean }> = {
-  projectId: { tasks: true, projects: true },
-  projectName: { tasks: true, projects: true },
-  taskName: { tasks: true, projects: false },
-  folderId: { tasks: true, projects: true },
-  folderName: { tasks: true, projects: true },
-  tags: { tasks: true, projects: true },
-  status: { tasks: true, projects: true },
-  flagged: { tasks: true, projects: true },
-  dueWithin: { tasks: true, projects: true },
-  deferredUntil: { tasks: true, projects: true },
-  plannedWithin: { tasks: true, projects: false },
-  hasNote: { tasks: true, projects: true },
-  inbox: { tasks: true, projects: false },
-  dueOn: { tasks: true, projects: true },
-  deferOn: { tasks: true, projects: true },
-  plannedOn: { tasks: true, projects: false },
-  addedWithin: { tasks: true, projects: true },
-  addedOn: { tasks: true, projects: true },
-  isRepeating: { tasks: true, projects: false },
-  completedWithin: { tasks: true, projects: true },
-  completedOn: { tasks: true, projects: true },
-  droppedWithin: { tasks: true, projects: true },
-  droppedOn: { tasks: true, projects: true },
-  reviewDue: { tasks: false, projects: true },
-};
-
-// Filters that SHOULD apply to projects (per FILTER_SPEC) but are not implemented
-// on the projects branch yet — real "tasks work, projects forgotten" gaps this
-// suite surfaces. Tracked in #71. When one is fixed, the "gaps stay honest" test
-// below fails on purpose, forcing its removal from this set.
-//
-// Empty as of the #71 follow-up: the seven gaps this suite originally surfaced
-// (tags, flagged, dueWithin, deferredUntil, hasNote, dueOn, deferOn) are all
-// implemented. Keep the mechanism — it is how the next gap gets recorded.
-const KNOWN_PROJECT_GAPS = new Set<string>([]);
+// Applicability is FILTERS_BY_ENTITY in the primitive — the same table that
+// refuses an inapplicable filter at runtime. One table, so the validator and the
+// generator cannot disagree: a filter the validator admits for an entity must be
+// implemented for it, and one it refuses must not be. (This replaced a separate
+// FILTER_SPEC here, which let projects' isRepeating and every folder filter sit
+// documented as "no-op" while the tool silently ignored them.)
+const ENTITIES = ['tasks', 'projects', 'folders'] as const;
+const applies = (entity: (typeof ENTITIES)[number], filter: string) =>
+  FILTERS_BY_ENTITY[entity].includes(filter);
 
 // A representative value for invoking each filter.
 const SAMPLE: Record<string, unknown> = {
@@ -97,49 +67,24 @@ const isImplemented = (entity: 'tasks' | 'projects' | 'folders', filter: string)
   generateFilterConditions(entity, { [filter]: SAMPLE[filter] }).trim().length > 0;
 
 describe('query_omnifocus filter parity (#71)', () => {
-  it('every documented filter is declared in FILTER_SPEC (and vice versa)', () => {
-    const documented = documentedFilterKeys().sort();
-    const declared = Object.keys(FILTER_SPEC).sort();
-    // If this fails, a filter was added/removed in the schema without updating
-    // the parity contract — declare its per-entity applicability above.
-    expect(declared).toEqual(documented);
+  it('every schema filter is assigned to at least one entity, and no entity lists an unknown one', () => {
+    const documented = new Set(documentedFilterKeys());
+    const assigned = new Set(ENTITIES.flatMap(e => FILTERS_BY_ENTITY[e]));
+    expect([...documented].sort()).toEqual([...assigned].sort());
   });
 
-  it('every KNOWN_PROJECT_GAPS entry is a real, documented, project-intended gap', () => {
-    for (const filter of KNOWN_PROJECT_GAPS) {
-      expect(FILTER_SPEC[filter], `${filter} in gaps but not in spec`).toBeDefined();
-      expect(FILTER_SPEC[filter].projects, `${filter} gap must be project-intended`).toBe(true);
-    }
+  it('SAMPLE covers every documented filter', () => {
+    expect(Object.keys(SAMPLE).sort()).toEqual(documentedFilterKeys().sort());
   });
 
-  describe('generateFilterConditions honors the applicability contract', () => {
-    for (const filter of Object.keys(FILTER_SPEC)) {
-      for (const entity of ['tasks', 'projects'] as const) {
-        const ideal = FILTER_SPEC[filter][entity];
-        const gapped = entity === 'projects' && KNOWN_PROJECT_GAPS.has(filter);
-        const expected = ideal && !gapped;
-        const note = gapped ? ' (known gap, tracked in #71)' : '';
-        it(`${entity}: ${filter} -> ${expected ? 'implemented' : 'no-op'}${note}`, () => {
+  describe('generateFilterConditions implements exactly the applicable filters', () => {
+    for (const filter of documentedFilterKeys()) {
+      for (const entity of ENTITIES) {
+        const expected = applies(entity, filter);
+        it(`${entity}: ${filter} -> ${expected ? 'implemented' : 'refused by validateFilters'}`, () => {
           expect(isImplemented(entity, filter)).toBe(expected);
         });
       }
-    }
-  });
-
-  it('gaps stay honest: each known gap is still unimplemented on projects', () => {
-    for (const filter of KNOWN_PROJECT_GAPS) {
-      // When someone implements one of these on the projects branch, this fails —
-      // remove it from KNOWN_PROJECT_GAPS (and the parity test flips to expect it).
-      expect(
-        isImplemented('projects', filter),
-        `${filter} now implemented on projects — remove it from KNOWN_PROJECT_GAPS`
-      ).toBe(false);
-    }
-  });
-
-  it('the folders entity intentionally supports no filters', () => {
-    for (const filter of Object.keys(FILTER_SPEC)) {
-      expect(isImplemented('folders', filter), `folders should not implement ${filter}`).toBe(false);
     }
   });
 
