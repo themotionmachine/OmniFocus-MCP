@@ -228,11 +228,16 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
       ${JXA_FORMAT_DATE_SOURCE}
       
       // Helper to check date filters
+      // Forward-looking "within N days": on or before the END of day N (0 =
+      // today). The cutoff used to be the current time of day, so dueWithin: 0
+      // — which is what "today" resolves to — returned only overdue items and
+      // missed everything due later today. No lower bound: overdue items match.
       function checkDateFilter(itemDate, daysFromNow) {
         if (!itemDate) return false;
-        const futureDate = new Date();
-        futureDate.setDate(futureDate.getDate() + daysFromNow);
-        return itemDate <= futureDate;
+        const cutoff = new Date();
+        cutoff.setHours(0, 0, 0, 0);
+        cutoff.setDate(cutoff.getDate() + daysFromNow + 1);
+        return itemDate < cutoff;
       }
 
       // Helper to check if date is within last N days (backward-looking)
