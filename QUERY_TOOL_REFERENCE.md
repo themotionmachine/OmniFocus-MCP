@@ -142,16 +142,16 @@ Every date filter compares the item's **own** date (`dueDate`, `deferDate`, `pla
 
 The item's date falls on the local calendar day *today + N*: `0` is today, `-1` is yesterday, `1` is tomorrow, and `"2026-10-01"` is that date. Named strings are fixed offsets: `"this week"` means exactly 7 days from today, not "sometime this week". An item with no date never matches.
 
-For "due today", use `dueOn: 0`, not `dueWithin: 0` (see below).
+For "due today, not overdue", use `dueOn: 0`. `dueWithin: 0` also includes overdue tasks (see below).
 
 #### Forward-looking `*Within`: up to a cutoff
 
 `dueWithin`, `deferredUntil`, `plannedWithin` (tasks only).
 
-The item's date is set and falls **at or before the current time of day, N days from now**. There is no lower bound:
+The item's date is set and falls **on or before the end of day N** (local time; `0` is today). There is no lower bound:
 
 - **Past dates match.** `dueWithin: 7` includes overdue tasks. `deferredUntil: 3` includes tasks whose defer date has already passed and that are available now, not only tasks still deferred.
-- **The cutoff is the current time, not the end of the day.** `dueWithin: 0` (or `"today"`) means "due at or before right now". It includes overdue tasks and leaves out tasks due later today. `dueWithin: "2026-10-01"` stops at the current time of day on October 1.
+- **The whole last day counts.** `dueWithin: 0` (or `"today"`) means "due by the end of today, overdue included". `dueWithin: "2026-10-01"` includes everything due on October 1. Before v1.17.0 the cutoff was the current time of day, so `dueWithin: 0` missed tasks due later today.
 
 `deferredUntil` is implemented and applied, to both tasks and projects. To get only items that are still deferred, add a status filter (deferred tasks report `Blocked`) or read `deferDate` from the results.
 

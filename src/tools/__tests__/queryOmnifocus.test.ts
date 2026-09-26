@@ -759,3 +759,31 @@ describe('limit validation', () => {
     expect(schema.safeParse({ entity: 'tasks', limit: 0 }).success).toBe(true);
   });
 });
+
+describe('forward *Within filters cut off at the end of the day', () => {
+  // Execute the embedded helper rather than string-match it: the bug was a
+  // cutoff of "now", which made dueWithin: 0 ("today") miss tasks due later today.
+  const script = primitives.generateQueryScript({ entity: 'tasks', filters: { dueWithin: 0 } });
+  const src = script.match(/function checkDateFilter\(itemDate, daysFromNow\) \{[\s\S]*?\n      \}/)![0];
+  const checkDateFilter = new Function(`${src}; return checkDateFilter;`)() as (d: Date, n: number) => boolean;
+  const at = (dayOffset: number, h: number, m = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() + dayOffset);
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+
+  it('includes something due late tonight for dueWithin: 0', () => {
+    expect(checkDateFilter(at(0, 23, 59), 0)).toBe(true);
+  });
+
+  it('excludes tomorrow for dueWithin: 0, includes all of tomorrow for 1', () => {
+    expect(checkDateFilter(at(1, 0, 1), 0)).toBe(false);
+    expect(checkDateFilter(at(1, 23, 59), 1)).toBe(true);
+    expect(checkDateFilter(at(2, 0, 1), 1)).toBe(false);
+  });
+
+  it('still includes overdue items (no lower bound)', () => {
+    expect(checkDateFilter(at(-10, 9), 0)).toBe(true);
+  });
+});
