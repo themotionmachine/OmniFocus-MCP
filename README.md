@@ -103,8 +103,10 @@ Available filters:
 - **Tags**: `tags` (exact match, case-sensitive)
 - **Status**: `status` — tasks: `Next`, `Available`, `Blocked`, `DueSoon`, `Overdue`, `Completed`, `Dropped`; projects: `Active`, `OnHold`, `Done`, `Dropped`
 - **Dates, forward-looking**: `dueWithin`, `deferredUntil`, `plannedWithin` (ranges), `dueOn`, `deferOn`, `plannedOn` (exact day). Accept a number of days, `"today"`, `"tomorrow"`, `"this week"`, `"next week"`, or an ISO date
-- **Dates, backward-looking**: `addedWithin`, `addedOn`, `completedWithin`, `completedOn`, `droppedWithin`, `droppedOn` (completed/dropped filters require `includeCompleted: true`)
-- **Flags & misc**: `flagged`, `inbox`, `hasNote`, `isRepeating`, `reviewDue` (projects only)
+- **Dates, backward-looking**: `addedWithin`, `addedOn`, `completedWithin`, `completedOn`, `droppedWithin`, `droppedOn` (same value forms; completed/dropped filters require `includeCompleted: true`)
+- **Flags & misc**: `flagged`, `inbox`, `hasNote`, `isRepeating` (tasks only), `reviewDue` (projects only)
+
+Filter names are not field names: the filter is `inbox`, the field is `inInbox`. Unknown filter keys are rejected. Filters don't apply to `entity: "folders"`. See the reference for per-entity applicability and exact date semantics.
 
 ### `dump_database`
 

@@ -82,7 +82,7 @@ The `query_omnifocus` tool provides efficient, targeted queries against your Omn
 ```
 
 ### Get tasks that will become available in the next 3 days
-> **Note:** The `deferredUntil` filter is accepted but not yet implemented — this query will return all tasks unfiltered. Use `deferOn` for exact-day matching instead.
+> **Note:** `deferredUntil` matches any defer date up to 3 days from now, including defer dates already passed, so tasks that are available now are included too. Add `"status": ["Blocked"]` to keep only tasks that are still deferred or otherwise blocked, or use `deferOn` for a single day.
 ```json
 {
   "entity": "tasks",
