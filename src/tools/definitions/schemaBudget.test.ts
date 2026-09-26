@@ -59,7 +59,10 @@ describe('schema description budget (#105)', () => {
     const total = Object.values(costs).reduce((a, b) => a + b, 0);
     // Raised from 6500 to 8200 in #116 to fund the `repeat` shape on four write
     // tools (~1.7k weighted). Deliberate, not drift.
-    expect(total).toBeLessThanOrEqual(8200);
+    // Raised from 8200 to 8300 for edit_item's newParentTaskId / position (#138)
+    // and newReviewInterval (#139), ~145 chars trimmed to the bone. The headroom
+    // before was 52 chars, too little for three new fields. Deliberate, not drift.
+    expect(total).toBeLessThanOrEqual(8300);
   });
 
   it('keeps query_omnifocus — the historical worst offender — under its own budget', () => {

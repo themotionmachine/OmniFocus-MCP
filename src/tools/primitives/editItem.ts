@@ -16,6 +16,12 @@ import {
   repetitionChangeLabel,
   type RepetitionSpec,
 } from '../../utils/repetitionRule.js';
+import { taskMoveScript, type TaskPosition } from '../../utils/taskMove.js';
+import {
+  reviewIntervalScript,
+  describeReviewInterval,
+  type ReviewIntervalSpec,
+} from '../../utils/reviewInterval.js';
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped' | 'skipped';
@@ -43,19 +49,47 @@ export interface EditItemParams {
   removeTags?: string[];        // Tags to remove from the task
   replaceTags?: string[];       // Tags to replace all existing tags with
   newProjectName?: string;      // Move task to this project; empty string or 'inbox' = move to inbox
+  newParentTaskId?: string;     // Nest under this task; "" = back to project root / inbox (#138)
+  position?: TaskPosition;      // Place among siblings in the target container (#138)
   
   // Project-specific fields
   newSequential?: boolean;      // Whether the project should be sequential
   newFolderName?: string;       // New folder to move the project to
   newProjectStatus?: ProjectStatus; // New status for projects
   markReviewed?: boolean;       // Mark the project as reviewed (advances next review date)
+  newReviewInterval?: ReviewIntervalSpec; // How often the project comes up for review (#139)
   allowPastOccurrence?: boolean; // Opt in to mutating a completed repeat occurrence (#124)
+}
+
+export class EditItemParamError extends Error {}
+
+/**
+ * Refuse field combinations that can't mean what the caller intends. Unlike the
+ * older type-specific fields (which a wrong itemType silently skips), the #138
+ * and #139 fields fail loudly: a nesting or review-interval request that quietly
+ * does nothing is a success line for a write that never happened.
+ */
+export function validateEditParams(params: EditItemParams): string | null {
+  const moving = params.newParentTaskId !== undefined || params.position !== undefined;
+  if (params.itemType === 'project' && moving) {
+    return 'newParentTaskId and position apply to tasks only; projects are moved with newFolderName.';
+  }
+  if (params.newParentTaskId !== undefined && params.newProjectName !== undefined) {
+    return 'Pass newParentTaskId or newProjectName, not both: a task nested under a parent follows that parent into its project.';
+  }
+  if (params.itemType === 'task' && params.newReviewInterval !== undefined) {
+    return 'newReviewInterval applies to projects only.';
+  }
+  return null;
 }
 
 /**
  * Generate pure AppleScript for item editing with dates constructed outside tell blocks
  */
 export function generateAppleScript(params: EditItemParams): string {
+  const invalid = validateEditParams(params);
+  if (invalid) throw new EditItemParamError(invalid);
+
   // Sanitize and prepare parameters for AppleScript
   const id = params.id ? escapeAppleScriptString(params.id) : '';
   const name = params.name ? escapeAppleScriptString(params.name) : '';
@@ -403,6 +437,17 @@ export function generateAppleScript(params: EditItemParams): string {
 `;
       }
     }
+
+    // Nest under a parent task and/or place among siblings (#138), through
+    // Omni Automation's moveTasks(). After any newProjectName move, so a
+    // position alone reorders within the project the task just landed in.
+    if (params.newParentTaskId !== undefined || params.position !== undefined) {
+      script += `
+        -- Move within the hierarchy (reads the result back; throws on mismatch)
+        ${taskMoveScript('foundItem', { parentId: params.newParentTaskId, position: params.position })}
+        set end of changedProperties to _moveLabel
+`;
+    }
   }
 
   // Project-specific updates
@@ -441,6 +486,16 @@ export function generateAppleScript(params: EditItemParams): string {
       }
     }
     
+    // Review interval (#139). Before markReviewed, so a combined call schedules
+    // the next review from the new interval.
+    if (params.newReviewInterval !== undefined) {
+      script += `
+        -- Set the review interval through Omni Automation (reads it back)
+        ${reviewIntervalScript('foundItem', params.newReviewInterval)}
+        set end of changedProperties to "review interval (every ${describeReviewInterval(params.newReviewInterval)})"
+`;
+    }
+
     // Mark project as reviewed
     if (params.markReviewed === true) {
       script += `
@@ -492,6 +547,15 @@ end try
 `;
   
   return script;
+}
+
+/**
+ * An error thrown inside `evaluate javascript` reaches AppleScript's `on error`
+ * as "Error: <message> undefined:1:436" — the JS error class and a source
+ * offset into the one-line script. Neither helps the caller; keep the message.
+ */
+export function cleanScriptError(error: string): string {
+  return error.replace(/^Error: /, '').replace(/ undefined:\d+:\d+$/, '');
 }
 
 /**
@@ -547,7 +611,7 @@ export async function editItem(params: EditItemParams): Promise<{
         id: result.id,
         name: result.name,
         changedProperties: result.changedProperties,
-        error: result.error
+        error: typeof result.error === 'string' ? cleanScriptError(result.error) : result.error
       };
     } catch (parseError) {
       console.error("Error parsing AppleScript result:", parseError);

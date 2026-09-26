@@ -14,6 +14,7 @@ vi.mock('../primitives/editItem.js', () => ({
 
 import { editItem } from '../primitives/editItem.js';
 import { handler, schema, UPDATE_FIELDS, updateFieldsProvided } from './editItem.js';
+import { deepStrict } from '../../buildServer.js';
 
 const extra = {} as any;
 
@@ -68,5 +69,50 @@ describe('edit_item refuses a no-op edit', () => {
     );
     expect(UPDATE_FIELDS).toContain('markReviewed');
     expect(UPDATE_FIELDS).not.toContain('itemType');
+  });
+});
+
+describe('edit_item schema: #138 / #139 shapes', () => {
+  // Registered tools are made strict by deepStrict in buildServer; mirror that.
+  const strict = deepStrict(schema);
+  const ok = (fields: Record<string, unknown>) =>
+    strict.safeParse({ id: 'x', itemType: 'task', ...fields }).success;
+
+  it('accepts the typed position forms', () => {
+    expect(ok({ position: 'beginning' })).toBe(true);
+    expect(ok({ position: 'end' })).toBe(true);
+    expect(ok({ position: { before: 'abc' } })).toBe(true);
+    expect(ok({ position: { after: 'abc' } })).toBe(true);
+    expect(ok({ newParentTaskId: '' })).toBe(true);
+  });
+
+  it('rejects malformed positions at the schema', () => {
+    expect(ok({ position: 'after:abc' })).toBe(false);
+    expect(ok({ position: 'top' })).toBe(false);
+    expect(ok({ position: { before: 'a', after: 'b' } })).toBe(false);
+    expect(ok({ position: { before: '' } })).toBe(false);
+    expect(ok({ position: { beside: 'a' } })).toBe(false);
+  });
+
+  it('validates the review interval shape', () => {
+    expect(ok({ newReviewInterval: { steps: 2, unit: 'week' } })).toBe(true);
+    expect(ok({ newReviewInterval: { steps: 0, unit: 'week' } })).toBe(false);
+    expect(ok({ newReviewInterval: { steps: 1.5, unit: 'week' } })).toBe(false);
+    expect(ok({ newReviewInterval: { steps: 2, unit: 'weeks' } })).toBe(false);
+    expect(ok({ newReviewInterval: { unit: 'week' } })).toBe(false);
+    expect(ok({ newReviewInterval: { steps: 1, unit: 'week', extra: 1 } })).toBe(false);
+  });
+
+  it('counts the new fields as edits', () => {
+    expect(UPDATE_FIELDS).toEqual(expect.arrayContaining(['newParentTaskId', 'position', 'newReviewInterval']));
+  });
+
+  it('reports a refused combination as an error, not success', async () => {
+    const { editItem: realEditItem } = await vi.importActual<typeof import('../primitives/editItem.js')>(
+      '../primitives/editItem.js'
+    );
+    const result = await realEditItem({ id: 'x', itemType: 'project', position: 'end' });
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/tasks only/);
   });
 });

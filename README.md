@@ -142,8 +142,19 @@ Edit an existing task or project. Also the way to **move** items — set `newPro
 - `itemType`: `task` or `project`
 - Common: `newName`, `newNote`, `newDueDate`, `newDeferDate`, `newFlagged`, `newEstimatedMinutes` (dates in ISO format; empty string clears)
 - Tasks: `newStatus` (`incomplete`, `completed`, `dropped`, `skipped` — skipped only for repeating tasks), `addTags`, `removeTags`, `replaceTags`, `newProjectName`, `newPlannedDate`
-- Projects: `newProjectStatus` (`active`, `completed`, `dropped`, `onHold`), `newFolderName`, `newSequential`, `markReviewed` (sets the next review date based on the project's review interval)
+- Tasks, nesting and order: `newParentTaskId` puts the task under another task (an action group), keeping its id and anything that links to it; `""` returns it to the top level of its project, or of the inbox if it has no project. `position` places it among its siblings: `"beginning"`, `"end"`, `{"before": "<id>"}` or `{"after": "<id>"}`.
+- Projects: `newProjectStatus` (`active`, `completed`, `dropped`, `onHold`), `newFolderName`, `newSequential`, `newReviewInterval` (`{"steps": 2, "unit": "week"}`; units `day`, `week`, `month`, `year`), `markReviewed` (sets the next review date based on the project's review interval, including one set in the same call)
 - Repetition: `newRepeat` sets a new rule (same shape as `repeat` on create); `newRepeat: null` clears it
+
+Rules for nesting and ordering:
+
+- A task follows its parent. If the parent is in another project or in the inbox, the task moves there too.
+- `position` without `newParentTaskId` reorders the task within its current parent.
+- A `before`/`after` task must be a sibling under the target parent; otherwise the edit fails.
+- Nesting a task under itself or one of its own subtasks fails, as does naming a project as the parent.
+- `newParentTaskId` can't be combined with `newProjectName` (the parent decides the project). `position` can: the task is moved to the project, then placed.
+- Both fields are for tasks only, and `newReviewInterval` is for projects only. Passing one on the wrong item type is an error, not a silent skip.
+- The result names what was stored, e.g. `parent (moved under Plan launch), position (after hZ3kP1x)` or `review interval (every 2 weeks)`. `query_omnifocus` reports the interval back in the same words (`reviewInterval: "2 weeks"`).
 
 At least one editable field is required — a call with only `id`/`name`/`itemType` is refused rather than reported as a successful no-op. Unrecognized argument keys (a `note` typo for `newNote`, say) are rejected by every tool with the key named in the error, instead of being silently dropped.
 
