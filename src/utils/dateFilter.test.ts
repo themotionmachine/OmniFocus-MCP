@@ -77,9 +77,10 @@ describe('resolveDateFilter', () => {
   });
 
   describe('direction parameter (for backward-looking filters like addedWithin)', () => {
-    it('numbers pass through unchanged regardless of direction', () => {
+    it('numbers pass through unchanged, except a negative "days ago" is refused', () => {
       expect(resolveDateFilter(5, 'past')).toBe(5);
-      expect(resolveDateFilter(-5, 'past')).toBe(-5);
+      expect(resolveDateFilter(-5, 'future')).toBe(-5);
+      expect(() => resolveDateFilter(-5, 'past')).toThrow(/in the future/);
     });
 
     it('named strings resolve the same regardless of direction', () => {
@@ -94,11 +95,11 @@ describe('resolveDateFilter', () => {
       expect(resolveDateFilter('2026-03-25', 'past')).toBe(1);
     });
 
-    it('resolves a future ISO date to a negative count under past direction', () => {
+    it('refuses a future ISO date under past direction (it used to resolve to a negative count)', () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date('2026-03-26T12:00:00'));
 
-      expect(resolveDateFilter('2026-04-02', 'past')).toBe(-7);
+      expect(() => resolveDateFilter('2026-04-02', 'past')).toThrow(/in the future/);
     });
 
     it('defaults to future direction when omitted (unchanged behavior)', () => {
@@ -107,5 +108,32 @@ describe('resolveDateFilter', () => {
 
       expect(resolveDateFilter('2026-03-25')).toBe(-1);
     });
+  });
+});
+
+describe('backward-looking filters refuse future values', () => {
+  it.each(['tomorrow', 'next week', 'Tomorrow'])('rejects %s', v => {
+    expect(() => resolveDateFilter(v, 'past')).toThrow(/in the future/);
+  });
+
+  it('rejects a future ISO date and a negative day count', () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    expect(() => resolveDateFilter(d.toLocaleDateString('en-CA'), 'past')).toThrow(/in the future/);
+    expect(() => resolveDateFilter(-2, 'past')).toThrow(/in the future/);
+  });
+
+  it('still accepts today, this week, day counts and past dates', () => {
+    expect(resolveDateFilter('today', 'past')).toBe(0);
+    expect(resolveDateFilter('this week', 'past')).toBe(7);
+    expect(resolveDateFilter(30, 'past')).toBe(30);
+    const d = new Date();
+    d.setDate(d.getDate() - 5);
+    expect(resolveDateFilter(d.toLocaleDateString('en-CA'), 'past')).toBe(5);
+  });
+
+  it('leaves forward-looking resolution unchanged', () => {
+    expect(resolveDateFilter('tomorrow', 'future')).toBe(1);
+    expect(resolveDateFilter(-2, 'future')).toBe(-2);
   });
 });

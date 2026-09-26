@@ -12,7 +12,27 @@ const NAMED_DATES: Record<string, number> = {
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * `direction: 'past'` is for the backward-looking `*Within` filters
+ * (addedWithin, completedWithin, droppedWithin), whose value is "days ago".
+ * A future value there has no meaning — "added within tomorrow" — and used to
+ * resolve silently to something else ("tomorrow" meant since midnight
+ * yesterday), so it is refused.
+ */
 export function resolveDateFilter(input: number | string, direction: 'future' | 'past' = 'future'): number {
+  const resolved = resolveRaw(input, direction);
+  if (direction === 'past' && resolved < 0) {
+    throw new Error(
+      `Date filter value ${JSON.stringify(input)} is in the future, but this filter looks backward ` +
+        `("within the last N days"). Use a number of days ago, "today", "this week", or a past YYYY-MM-DD.`
+    );
+  }
+  return resolved;
+}
+
+const FUTURE_NAMES = new Set(['tomorrow', 'next week']);
+
+function resolveRaw(input: number | string, direction: 'future' | 'past'): number {
   if (typeof input === 'number') {
     return input;
   }
@@ -24,6 +44,7 @@ export function resolveDateFilter(input: number | string, direction: 'future' | 
   const normalized = input.trim().toLowerCase();
 
   if (normalized in NAMED_DATES) {
+    if (direction === 'past' && FUTURE_NAMES.has(normalized)) return -1;
     return NAMED_DATES[normalized];
   }
 
