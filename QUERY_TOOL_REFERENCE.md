@@ -11,8 +11,8 @@ Every parameter, filter, field and allowed value of the `query_omnifocus` tool, 
 | `entity` | `"tasks"` \| `"projects"` \| `"folders"` | required | What to query. |
 | `filters` | object | none | Narrow the results. See [Filters](#filters). |
 | `fields` | string[] | per-entity default set | Only return these fields. Names are checked against a per-entity allowlist; see [Fields](#fields). |
-| `limit` | number | no limit | Keep the first N items after sorting. `0` means no limit. When the result count equals `limit`, the response adds a note that more may be available. |
-| `sortBy` | string | OmniFocus order | Sort before `limit` is applied. See [Sorting](#sorting); only some names sort meaningfully. |
+| `limit` | non-negative integer | no limit | Keep the first N items after sorting. `0` means no limit. When the result count equals `limit`, the response adds a note that more may be available. |
+| `sortBy` | enum | OmniFocus order | Sort before `limit` is applied. One of the keys in [Sorting](#sorting). |
 | `sortOrder` | `"asc"` \| `"desc"` | `"asc"` | Sort direction. Ignored without `sortBy`. |
 | `includeCompleted` | boolean | `false` | Include completed and dropped items. See [includeCompleted](#includecompleted). |
 | `summary` | boolean | `false` | Return only `Found N <entity> matching your criteria.` The count is taken after `limit`, so `summary` with `limit: 10` never reports more than 10. |
@@ -274,19 +274,18 @@ Dates are local ISO 8601 with a UTC offset, for example `"2026-10-01T00:00:00+01
 
 ## Sorting
 
-`sortBy` is a free-form string. It is **not** validated, and it sorts on the underlying OmniFocus object's property of that name, **not** on the returned field. Nulls sort last in both directions.
+`sortBy` takes one of a fixed set of keys; anything else is rejected with the list of valid keys. Sorting happens before `limit`. Nulls sort last in both directions.
 
-| `sortBy` | Works? |
+| `sortBy` | Sorts by |
 |---|---|
-| `name` | yes, alphabetical |
-| `dueDate`, `deferDate` | yes (tasks and projects) |
-| `plannedDate` | yes (tasks) |
-| `estimatedMinutes` | yes (tasks) |
-| `modified`, `added` | yes for tasks; no-op for projects |
-| `modificationDate`, `creationDate` | **no-op**: these are output field names with no matching OmniFocus property, so every value is null and the order is unchanged |
-| `taskStatus` | **not meaningful**: status values are OmniFocus enum objects, and they don't compare |
+| `name` | Name, alphabetical |
+| `dueDate`, `deferDate` | That date (tasks and projects) |
+| `plannedDate` | Planned date (tasks; projects have none) |
+| `estimatedMinutes` | Estimate (tasks) |
+| `modificationDate`, `creationDate` | Last modified / date added (tasks and projects) |
+| `taskStatus` | Urgency: Overdue, DueSoon, Next, Available, Blocked, Completed, Dropped. On projects, project status: Active, OnHold, Done, Dropped |
 
-An unrecognized name leaves the order unchanged. It returns no error.
+Before v1.17.0, `sortBy` was an unvalidated string: `modificationDate`, `creationDate` and `taskStatus` silently did nothing, and an unknown name returned no error.
 
 ## Tips
 

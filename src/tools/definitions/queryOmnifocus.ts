@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { queryOmnifocus, QueryOmnifocusParams } from '../primitives/queryOmnifocus.js';
+import { queryOmnifocus, QueryOmnifocusParams, SORT_KEYS } from '../primitives/queryOmnifocus.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import { resolveDateFilter } from '../../utils/dateFilter.js';
 import { localDatePart } from '../../utils/dateSerialization.js';
@@ -41,9 +41,9 @@ export const schema = z.object({
 
   fields: z.array(z.string()).optional().describe("Only return the listed fields (smaller responses). Tasks: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, dropDate, effectiveDropDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, isRepeating, repetitionRule (ICS, e.g. FREQ=WEEKLY;INTERVAL=2), repetitionMethod (Fixed | DeferUntilDate | DueDate), repetitionAnchor (DeferDate | DueDate | PlannedDate), repetitionSchedule, catchUpAutomatically, isPastOccurrence, modificationDate, creationDate. Projects: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completionDate, dropDate, effectiveDropDate, completedByChildren, containsSingletonActions, taskCount, tasks, nextReviewDate, reviewInterval, modificationDate, creationDate. Folders: id, name, path, parentFolderID, status, projectCount, projects, subfolders"),
 
-  limit: z.number().optional().describe("Max items to return"),
+  limit: z.number().int().min(0).optional().describe("Max items to return"),
 
-  sortBy: z.string().optional().describe("name, dueDate, deferDate, modificationDate, creationDate, estimatedMinutes, or taskStatus"),
+  sortBy: z.enum(SORT_KEYS).optional().describe("taskStatus sorts by urgency (Overdue first)"),
 
   sortOrder: z.enum(['asc', 'desc']).optional().describe("Default: asc"),
 
