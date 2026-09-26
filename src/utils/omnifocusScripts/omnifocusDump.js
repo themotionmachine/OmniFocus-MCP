@@ -34,15 +34,14 @@
           return mapObj[enumObj] || "Unknown";
         }
 
-        // Format a DateComponents interval into a human-readable string
+        // A Project.ReviewInterval is {steps, unit} with a plural unit ('weeks').
+        // Rendered "1 week" / "2 weeks" so edit_item's newReviewInterval (#139)
+        // round-trips. (This used to read years/months/weeks/days fields, which
+        // the object doesn't have, so every project reported null.)
         function formatReviewInterval(interval) {
-          if (!interval) return null;
-          const parts = [];
-          if (interval.years && interval.years > 0) parts.push(interval.years === 1 ? "1 year" : interval.years + " years");
-          if (interval.months && interval.months > 0) parts.push(interval.months === 1 ? "1 month" : interval.months + " months");
-          if (interval.weeks && interval.weeks > 0) parts.push(interval.weeks === 1 ? "1 week" : interval.weeks + " weeks");
-          if (interval.days && interval.days > 0) parts.push(interval.days === 1 ? "1 day" : interval.days + " days");
-          return parts.length > 0 ? parts.join(", ") : null;
+          if (!interval || !interval.steps || !interval.unit) return null;
+          const unit = interval.steps === 1 ? String(interval.unit).replace(/s$/, "") : String(interval.unit);
+          return interval.steps + " " + unit;
         }
 
         // Create database export object using Maps for faster lookups

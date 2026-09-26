@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateAppleScript, EditItemParams } from './editItem.js';
+import { generateAppleScript, cleanScriptError, EditItemParams } from './editItem.js';
 
 function makeParams(overrides: Partial<EditItemParams>): EditItemParams {
   return { itemType: 'task', name: 'Test Task', ...overrides };
@@ -371,5 +371,86 @@ describe('editItem generateAppleScript', () => {
       expect(script).not.toContain('last review date');
       expect(script).not.toContain('marked reviewed');
     });
+  });
+});
+
+describe('newParentTaskId / position (#138)', () => {
+  it('emits the Omni Automation move after the #124 occurrence guard', () => {
+    const script = generateAppleScript(makeParams({ id: 'T1', newParentTaskId: 'P9' }));
+    const guard = script.indexOf('This is a completed occurrence');
+    const move = script.indexOf('set _moveId to id of foundItem');
+    expect(guard).toBeGreaterThan(-1);
+    expect(move).toBeGreaterThan(guard);
+    expect(script).toContain("Task.byIdentifier('P9')");
+    expect(script).toContain('moveTasks([t],L)');
+    expect(script).toContain('set end of changedProperties to _moveLabel');
+  });
+
+  it('keeps the guard unless allowPastOccurrence is passed', () => {
+    const script = generateAppleScript(makeParams({ id: 'T1', position: 'end', allowPastOccurrence: true }));
+    expect(script).not.toContain('This is a completed occurrence');
+    expect(script).toContain('moveTasks([t],L)');
+  });
+
+  it('places a position-only reorder after a newProjectName move', () => {
+    const script = generateAppleScript(makeParams({ id: 'T1', newProjectName: 'Work', position: 'beginning' }));
+    expect(script.indexOf('set _moveId')).toBeGreaterThan(script.indexOf('move foundItem to end of tasks of destProject'));
+  });
+
+  it('refuses newParentTaskId together with newProjectName', () => {
+    expect(() =>
+      generateAppleScript(makeParams({ id: 'T1', newParentTaskId: 'P9', newProjectName: 'Work' }))
+    ).toThrow(/not both/);
+  });
+
+  it.each([
+    [{ newParentTaskId: 'P9' }],
+    [{ newParentTaskId: '' }],
+    [{ position: 'beginning' as const }],
+  ])('refuses %o on a project', fields => {
+    expect(() => generateAppleScript({ itemType: 'project', id: 'X', ...fields })).toThrow(/tasks only/);
+  });
+
+  it('strips the JS error class and source offset from an Omni Automation error', () => {
+    // Observed live: a throw inside evaluate javascript arrives like this.
+    expect(
+      cleanScriptError('Error: move: cannot nest a task under itself or one of its own subtasks undefined:1:436')
+    ).toBe('move: cannot nest a task under itself or one of its own subtasks');
+    expect(cleanScriptError('Item not found')).toBe('Item not found');
+  });
+
+  it('emits no move when neither field is present', () => {
+    expect(generateAppleScript(makeParams({ newName: 'x' }))).not.toContain('moveTasks');
+  });
+});
+
+describe('newReviewInterval (#139)', () => {
+  it('writes through Omni Automation, labelled as query_omnifocus will read it back', () => {
+    const script = generateAppleScript({ itemType: 'project', id: 'P1', newReviewInterval: { steps: 2, unit: 'week' } });
+    expect(script).toContain('set _reviewId to id of foundItem as string');
+    expect(script).toContain("r.unit='weeks';p.reviewInterval=r;");
+    expect(script).toContain('review interval (every 2 weeks)');
+  });
+
+  it('sets the interval before markReviewed, so the next review uses it', () => {
+    const script = generateAppleScript({
+      itemType: 'project',
+      id: 'P1',
+      markReviewed: true,
+      newReviewInterval: { steps: 1, unit: 'month' },
+    });
+    expect(script.indexOf('set _reviewId')).toBeLessThan(script.indexOf('set last review date'));
+    expect(script).toContain('review interval (every 1 month)');
+  });
+
+  it('runs after the #124 guard', () => {
+    const script = generateAppleScript({ itemType: 'project', id: 'P1', newReviewInterval: { steps: 1, unit: 'day' } });
+    expect(script.indexOf('set _reviewId')).toBeGreaterThan(script.indexOf('This is a completed occurrence'));
+  });
+
+  it('refuses newReviewInterval on a task', () => {
+    expect(() => generateAppleScript(makeParams({ newReviewInterval: { steps: 1, unit: 'week' } }))).toThrow(
+      /projects only/
+    );
   });
 });

@@ -259,14 +259,14 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
                itemDate.getDate() === target.getDate();
       }
       
+      // A Project.ReviewInterval is {steps, unit} with a plural unit ('weeks').
+      // Rendered "1 week" / "2 weeks" so edit_item's newReviewInterval (#139)
+      // round-trips. (This used to read years/months/weeks/days fields, which
+      // the object doesn't have, so every project reported null.)
       function formatReviewInterval(ri) {
-        if (!ri) return null;
-        const parts = [];
-        if (ri.years && ri.years > 0) parts.push(ri.years === 1 ? "1 year" : ri.years + " years");
-        if (ri.months && ri.months > 0) parts.push(ri.months === 1 ? "1 month" : ri.months + " months");
-        if (ri.weeks && ri.weeks > 0) parts.push(ri.weeks === 1 ? "1 week" : ri.weeks + " weeks");
-        if (ri.days && ri.days > 0) parts.push(ri.days === 1 ? "1 day" : ri.days + " days");
-        return parts.length > 0 ? parts.join(", ") : null;
+        if (!ri || !ri.steps || !ri.unit) return null;
+        const unit = ri.steps === 1 ? String(ri.unit).replace(/s$/, "") : String(ri.unit);
+        return ri.steps + " " + unit;
       }
 
       // Status mappings

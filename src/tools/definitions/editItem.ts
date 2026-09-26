@@ -24,12 +24,22 @@ export const schema = z.object({
   removeTags: z.array(z.string()).optional().describe("Tags to remove"),
   replaceTags: z.array(z.string()).optional().describe("Replace all tags with these"),
   newProjectName: z.string().optional().describe("Move the task to this project (name or folder path like 'Work/My Project'); \"\" or 'inbox' moves it to the inbox (tasks only)"),
+  newParentTaskId: z.string().optional().describe("Nest under this task id; \"\" = top level (tasks only)"),
+  position: z.union([
+    z.enum(['beginning', 'end']),
+    z.object({ before: z.string().min(1) }),
+    z.object({ after: z.string().min(1) }),
+  ]).optional().describe("Order among siblings; {before|after: id} (tasks only)"),
 
   // Project-specific fields
   newSequential: z.boolean().optional().describe("Make the project sequential"),
   newFolderName: z.string().optional().describe("Move the project to this folder"),
   newProjectStatus: z.enum(['active', 'completed', 'dropped', 'onHold']).optional().describe("New project status"),
   markReviewed: z.boolean().optional().describe("true marks the project reviewed, scheduling the next review from its review interval (projects only)"),
+  newReviewInterval: z.object({
+    steps: z.number().int().min(1),
+    unit: z.enum(['day', 'week', 'month', 'year']),
+  }).optional().describe("Review every N units (projects only)"),
   allowPastOccurrence: z.boolean().optional().describe("Allow mutating a completed occurrence of a repeating item (refused by default — it can cascade through the live repeat chain)")
 });
 
