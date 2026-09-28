@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { addProject, AddProjectParams } from '../primitives/addProject.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import { repeatShape } from './repeatSchema.js';
+import { parseInputDate } from '../../utils/dateFormatting.js';
 
 export const schema = z.object({
   name: z.string().describe("Project name"),
@@ -32,7 +33,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         : "";
         
       let dueDateText = args.dueDate
-        ? ` due on ${new Date(args.dueDate).toLocaleDateString()}`
+        ? ` due on ${parseInputDate(args.dueDate).toLocaleDateString()}`
         : "";
         
       let sequentialText = args.sequential

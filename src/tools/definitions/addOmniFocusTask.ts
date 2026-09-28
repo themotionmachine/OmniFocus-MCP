@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { addOmniFocusTask, AddOmniFocusTaskParams } from '../primitives/addOmniFocusTask.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import { repeatShape } from './repeatSchema.js';
+import { parseInputDate } from '../../utils/dateFormatting.js';
 
 export const schema = z.object({
   name: z.string().describe("Task name"),
@@ -54,7 +55,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         : '';
 
       const dueDateText = args.dueDate
-        ? ` due on ${new Date(args.dueDate).toLocaleDateString()}`
+        ? ` due on ${parseInputDate(args.dueDate).toLocaleDateString()}`
         : '';
 
       // Warning if parent requested but not used
