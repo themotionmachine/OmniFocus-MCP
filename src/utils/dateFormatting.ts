@@ -9,15 +9,25 @@
  * @param varName - Name for the date variable
  * @returns AppleScript code to construct the date
  */
-export function createDateOutsideTellBlock(isoDateString: string, varName: string): string {
-  // Date-only strings (YYYY-MM-DD) are interpreted as UTC by new Date(),
-  // which shifts the calendar day in timezones behind UTC. Append T00:00:00
-  // to force local-time interpretation so "2026-04-10" means April 10th local.
+/**
+ * Parse a caller-supplied date the way it is written to OmniFocus: as LOCAL
+ * wall-clock time. `new Date("2026-04-10")` is UTC midnight, which is the
+ * previous evening anywhere behind UTC, so date-only strings get T00:00:00.
+ *
+ * Every place that turns caller input into a Date — the write AND any echo of
+ * it in a result — must go through this. The add tools' success text once used
+ * `new Date(args.dueDate)` directly and reported a task due 9/29 as "due on
+ * 9/28/2026" while storing 9/29 correctly; callers trust that text.
+ */
+export function parseInputDate(isoDateString: string): Date {
   const normalized = /^\d{4}-\d{2}-\d{2}$/.test(isoDateString)
     ? isoDateString + 'T00:00:00'
     : isoDateString;
+  return new Date(normalized);
+}
 
-  const date = new Date(normalized);
+export function createDateOutsideTellBlock(isoDateString: string, varName: string): string {
+  const date = parseInputDate(isoDateString);
 
   // Check if the date is valid
   if (isNaN(date.getTime())) {
