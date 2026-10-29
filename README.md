@@ -213,6 +213,12 @@ Create a tag, optionally nested under an existing parent.
 - `name`
 - `parentTagName` / `parentTagID` *(optional; ID takes precedence)*
 
+### `synchronize`
+
+Sync with the OmniFocus sync server, as **Sync Now** does. OmniFocus only *starts* a sync when asked, so this waits until it has finished; a query made next then sees changes made on your other devices. Useful when the Mac running the server is not the one you edit on.
+
+- `waitSeconds` *(optional, default: 30, max 50)*: how long to wait; `0` starts the sync and returns
+
 ### Repeating items
 
 `add_omnifocus_task`, `add_project`, and each item in `batch_add_items` accept a `repeat` object; `edit_item` accepts `newRepeat`. You describe the schedule and the server compiles the ICS recurrence rule, so you never hand-write an RRULE.
