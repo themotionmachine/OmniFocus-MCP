@@ -15,6 +15,7 @@ export const schema = z.object({
   filters: z.object({
     projectId: z.string().optional().describe("Exact project id"),
     projectName: z.string().optional().describe("Project name; case-insensitive partial match. 'inbox' targets the inbox"),
+    taskId: z.string().optional().describe("Exact task id; a direct lookup, much faster than taskName"),
     taskName: z.string().optional().describe("Task name; case-insensitive partial match"),
     folderId: z.string().optional().describe("Folder id, including subfolders; tasks match via their containing project"),
     folderName: z.string().optional().describe("Folder name; case-insensitive partial match, may match several folders, each including subfolders. folderId takes precedence"),

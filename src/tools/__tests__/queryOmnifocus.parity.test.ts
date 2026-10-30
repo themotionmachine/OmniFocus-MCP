@@ -30,6 +30,7 @@ const applies = (entity: (typeof ENTITIES)[number], filter: string) =>
 const SAMPLE: Record<string, unknown> = {
   projectId: 'p1',
   projectName: 'Work',
+  taskId: 't1',
   taskName: 'Email',
   folderId: 'f1',
   folderName: 'Work',
