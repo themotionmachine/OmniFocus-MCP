@@ -10,6 +10,8 @@ import {
   shouldProbeAppHealth,
   probeOmniFocusAlive,
   _resetAppHealth,
+  argvDeclaration,
+  escapeContent,
 } from './scriptExecution.js';
 
 describe('Semaphore', () => {
@@ -255,5 +257,23 @@ describe('probeOmniFocusAlive (#121)', () => {
     const exec = vi.fn().mockResolvedValue({ stdout: '', stderr: '' });
     await probeOmniFocusAlive(exec as any);
     expect(exec.mock.calls[0][0]).toContain('name of default document');
+  });
+});
+
+describe('argvDeclaration', () => {
+  const hostile = [
+    'My "Work" perspective',
+    'a"); globalThis.injected = true; ("',
+    'back\\slash',
+    'tick ` and ${template}',
+    'line\nbreak',
+  ];
+
+  it('round-trips arguments through the evaluateJavascript template literal unchanged', () => {
+    const script = `${argvDeclaration(hostile)}\nreturn argv;`;
+    // executeOmniFocusScript embeds the script as app.evaluateJavascript(`<escaped>`).
+    const delivered = new Function(`return \`${escapeContent(script)}\`;`)() as string;
+    expect(new Function(delivered)()).toEqual(hostile);
+    expect((globalThis as { injected?: boolean }).injected).toBeUndefined();
   });
 });

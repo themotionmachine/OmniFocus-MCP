@@ -332,12 +332,16 @@ export async function executeJXA(script: string): Promise<any[]> {
   }
 }
 
-const escapeContent = (content: string) => {
+export const escapeContent = (content: string) => {
   return content
     .replace(/\\/g, "\\\\") // Escape backslashes
     .replace(/`/g, "\\`") // Escape backticks
     .replace(/\$/g, "\\$"); // Escape dollar signs
 };
+
+// JSON string literals are valid JavaScript and escape quotes, backslashes and control
+// characters, so an argument can never end its literal and become code.
+export const argvDeclaration = (args: string[]) => `const argv = ${JSON.stringify(args)};`;
 
 // Function to execute scripts in OmniFocus using the URL scheme
 export async function executeOmniFocusScript(
@@ -395,13 +399,10 @@ export async function executeOmniFocusScript(
     let wrappedScript = `${JXA_FORMAT_DATE_SOURCE}\n\n${scriptContent}`;
 
     if (args && args.length > 0) {
-      const quotedArgs = args
-        .map((arg) => `"${escapeContent(arg)}"`)
-        .join(", ");
       wrappedScript = `${JXA_FORMAT_DATE_SOURCE}
 
 // Set up arguments
-const argv = [${quotedArgs}];
+${argvDeclaration(args)}
 
 ${scriptContent}`;
     }
