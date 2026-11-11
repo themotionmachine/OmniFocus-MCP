@@ -546,6 +546,8 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
         note: task.note || "",
         dueDate: formatDate(task.dueDate),
         deferDate: formatDate(task.deferDate),
+        // plannedDate is OmniFocus 4.7+; older versions read undefined → null.
+        plannedDate: formatDate(task.plannedDate),
         completionDate: formatDate(task.completionDate),
         estimatedMinutes: task.estimatedMinutes
           ? Number(task.estimatedMinutes)
@@ -646,6 +648,94 @@ function getPerspectiveViewByName(perspectiveName, limit = 100) {
               filteredTasks.push(taskDetail);
             }
           });
+        });
+      } else if (currentPerspective === Perspective.BuiltIn.Forecast) {
+        // Forecast has no rules to evaluate and no API that returns its rows,
+        // so hand back the settings that define it plus every remaining task
+        // that could be in Today. Membership and order are decided on the
+        // Node side (src/utils/forecastToday.ts), where they can be tested.
+        // Keep this list in sync with FORECAST_SETTING_KEYS there (a test
+        // checks it).
+        const forecastSettingKeys = [
+          "_ForecastIncludePlannedItems",
+          "_ForecastIncludeDeferredItems",
+          "_ForecastIncludeItemsWithScheduledNotifications",
+          "_ForecastTodayIncludesFlaggedItems",
+          "_ForecastBlessedTagIdentifier",
+          "_ForecastIsOrganizedIntoGroups",
+          "_ForecastAllowCustomOrder",
+          "ForecastFlatListCustomOrder",
+        ];
+        const forecastSettings = {};
+        const settingErrors = {};
+        forecastSettingKeys.forEach((key) => {
+          try {
+            const value = settings.objectForKey(key);
+            forecastSettings[key] = value === undefined ? null : value;
+          } catch (e) {
+            settingErrors[key] = e.toString();
+          }
+        });
+        const blessedTagId = forecastSettings["_ForecastBlessedTagIdentifier"];
+        const wantsNotifications = Boolean(
+          forecastSettings["_ForecastIncludeItemsWithScheduledNotifications"]
+        );
+        // A loose window (yesterday..tomorrow) only trims the payload; the
+        // exact "falls on today" test runs in Node in the host's timezone.
+        const now = new Date();
+        const windowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const windowEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+        const inWindow = (d) => Boolean(d && d >= windowStart && d < windowEnd);
+        const candidates = [];
+        flattenedTasks.forEach((task) => {
+          tasksEvaluated++;
+          if (
+            task.taskStatus === Task.Status.Completed ||
+            task.taskStatus === Task.Status.Dropped
+          ) {
+            return;
+          }
+          let notificationDate = null;
+          if (wantsNotifications) {
+            (task.notifications || []).forEach((n) => {
+              let fire = null;
+              try {
+                fire = n.absoluteFireDate;
+              } catch (e) {
+                fire = null;
+              }
+              if (fire && (!notificationDate || fire < notificationDate)) {
+                notificationDate = fire;
+              }
+            });
+          }
+          const tagIds = (task.tags || []).map((tag) => tag.id.primaryKey);
+          const relevant =
+            task.flagged ||
+            inWindow(task.effectivePlannedDate) ||
+            inWindow(task.effectiveDueDate) ||
+            inWindow(task.effectiveDeferDate) ||
+            inWindow(notificationDate) ||
+            (blessedTagId && tagIds.includes(blessedTagId));
+          if (!relevant) return;
+          const details = getTaskDetails(task);
+          details.effectivePlannedDate = formatDate(task.effectivePlannedDate);
+          details.effectiveDueDate = formatDate(task.effectiveDueDate);
+          details.effectiveDeferDate = formatDate(task.effectiveDeferDate);
+          details.notificationDate = formatDate(notificationDate);
+          details.tagIds = tagIds;
+          candidates.push(details);
+        });
+        return JSON.stringify({
+          success: true,
+          perspectiveName: perspectiveDisplayName,
+          isCustomPerspective: false,
+          forecast: {
+            settings: forecastSettings,
+            settingErrors: Object.keys(settingErrors).length ? settingErrors : undefined,
+            candidates: candidates,
+          },
+          debug: { rules: null, tasksEvaluated: tasksEvaluated },
         });
       } else {
         flattenedTasks.forEach((task) => {

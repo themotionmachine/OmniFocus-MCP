@@ -1,6 +1,28 @@
 import { z } from 'zod';
-import { getPerspectiveView } from '../primitives/getPerspectiveView.js';
+import { getPerspectiveView, ForecastOrderInfo } from '../primitives/getPerspectiveView.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { localDatePart } from '../../utils/dateSerialization.js';
+
+/** "2026-11-11T08:00:00-06:00" → "11/11", without a UTC round-trip. */
+function shortDate(iso: string): string {
+  const [, m, d] = localDatePart(iso).split('-');
+  return `${Number(m)}/${Number(d)}`;
+}
+
+/** Say how a Forecast list was ordered, so a time-sorted fallback isn't mistaken for the user's order. */
+export function forecastOrderLine(info: ForecastOrderInfo): string {
+  let line: string;
+  if (info.orderSource === 'custom') {
+    const rest = info.totalCount - info.customOrderedCount;
+    line = 'Today, in your Forecast order' + (rest > 0 ? ` (${rest} not yet ordered, by time at the end)` : '') + '.';
+  } else {
+    line = 'Today, sorted by time (no custom Forecast order for today).';
+  }
+  if (info.settingErrors && Object.keys(info.settingErrors).length > 0) {
+    line += ` ⚠️ Could not read settings: ${Object.keys(info.settingErrors).join(', ')}; defaults used.`;
+  }
+  return line;
+}
 
 export const schema = z.object({
   perspectiveName: z.string().describe("Perspective name, built-in ('Inbox', 'Flagged', …) or custom"),
@@ -9,7 +31,7 @@ export const schema = z.object({
 
   includeMetadata: z.boolean().optional().describe("Include project names, tags, dates (default: true)"),
 
-  fields: z.array(z.string()).optional().describe("Only return the listed fields: id, name, note, flagged, dueDate, deferDate, completionDate, taskStatus, projectName, tagNames, estimatedMinutes")
+  fields: z.array(z.string()).optional().describe("Only return the listed fields: id, name, note, flagged, dueDate, deferDate, plannedDate, completionDate, taskStatus, projectName, tagNames, estimatedMinutes")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
@@ -26,6 +48,9 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       
       // Format the output
       let output = `## ${args.perspectiveName} Perspective (${items.length} items)\n\n`;
+      if (result.forecast) {
+        output += forecastOrderLine(result.forecast) + '\n\n';
+      }
       
       if (items.length === 0) {
         output += "No items visible in this perspective.";
@@ -51,6 +76,11 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
             parts.push(`[due: ${dateStr}]`);
           }
           
+          // Planned date
+          if (item.plannedDate) {
+            parts.push(`[planned: ${shortDate(item.plannedDate)}]`);
+          }
+
           // Defer date
           if (item.deferDate) {
             const date = new Date(item.deferDate);
