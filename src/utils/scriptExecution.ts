@@ -339,6 +339,17 @@ const escapeContent = (content: string) => {
     .replace(/\$/g, "\\$"); // Escape dollar signs
 };
 
+/**
+ * Render script arguments as a comma-separated list of JS string literals for
+ * the `const argv = [...]` prelude. Exported for the injection regression test.
+ */
+export function quoteOmniJSArgs(args: string[]): string {
+  return args.map((arg) => JSON.stringify(String(arg))).join(", ");
+}
+
+/** Exported for tests: the template-literal escaping applied to the OmniJS payload. */
+export const _escapeContentForTest = (content: string) => escapeContent(content);
+
 // Function to execute scripts in OmniFocus using the URL scheme
 export async function executeOmniFocusScript(
   scriptPath: string,
@@ -395,9 +406,12 @@ export async function executeOmniFocusScript(
     let wrappedScript = `${JXA_FORMAT_DATE_SOURCE}\n\n${scriptContent}`;
 
     if (args && args.length > 0) {
-      const quotedArgs = args
-        .map((arg) => `"${escapeContent(arg)}"`)
-        .join(", ");
+      // JSON.stringify produces a correctly escaped JS string literal (quotes,
+      // newlines, control chars). The old `"${escapeContent(arg)}"` did not
+      // escape `"`, so an argument such as a perspective name could close the
+      // string and inject OmniJS code. The whole wrapped script is escaped for
+      // the template literal below, so no further escaping is needed here.
+      const quotedArgs = quoteOmniJSArgs(args);
       wrappedScript = `${JXA_FORMAT_DATE_SOURCE}
 
 // Set up arguments
