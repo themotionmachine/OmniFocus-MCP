@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { listTags, TagInfo } from '../primitives/listTags.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   includeDropped: z.boolean().optional().describe("Include dropped/inactive tags. Default: false")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     const result = await listTags({
       includeDropped: args.includeDropped ?? false

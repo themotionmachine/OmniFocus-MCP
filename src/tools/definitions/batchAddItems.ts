@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { batchAddItems, BatchAddItemsParams } from '../primitives/batchAddItems.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 import { repeatShape } from './repeatSchema.js';
 
 export const schema = z.object({
@@ -107,7 +108,7 @@ export function describePlacement(
   return `${label ? ` → in project ${label}` : ' → in a project'}${parentMissed}`;
 }
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     // Call the batchAddItems function
     const result = await batchAddItems(args.items as BatchAddItemsParams[]);

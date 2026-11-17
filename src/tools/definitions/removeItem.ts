@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { removeItem, RemoveItemParams } from '../primitives/removeItem.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   id: z.string().optional().describe("The ID of the task or project to remove"),
@@ -9,7 +10,7 @@ export const schema = z.object({
   allowPastOccurrence: z.boolean().optional().describe("Allow removing a completed occurrence of a repeating item (refused by default — it can cascade through the live repeat chain)")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     // Validate that either id or name is provided
     if (!args.id && !args.name) {

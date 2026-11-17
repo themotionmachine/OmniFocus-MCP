@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { queryOmnifocus, QueryOmnifocusParams, SORT_KEYS } from '../primitives/queryOmnifocus.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 import { resolveDateFilter } from '../../utils/dateFilter.js';
 import { localDatePart } from '../../utils/dateSerialization.js';
 
@@ -58,7 +59,7 @@ export const schema = z.object({
 const PAST_LOOKING_DATE_FIELDS = ['addedWithin', 'completedWithin', 'droppedWithin'] as const;
 const FUTURE_LOOKING_DATE_FIELDS = ['dueWithin', 'deferredUntil', 'plannedWithin', 'dueOn', 'deferOn', 'plannedOn', 'addedOn', 'completedOn', 'droppedOn'] as const;
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     // Normalize date filter strings to numbers
     const normalizedArgs = { ...args };

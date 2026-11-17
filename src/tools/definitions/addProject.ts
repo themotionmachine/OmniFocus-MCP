@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { addProject, AddProjectParams } from '../primitives/addProject.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 import { repeatShape } from './repeatSchema.js';
 import { parseInputDate } from '../../utils/dateFormatting.js';
 
@@ -17,7 +18,7 @@ export const schema = z.object({
   repeat: repeatShape.optional()
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     // Call the addProject function 
     const result = await addProject(args as AddProjectParams);

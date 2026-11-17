@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { editItem, EditItemParams } from '../primitives/editItem.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 import { repeatShape } from './repeatSchema.js';
 
 export const schema = z.object({
@@ -64,7 +65,7 @@ export function updateFieldsProvided(args: Record<string, unknown>): string[] {
   return UPDATE_FIELDS.filter(k => args[k] !== undefined);
 }
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     // Validate that either id or name is provided
     if (!args.id && !args.name) {

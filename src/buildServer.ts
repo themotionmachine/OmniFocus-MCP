@@ -100,119 +100,83 @@ export function createOmniFocusServer(): BuiltServer {
 
   registerResources(server, logger);
 
-  server.tool(
-    "dump_database",
-    "Gets the current state of your OmniFocus database",
-    dumpDatabaseTool.schema.shape,
-    withUpgradeNudge(dumpDatabaseTool.handler)
-  );
-
-  server.tool(
-    "add_omnifocus_task",
-    "Create a NEW task. If a matching task already exists (e.g. in the Inbox), do NOT create a duplicate — MOVE it with edit_item + newProjectName. When unsure, check with query_omnifocus first.",
-    addOmniFocusTaskTool.schema.shape,
-    withUpgradeNudge(addOmniFocusTaskTool.handler)
-  );
-
-  server.tool(
-    "add_project",
-    "Add a new project to OmniFocus",
-    addProjectTool.schema.shape,
-    withUpgradeNudge(addProjectTool.handler)
-  );
-
-  server.tool(
-    "remove_item",
-    "Remove a task or project from OmniFocus",
-    removeItemTool.schema.shape,
-    withUpgradeNudge(removeItemTool.handler)
-  );
-
-  server.tool(
-    "edit_item",
-    "Edit an existing task or project. Also how you MOVE a task: set newProjectName (or \"\" / \"inbox\"). Prefer moving an existing task over re-creating it — never make duplicates.",
-    editItemTool.schema.shape,
-    withUpgradeNudge(editItemTool.handler)
-  );
-
-  server.tool(
-    "batch_add_items",
-    "Add multiple tasks or projects to OmniFocus in a single operation",
-    batchAddItemsTool.schema.shape,
-    withUpgradeNudge(batchAddItemsTool.handler)
-  );
-
-  server.tool(
-    "batch_remove_items",
-    "Remove multiple tasks or projects from OmniFocus in a single operation",
-    batchRemoveItemsTool.schema.shape,
-    withUpgradeNudge(batchRemoveItemsTool.handler)
-  );
-
-  server.tool(
-    "query_omnifocus",
-    "Query tasks, projects, or folders with filters (project, folder, tags, status, dates). Much faster and lighter than dump_database for targeted lookups.",
-    queryOmniFocusTool.schema.shape,
-    withUpgradeNudge(queryOmniFocusTool.handler)
-  );
-
-  server.tool(
-    "list_perspectives",
-    "List built-in and custom perspectives (custom is a Pro feature)",
-    listPerspectivesTool.schema.shape,
-    withUpgradeNudge(listPerspectivesTool.handler)
-  );
-
-  server.tool(
-    "get_perspective_view",
-    "Get the items visible in a named OmniFocus perspective",
-    getPerspectiveViewTool.schema.shape,
-    withUpgradeNudge(getPerspectiveViewTool.handler)
-  );
-
-  server.tool(
-    "list_tags",
-    "List all tags with their hierarchy",
-    listTagsTool.schema.shape,
-    withUpgradeNudge(listTagsTool.handler)
-  );
-
-  server.tool(
-    "create_tag",
-    "Create a new tag in OmniFocus, optionally nested under an existing parent tag",
-    createTagTool.schema.shape,
-    withUpgradeNudge(createTagTool.handler)
-  );
-
-  rejectUnknownArguments(server);
+  for (const tool of selectTools(process.env.OMNIFOCUS_MCP_TOOLS)) {
+    // Every tool's arguments are strict at every depth (see deepStrict).
+    server.registerTool(
+      tool.name,
+      { description: tool.description, inputSchema: deepStrict(tool.module.schema) },
+      withUpgradeNudge(tool.module.handler) as never
+    );
+  }
 
   return { server, logger };
 }
 
 /**
- * Make every registered tool refuse unrecognized argument keys.
+ * Every tool the server can offer, in registration order.
  *
- * `server.tool()` wraps each shape in a plain `z.object`, which silently strips
- * unknown keys before the handler runs. That is how `edit_item` called with
- * `note` instead of `newNote` reported "updated successfully" for a write that
- * never happened: the typo was dropped and the handler saw nothing to change.
- * A wrong field name should fail loudly, with the key named in the error, on
- * every tool — not only on the one that happened to bite.
- *
- * The SDK offers no public way to pass a strict object to `tool()`, so this
- * reaches into `_registeredTools` and swaps each `inputSchema` for its
- * `.strict()` form. `buildServer.test.ts` drives a real client through the
- * result; an SDK bump that renames the field turns the test red rather than
- * quietly restoring the silent-strip behavior.
+ * Unknown argument keys must be rejected, not silently stripped. A plain
+ * `z.object` strips them before the handler runs. That is how `edit_item`
+ * called with `note` instead of `newNote` reported "updated successfully" for
+ * a write that never happened. So each schema is passed through `deepStrict`
+ * at registration. `buildServer.test.ts` drives a real client through the
+ * result.
  */
-export function rejectUnknownArguments(server: McpServer): void {
-  const registered = (server as unknown as { _registeredTools?: Record<string, { inputSchema?: unknown }> })._registeredTools;
-  if (!registered) return;
-  for (const tool of Object.values(registered)) {
-    if (tool.inputSchema instanceof z.ZodObject) {
-      tool.inputSchema = deepStrict(tool.inputSchema);
-    }
+interface ToolModule {
+  schema: z.ZodObject;
+  handler: (...args: any[]) => any;
+}
+
+const TOOLS: ReadonlyArray<{ name: string; description: string; module: ToolModule }> = [
+  { name: "dump_database", module: dumpDatabaseTool,
+    description: "Gets the current state of your OmniFocus database" },
+  { name: "add_omnifocus_task", module: addOmniFocusTaskTool,
+    description: "Create a NEW task. If a matching task already exists (e.g. in the Inbox), do NOT create a duplicate — MOVE it with edit_item + newProjectName. When unsure, check with query_omnifocus first." },
+  { name: "add_project", module: addProjectTool,
+    description: "Add a new project to OmniFocus" },
+  { name: "remove_item", module: removeItemTool,
+    description: "Remove a task or project from OmniFocus" },
+  { name: "edit_item", module: editItemTool,
+    description: "Edit an existing task or project. Also how you MOVE a task: set newProjectName (or \"\" / \"inbox\"). Prefer moving an existing task over re-creating it — never make duplicates." },
+  { name: "batch_add_items", module: batchAddItemsTool,
+    description: "Add multiple tasks or projects to OmniFocus in a single operation" },
+  { name: "batch_remove_items", module: batchRemoveItemsTool,
+    description: "Remove multiple tasks or projects from OmniFocus in a single operation" },
+  { name: "query_omnifocus", module: queryOmniFocusTool,
+    description: "Query tasks, projects, or folders with filters (project, folder, tags, status, dates). Much faster and lighter than dump_database for targeted lookups." },
+  { name: "list_perspectives", module: listPerspectivesTool,
+    description: "List built-in and custom perspectives (custom is a Pro feature)" },
+  { name: "get_perspective_view", module: getPerspectiveViewTool,
+    description: "Get the items visible in a named OmniFocus perspective" },
+  { name: "list_tags", module: listTagsTool,
+    description: "List all tags with their hierarchy" },
+  { name: "create_tag", module: createTagTool,
+    description: "Create a new tag in OmniFocus, optionally nested under an existing parent tag" },
+];
+
+/**
+ * Pick which tools to register from an allowlist, as in
+ * `OMNIFOCUS_MCP_TOOLS=query_omnifocus,edit_item`.
+ *
+ * Unset or blank means every tool. The allowlist exists for exposing the
+ * server remotely (for example to a cloud agent over HTTP) without the
+ * destructive tools. It is an allowlist rather than a denylist, so a tool
+ * added upstream stays hidden until someone opts in. An unknown name is an
+ * error: a typo should stop the server, not quietly change what it offers.
+ */
+export function selectTools(allowlist: string | undefined): typeof TOOLS {
+  if (!allowlist || !allowlist.trim()) return TOOLS;
+  const wanted = allowlist.split(',').map(n => n.trim()).filter(Boolean);
+  const known = new Set(TOOLS.map(t => t.name));
+  const unknown = wanted.filter(n => !known.has(n));
+  if (unknown.length) {
+    throw new Error(
+      `OMNIFOCUS_MCP_TOOLS names unknown tool(s): ${unknown.join(', ')}. ` +
+      `Known tools: ${[...known].join(', ')}`
+    );
   }
+  const keep = new Set(wanted);
+  return TOOLS.filter(t => keep.has(t.name));
 }
 
 /**
@@ -223,27 +187,37 @@ export function rejectUnknownArguments(server: McpServer): void {
  * depth (through optional/nullable/default wrappers, arrays, and unions) is
  * strict.
  */
-export function deepStrict<T extends z.ZodTypeAny>(schema: T): T {
-  // Each branch rebuilds from the existing `_def` so descriptions, defaults and
+export function deepStrict<T extends z.ZodType>(schema: T): T {
+  // zod 4 keeps `.describe()` text in a registry keyed by schema instance, so
+  // a clone starts without it. Copy it across.
+  const out = rebuildStrict(schema);
+  const meta = z.globalRegistry.get(schema);
+  if (out !== schema && meta) z.globalRegistry.add(out, meta);
+  return out;
+}
+
+function rebuildStrict<T extends z.ZodType>(schema: T): T {
+  // Each branch clones the existing def so descriptions, defaults and
   // constraints (array min/max, etc.) ride along unchanged; only the shape or
-  // inner type is replaced.
+  // inner type is replaced. In zod 4 "strict" is an object whose catchall is
+  // `z.never()`.
   if (schema instanceof z.ZodObject) {
-    const shape: Record<string, z.ZodTypeAny> = {};
-    for (const [key, value] of Object.entries(schema.shape as Record<string, z.ZodTypeAny>)) {
+    const shape: Record<string, z.ZodType> = {};
+    for (const [key, value] of Object.entries(schema.shape as Record<string, z.ZodType>)) {
       shape[key] = deepStrict(value);
     }
-    return new z.ZodObject({ ...schema._def, shape: () => shape, unknownKeys: 'strict' }) as unknown as T;
+    return schema.clone({ ...schema.def, shape, catchall: z.never() }) as unknown as T;
   }
   if (schema instanceof z.ZodOptional || schema instanceof z.ZodNullable || schema instanceof z.ZodDefault) {
-    const Ctor = schema.constructor as new (def: any) => T;
-    return new Ctor({ ...schema._def, innerType: deepStrict(schema._def.innerType) });
+    const def = schema.def as unknown as { innerType: z.ZodType };
+    return schema.clone({ ...schema.def, innerType: deepStrict(def.innerType) } as never) as unknown as T;
   }
   if (schema instanceof z.ZodArray) {
-    return new z.ZodArray({ ...schema._def, type: deepStrict(schema._def.type) }) as unknown as T;
+    return schema.clone({ ...schema.def, element: deepStrict(schema.def.element as z.ZodType) }) as unknown as T;
   }
   if (schema instanceof z.ZodUnion) {
-    const options = (schema._def.options as z.ZodTypeAny[]).map(deepStrict);
-    return new z.ZodUnion({ ...schema._def, options }) as unknown as T;
+    const options = (schema.def.options as readonly z.ZodType[]).map(deepStrict);
+    return schema.clone({ ...schema.def, options } as never) as unknown as T;
   }
   return schema;
 }
