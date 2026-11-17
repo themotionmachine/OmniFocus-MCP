@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getPerspectiveView } from '../primitives/getPerspectiveView.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   perspectiveName: z.string().describe("Perspective name, built-in ('Inbox', 'Flagged', …) or custom"),
@@ -12,7 +13,7 @@ export const schema = z.object({
   fields: z.array(z.string()).optional().describe("Only return the listed fields: id, name, note, flagged, dueDate, deferDate, completionDate, taskStatus, projectName, tagNames, estimatedMinutes")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     const result = await getPerspectiveView({
       perspectiveName: args.perspectiveName,

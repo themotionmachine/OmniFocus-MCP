@@ -5,9 +5,9 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 /**
  * Unknown argument keys must be rejected, not silently stripped. This drives a
  * real MCP client through the server built by `createOmniFocusServer`, because
- * the strictness lives in a post-registration patch of SDK internals
- * (`rejectUnknownArguments`) — a unit test of the schema object alone would
- * pass even if the patch stopped taking effect.
+ * the strictness is applied at registration (`deepStrict` in `buildServer.ts`),
+ * and a unit test of the schema object alone would pass even if the server
+ * stopped using the strict schema.
  */
 
 // Belt and braces: no test path below should reach OmniFocus, and if one does
@@ -25,7 +25,7 @@ vi.mock('./utils/scriptExecution.js', async (importOriginal) => {
   };
 });
 
-import { createOmniFocusServer } from './buildServer.js';
+import { createOmniFocusServer, selectTools } from './buildServer.js';
 
 async function connectedClient() {
   const { server } = createOmniFocusServer();
@@ -36,15 +36,34 @@ async function connectedClient() {
   return client;
 }
 
+/**
+ * An unknown key must be refused, naming the key. SDK 1.8 threw a protocol
+ * error; newer SDKs return it as an `isError` tool result (per the MCP spec).
+ * Either way the handler must not run.
+ */
+async function expectInvalidArguments(call: Promise<unknown>, key: RegExp) {
+  let result: any;
+  try {
+    result = await call;
+  } catch (err) {
+    expect(String((err as Error).message)).toMatch(key);
+    return;
+  }
+  expect(result.isError).toBe(true);
+  expect(result.content[0].text).toMatch(/Invalid arguments|Unrecognized key/);
+  expect(result.content[0].text).toMatch(key);
+}
+
 describe('tool arguments are strict', () => {
   it('edit_item rejects a misspelled field and names it', async () => {
     const client = await connectedClient();
-    await expect(
+    await expectInvalidArguments(
       client.callTool({
         name: 'edit_item',
         arguments: { id: 'abc', itemType: 'task', note: 'typo for newNote' },
-      })
-    ).rejects.toThrow(/note/);
+      }),
+      /note/
+    );
   });
 
   it('edit_item with nothing to change is an error result, not a success line', async () => {
@@ -82,28 +101,31 @@ describe('tool arguments are strict', () => {
 describe('nested objects are strict too', () => {
   it('query_omnifocus rejects a misspelled filter instead of running unfiltered', async () => {
     const client = await connectedClient();
-    await expect(
+    await expectInvalidArguments(
       client.callTool({
         name: 'query_omnifocus',
         arguments: { entity: 'tasks', filters: { inInbox: true }, summary: true },
-      })
-    ).rejects.toThrow(/inInbox/);
+      }),
+      /inInbox/
+    );
   });
 
   it('batch_add_items rejects an unknown key inside an item, and inside its repeat', async () => {
     const client = await connectedClient();
-    await expect(
+    await expectInvalidArguments(
       client.callTool({
         name: 'batch_add_items',
         arguments: { items: [{ type: 'task', name: 'x', note: 'ok', dueDat: 'typo' }] },
-      })
-    ).rejects.toThrow(/dueDat/);
-    await expect(
+      }),
+      /dueDat/
+    );
+    await expectInvalidArguments(
       client.callTool({
         name: 'batch_add_items',
         arguments: { items: [{ type: 'task', name: 'x', repeat: { every: 'week', bogus: 1 } }] },
-      })
-    ).rejects.toThrow(/bogus/);
+      }),
+      /bogus/
+    );
   });
 
   it('the advertised JSON schema carries additionalProperties: false at depth', async () => {
@@ -130,5 +152,41 @@ describe('nested objects are strict too', () => {
       arguments: { itemType: 'task', newRepeat: null },
     })) as any;
     expect(r.content[0].text).toContain('Either id or name');
+  });
+});
+
+describe('OMNIFOCUS_MCP_TOOLS allowlist', () => {
+  const ALL = selectTools(undefined).map(t => t.name);
+
+  it('offers every tool when unset or blank', () => {
+    expect(ALL).toHaveLength(12);
+    expect(selectTools('').map(t => t.name)).toEqual(ALL);
+    expect(selectTools('  ').map(t => t.name)).toEqual(ALL);
+  });
+
+  it('keeps only the listed tools, tolerating spaces', () => {
+    expect(selectTools(' query_omnifocus , edit_item').map(t => t.name)).toEqual(['edit_item', 'query_omnifocus']);
+  });
+
+  it('refuses an unknown tool name instead of ignoring it', () => {
+    expect(() => selectTools('query_omnifocus,remove_itme')).toThrow(/remove_itme/);
+  });
+
+  it('a server built with the allowlist does not offer or run the other tools', async () => {
+    const prev = process.env.OMNIFOCUS_MCP_TOOLS;
+    process.env.OMNIFOCUS_MCP_TOOLS = 'query_omnifocus,edit_item';
+    try {
+      const client = await connectedClient();
+      const { tools } = await client.listTools();
+      expect(tools.map(t => t.name).sort()).toEqual(['edit_item', 'query_omnifocus']);
+      const result: any = await client
+        .callTool({ name: 'remove_item', arguments: { id: 'abc', itemType: 'task' } })
+        .catch((err: Error) => ({ isError: true, content: [{ text: err.message }] }));
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toMatch(/remove_item/);
+    } finally {
+      if (prev === undefined) delete process.env.OMNIFOCUS_MCP_TOOLS;
+      else process.env.OMNIFOCUS_MCP_TOOLS = prev;
+    }
   });
 });

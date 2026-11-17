@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createTag } from '../primitives/createTag.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   name: z.string().describe("Name of the tag to create"),
@@ -8,7 +9,7 @@ export const schema = z.object({
   parentTagID: z.string().optional().describe("ID of an existing tag to nest the new tag under. Takes precedence over parentTagName.")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     const result = await createTag({
       name: args.name,

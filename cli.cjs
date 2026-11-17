@@ -19,7 +19,14 @@ const distUrl = (...parts) => pathToFileURL(path.join(__dirname, 'dist', ...part
 // dedicated server per client, no socket, no shared state. Keep this working; it
 // is the answer for anyone whose environment the daemon can't accommodate, and
 // the first debugging step when the daemon is suspected.
-const noDaemon = /^(1|true|yes)$/i.test(process.env.OMNIFOCUS_MCP_NO_DAEMON || '');
+//
+// A tool allowlist (OMNIFOCUS_MCP_TOOLS) also forces this mode. The shared
+// daemon reads the allowlist from its own environment when it starts, and its
+// socket name depends only on the version, so a restricted client could
+// otherwise attach to an unrestricted daemon and be offered every tool.
+const noDaemon =
+  /^(1|true|yes)$/i.test(process.env.OMNIFOCUS_MCP_NO_DAEMON || '') ||
+  Boolean((process.env.OMNIFOCUS_MCP_TOOLS || '').trim());
 
 async function main() {
   if (noDaemon) {

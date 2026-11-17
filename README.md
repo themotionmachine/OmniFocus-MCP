@@ -294,6 +294,7 @@ Note that the check is on *repeating item plus terminal status*, not on the shap
 | Variable | Default | Purpose |
 |---|---|---|
 | `OMNIFOCUS_MCP_NO_DAEMON` | unset | Set to `1` to skip the daemon entirely and run a dedicated server per client (the pre-daemon behavior). First thing to try if you suspect the daemon. |
+| `OMNIFOCUS_MCP_TOOLS` | unset (all tools) | Comma-separated allowlist of tool names to offer, e.g. `query_omnifocus,list_tags,add_omnifocus_task`. Useful when exposing the server to a remote agent without `remove_item`, `batch_remove_items` or `dump_database`. Tools not listed (including ones added in later versions) are not offered; an unknown name stops the server at startup. When set, the server runs in-process rather than attaching to the shared daemon. |
 | `OMNIFOCUS_MCP_SOCKET` | `~/.omnifocus-mcp/daemon-<version>.sock` | Override the socket path, e.g. to run an isolated instance. |
 | `OMNIFOCUS_MCP_IDLE_TIMEOUT_MINUTES` | `30` | Idle window after which the server pings the client and exits only if it gets no answer. `0` disables the check. |
 | `OMNIFOCUS_MCP_MAX_CONCURRENT_OSASCRIPT` | `4` | Maximum concurrent `osascript` calls. Lower it if you still see AppleEvent timeouts. |
