@@ -3,6 +3,7 @@ import { queryOmnifocus, QueryOmnifocusParams, SORT_KEYS } from '../primitives/q
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import { resolveDateFilter } from '../../utils/dateFilter.js';
 import { localDatePart } from '../../utils/dateSerialization.js';
+import { writeOutputFile } from '../../utils/outputFile.js';
 
 // Description budget (#105): these strings load into EVERY session that touches
 // the server, so shared grammar is stated once on the filters object and each
@@ -50,7 +51,9 @@ export const schema = z.object({
 
   includeCompleted: z.boolean().optional().describe("Include completed/dropped items (default: false)"),
 
-  summary: z.boolean().optional().describe("Return only the match count")
+  summary: z.boolean().optional().describe("Return only the match count"),
+
+  outputFile: z.string().optional().describe("Absolute path in a temp dir: write the result there and return a one-line summary")
 });
 
 // Backward-looking filters ("within the last N days ago") need the ISO-date branch
@@ -59,7 +62,43 @@ export const schema = z.object({
 const PAST_LOOKING_DATE_FIELDS = ['addedWithin', 'completedWithin', 'droppedWithin'] as const;
 const FUTURE_LOOKING_DATE_FIELDS = ['dueWithin', 'deferredUntil', 'plannedWithin', 'dueOn', 'deferOn', 'plannedOn', 'addedOn', 'completedOn', 'droppedOn'] as const;
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
+
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra): Promise<ToolResult> {
+  const { outputFile, ...queryArgs } = args;
+  const result = await runQuery(queryArgs);
+  if (outputFile === undefined) return result;
+  return redirectToFile(result, outputFile, queryArgs.entity);
+}
+
+// outputFile (for large results an agent will process with scripts, not read):
+// the file gets exactly the text the tool would have returned, so parsers of
+// the inline format keep working, and the reply shrinks to one line.
+function redirectToFile(result: ToolResult, outputFile: string, entity: string): ToolResult {
+  const text = result.content.map(c => c.text).join('\n');
+  let written: string;
+  try {
+    written = writeOutputFile(outputFile, text);
+  } catch (err) {
+    return {
+      content: [{ type: "text" as const, text: `outputFile not written: ${(err as Error).message}` }],
+      isError: true
+    };
+  }
+  const chars = text.length.toLocaleString('en-US');
+  let summary: string;
+  if (result.isError) {
+    summary = `Query failed; wrote the error (${chars} chars) to ${written}`;
+  } else {
+    const count = text.match(/^(\d+) \w+:/);
+    summary = count
+      ? `Wrote ${count[1]} ${entity} (${chars} chars) to ${written}`
+      : `Wrote ${chars} chars to ${written}: ${text.split('\n')[0]}`;
+  }
+  return { content: [{ type: "text" as const, text: summary }], ...(result.isError ? { isError: true } : {}) };
+}
+
+async function runQuery(args: Omit<z.infer<typeof schema>, 'outputFile'>): Promise<ToolResult> {
   try {
     // Normalize date filter strings to numbers
     const normalizedArgs = { ...args };
