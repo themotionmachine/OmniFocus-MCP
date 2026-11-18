@@ -62,7 +62,10 @@ describe('schema description budget (#105)', () => {
     // Raised from 8200 to 8300 for edit_item's newParentTaskId / position (#138)
     // and newReviewInterval (#139), ~145 chars trimmed to the bone. The headroom
     // before was 52 chars, too little for three new fields. Deliberate, not drift.
-    expect(total).toBeLessThanOrEqual(8300);
+    // Raised from 8300 to 8400 for query_omnifocus's outputFile (~80 chars):
+    // large results written to a temp file instead of the agent's context.
+    // Deliberate, not drift.
+    expect(total).toBeLessThanOrEqual(8400);
   });
 
   it('keeps query_omnifocus — the historical worst offender — under its own budget', () => {
@@ -72,7 +75,8 @@ describe('schema description budget (#105)', () => {
     // due-anchored rule from a defer-anchored one, and the difference decides
     // whether a completed item grows a due date. Deliberate, not drift.
     const source = readFileSync(join(definitionsDir, 'queryOmnifocus.ts'), 'utf8');
-    expect(describeChars(source)).toBeLessThanOrEqual(2900);
+    // Raised from 2900 to 3000 for outputFile (see the total above).
+    expect(describeChars(source)).toBeLessThanOrEqual(3000);
   });
 
   it('keeps the shared repeat shape lean, since every character is paid 4x', () => {

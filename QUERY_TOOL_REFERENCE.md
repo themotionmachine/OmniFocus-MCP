@@ -16,6 +16,7 @@ Every parameter, filter, field and allowed value of the `query_omnifocus` tool, 
 | `sortOrder` | `"asc"` \| `"desc"` | `"asc"` | Sort direction. Ignored without `sortBy`. |
 | `includeCompleted` | boolean | `false` | Include completed and dropped items. See [includeCompleted](#includecompleted). |
 | `summary` | boolean | `false` | Return only `Found N <entity> matching your criteria.` The count is taken after `limit`, so `summary` with `limit: 10` never reports more than 10. |
+| `outputFile` | string | none | Absolute path inside a temp directory (`os.tmpdir()`, `/tmp`, `/private/tmp`). Writes the exact text the query would have returned (including an empty or failed result) to that file and returns a one-line summary such as `Wrote 412 tasks (310,905 chars) to <path>`. The directory must exist; a path elsewhere, a symlinked escape, or a symlink as the file itself is refused. Use it for large results you will process with scripts rather than read. |
 
 ### Unknown keys are rejected
 
@@ -46,6 +47,7 @@ This returns flagged tasks that are (Next or Available) and tagged (home or erra
 |---|---|:-:|:-:|:-:|
 | `projectId` | string | yes | yes | rejected |
 | `projectName` | string | yes | yes | rejected |
+| `taskId` | string | yes | rejected | rejected |
 | `taskName` | string | yes | rejected | rejected |
 | `folderId` | string | yes | yes | yes |
 | `folderName` | string | yes | yes | yes |
@@ -78,6 +80,8 @@ No filter applies to `entity: "folders"`. A folder query returns every folder, m
 **`projectName`**: case-insensitive substring match on the project name. `"review"` matches "Weekly Review" and "Review Documents".
 - On tasks, the value `"inbox"` (any case, exactly that word) also matches inbox tasks. It still matches tasks in any project whose name contains "inbox". No other value matches inbox tasks.
 - On projects, `"inbox"` has no special meaning.
+
+**`taskId`** (tasks only): exact match on the task's id — the id `query_omnifocus` returns and `edit_item` accepts. A direct lookup rather than a scan of every task, so prefer it over `taskName` whenever the id is known. A project's id finds its root task. An unknown id matches nothing.
 
 **`taskName`** (tasks only): case-insensitive substring match on the task name.
 
