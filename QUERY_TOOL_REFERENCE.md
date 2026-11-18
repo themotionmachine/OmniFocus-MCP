@@ -46,6 +46,7 @@ This returns flagged tasks that are (Next or Available) and tagged (home or erra
 |---|---|:-:|:-:|:-:|
 | `projectId` | string | yes | yes | rejected |
 | `projectName` | string | yes | yes | rejected |
+| `taskId` | string | yes | rejected | rejected |
 | `taskName` | string | yes | rejected | rejected |
 | `folderId` | string | yes | yes | yes |
 | `folderName` | string | yes | yes | yes |
@@ -78,6 +79,8 @@ No filter applies to `entity: "folders"`. A folder query returns every folder, m
 **`projectName`**: case-insensitive substring match on the project name. `"review"` matches "Weekly Review" and "Review Documents".
 - On tasks, the value `"inbox"` (any case, exactly that word) also matches inbox tasks. It still matches tasks in any project whose name contains "inbox". No other value matches inbox tasks.
 - On projects, `"inbox"` has no special meaning.
+
+**`taskId`** (tasks only): exact match on the task's id — the id `query_omnifocus` returns and `edit_item` accepts. A direct lookup rather than a scan of every task, so prefer it over `taskName` whenever the id is known. A project's id finds its root task. An unknown id matches nothing.
 
 **`taskName`** (tasks only): case-insensitive substring match on the task name.
 
