@@ -384,18 +384,6 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
           : false;
       }
 
-      // Get the appropriate collection based on entity type
-      let items = [];
-      const entityType = "${entity}";
-
-      if (entityType === "tasks") {
-        items = flattenedTasks;
-      } else if (entityType === "projects") {
-        items = flattenedProjects;
-      } else if (entityType === "folders") {
-        items = flattenedFolders;
-      }
-
       ${filters.folderId || filters.folderName ? `
       // Pre-compute the set of folder IDs that are the target(s) or their
       // descendants. _folderIdSet is referenced by the filter conditions emitted
@@ -417,7 +405,22 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
         }
       }`}
       ` : ''}
-      
+
+      ${entity === 'tasks' ? generateTaskCandidates(filters, includeCompleted) : ''}
+
+      // Get the appropriate collection based on entity type. Runs after
+      // the folder set is built: the task candidates can narrow by folder.
+      let items = [];
+      const entityType = "${entity}";
+
+      if (entityType === "tasks") {
+        items = _taskCandidates();
+      } else if (entityType === "projects") {
+        items = flattenedProjects;
+      } else if (entityType === "folders") {
+        items = flattenedFolders;
+      }
+
       // Apply filters
       let filtered = items.filter(item => {
         // Skip completed/dropped unless explicitly requested
@@ -479,6 +482,104 @@ function generateQueryScript(params: QueryOmnifocusParams): string {
       });
     }
   })();`;
+}
+
+// Where a task query starts. Walking flattenedTasks costs time proportional to
+// every task ever created — completed ones included, which are most of a
+// long-lived database — and OmniFocus's UI is blocked for the whole walk (a
+// 5,600-task database spent 3-16s there while every filter matched a handful).
+// When a filter pins the result inside a set OmniJS can reach directly, start
+// from that set instead. generateFilterConditions still runs on every
+// candidate, so a narrowing only has to return a SUPERSET of the matches.
+//
+// Returns the source of a JXA function `_taskCandidates()` returning an array.
+function generateTaskCandidates(filters: any, includeCompleted: boolean): string {
+  let body: string;
+
+  // flattenedTasks includes each project's root task, but
+  // project.flattenedTasks does not, so the project narrowings add it back
+  // (_projectTasks). tag.remainingTasks already includes a tagged project's.
+  if (filters.projectId) {
+    // Either id namespace, as in the projectId filter: a Project id, or the
+    // AppleScript-namespace id of the project's root task.
+    const safeId = escapeJXA(filters.projectId);
+    body = `
+      var p = Project.byIdentifier("${safeId}");
+      if (!p) {
+        var root = Task.byIdentifier("${safeId}");
+        p = root ? root.project : null;
+      }
+      return p ? _projectTasks(p) : [];`;
+  } else if (filters.inbox === true) {
+    body = `return _inboxTasks();`;
+  } else if (filters.tags && filters.tags.length > 0 && !includeCompleted) {
+    // remainingTasks excludes completed/dropped tasks, so it is only a superset
+    // when those are excluded anyway. Several tags may share a name (nested
+    // tags), and a task can carry more than one of the requested tags.
+    const names = filters.tags.map((t: string) => `"${escapeJXA(t)}"`).join(', ');
+    body = `
+      var names = [${names}];
+      var seen = new Set();
+      var out = [];
+      flattenedTags.forEach(function (tag) {
+        if (names.indexOf(tag.name) === -1) return;
+        tag.remainingTasks.forEach(function (t) {
+          var key = t.id.primaryKey;
+          if (!seen.has(key)) { seen.add(key); out.push(t); }
+        });
+      });
+      return out;`;
+  } else if (filters.folderId || filters.folderName) {
+    // Mirrors the folder condition: tasks of projects whose folder is in
+    // _folderIdSet, which generateQueryScript builds before calling this.
+    body = `
+      var out = [];
+      flattenedProjects.forEach(function (p) {
+        if (p.parentFolder && _folderIdSet.has(p.parentFolder.id.primaryKey)) {
+          _projectTasks(p).forEach(function (t) { out.push(t); });
+        }
+      });
+      return out;`;
+  } else if (filters.projectName) {
+    // Mirrors the projectName condition: a project task matches on its
+    // project's name, and a task with no project only when the name is "inbox".
+    const safeName = escapeJXA(filters.projectName.toLowerCase());
+    body = `
+      var out = [];
+      flattenedProjects.forEach(function (p) {
+        if (p.name.toLowerCase().includes("${safeName}")) {
+          _projectTasks(p).forEach(function (t) { out.push(t); });
+        }
+      });
+      if ("${safeName}" === "inbox") {
+        _inboxTasks().forEach(function (t) { out.push(t); });
+      }
+      return out;`;
+  } else {
+    body = `return flattenedTasks;`;
+  }
+
+  return `
+      // Not [p.task].concat(p.flattenedTasks): OmniJS collections aren't real
+      // Arrays, so concat appends the whole collection as one element.
+      function _projectTasks(p) {
+        var out = [p.task];
+        p.flattenedTasks.forEach(function (t) { out.push(t); });
+        return out;
+      }
+
+      // Every inbox task, subtasks included (the inbox holds only top-level ones).
+      function _inboxTasks() {
+        var out = [];
+        inbox.forEach(function (t) {
+          out.push(t);
+          t.flattenedTasks.forEach(function (c) { out.push(c); });
+        });
+        return out;
+      }
+
+      function _taskCandidates() {${body}
+      }`;
 }
 
 function generateFilterConditions(entity: string, filters: any): string {
@@ -1076,6 +1177,7 @@ export const _testExports = {
   generateFilterConditions,
   generateFieldMapping,
   generateQueryScript,
+  generateTaskCandidates,
   validateFields,
   validateFilters,
 };

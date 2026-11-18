@@ -836,3 +836,134 @@ describe('filters that do not apply to the entity are refused, not ignored', () 
     expect(script).toContain('folderStatusMap[item.status] === "Dropped"');
   });
 });
+
+// ============================================================
+// generateTaskCandidates - where a task query starts
+// ============================================================
+describe('generateTaskCandidates', () => {
+  const { generateTaskCandidates, generateQueryScript } = primitives;
+
+  // OmniJS collections are array-like but not Arrays — concat on one appends
+  // the whole collection as a single element — so the fakes aren't either.
+  const collection = <T,>(items: T[]) => ({
+    length: items.length,
+    forEach: (fn: (x: T) => void) => items.forEach(fn),
+  });
+
+  type FakeTask = { id: { primaryKey: string }; name: string; flattenedTasks: ReturnType<typeof collection> };
+  const task = (id: string, children: FakeTask[] = []): FakeTask => {
+    const flattened: FakeTask[] = [];
+    const walk = (cs: FakeTask[]) => cs.forEach(c => { flattened.push(c); walk(c.children); });
+    walk(children);
+    return Object.assign({ id: { primaryKey: id }, name: id, flattenedTasks: collection(flattened) }, { children });
+  };
+
+  // A small database: two projects (each a root task plus children), an inbox
+  // with a subtask, and tags — two of them sharing a name, as nested tags can.
+  const sub = task('a1-sub');
+  const work = { id: { primaryKey: 'pWork' }, name: 'Work Stuff', parentFolder: { id: { primaryKey: 'fWork' } }, task: task('rWork'), flattenedTasks: collection([task('a1', [sub]), sub, task('a2')]) };
+  const inboxZero = { id: { primaryKey: 'pZero' }, name: 'Inbox Zero', parentFolder: null, task: task('rZero'), flattenedTasks: collection([task('z1')]) };
+  const projects = [work, inboxZero];
+  const inboxSub = task('i1-sub');
+  const inboxTop = [task('i1', [inboxSub]), task('i2')];
+  const [t1, t2, t3] = [task('t1'), task('t2'), task('t3')];
+  const tags = [
+    { name: 'Waiting', remainingTasks: collection([t1, t2]) },
+    { name: 'Waiting', remainingTasks: collection([t2]) },
+    { name: 'Started', remainingTasks: collection([t2, t3]) },
+    { name: 'Other "quoted"', remainingTasks: collection([t3]) },
+  ];
+  const everything = collection([t1, t2, t3]);
+
+  function candidates(filters: any, includeCompleted = false): string[] | 'flattenedTasks' {
+    const src = generateTaskCandidates(filters, includeCompleted);
+    const globals = {
+      Project: { byIdentifier: (id: string) => projects.find(p => p.id.primaryKey === id) ?? null },
+      Task: {
+        byIdentifier: (id: string) => {
+          const p = projects.find(p => p.task.id.primaryKey === id);
+          return p ? { project: p } : null;
+        },
+      },
+      flattenedTags: collection(tags),
+      flattenedProjects: collection(projects),
+      inbox: collection(inboxTop),
+      flattenedTasks: everything,
+      // Built by generateQueryScript from folderId/folderName before the call.
+      _folderIdSet: new Set(['fWork', 'fWorkChild']),
+    };
+    const run = new Function(...Object.keys(globals), `${src}; return _taskCandidates();`);
+    const result = run(...Object.values(globals));
+    if (result === everything) return 'flattenedTasks';
+    return result.map((t: FakeTask) => t.id.primaryKey);
+  }
+
+  it('walks every task when no filter narrows the set', () => {
+    expect(candidates({})).toBe('flattenedTasks');
+    expect(candidates({ taskName: 'x', flagged: true, plannedOn: 0 })).toBe('flattenedTasks');
+    expect(candidates({ inbox: false })).toBe('flattenedTasks');
+  });
+
+  it('starts from the project for projectId, root task included', () => {
+    expect(candidates({ projectId: 'pWork' })).toEqual(['rWork', 'a1', 'a1-sub', 'a2']);
+  });
+
+  it('resolves projectId given as the root task id', () => {
+    expect(candidates({ projectId: 'rWork' })).toEqual(['rWork', 'a1', 'a1-sub', 'a2']);
+  });
+
+  it('returns nothing for an unknown projectId', () => {
+    expect(candidates({ projectId: 'nope' })).toEqual([]);
+  });
+
+  it('starts from the inbox, subtasks included, for inbox: true', () => {
+    expect(candidates({ inbox: true })).toEqual(['i1', 'i1-sub', 'i2']);
+  });
+
+  it('unions remaining tasks across every tag with a requested name, once each', () => {
+    expect(candidates({ tags: ['Waiting'] })).toEqual(['t1', 't2']);
+    expect(candidates({ tags: ['Waiting', 'Started'] })).toEqual(['t1', 't2', 't3']);
+    expect(candidates({ tags: ['Missing'] })).toEqual([]);
+  });
+
+  it('escapes tag names', () => {
+    expect(candidates({ tags: ['Other "quoted"'] })).toEqual(['t3']);
+  });
+
+  it('walks every task for tags when completed tasks are wanted', () => {
+    // remainingTasks omits completed/dropped, so it would lose matches.
+    expect(candidates({ tags: ['Waiting'] }, true)).toBe('flattenedTasks');
+  });
+
+  it('starts from the projects in the folder set for folderId/folderName', () => {
+    expect(candidates({ folderId: 'fWork' })).toEqual(['rWork', 'a1', 'a1-sub', 'a2']);
+    expect(candidates({ folderName: 'work' })).toEqual(['rWork', 'a1', 'a1-sub', 'a2']);
+  });
+
+  it('prefers tags over folder', () => {
+    expect(candidates({ tags: ['Started'], folderId: 'fWork' })).toEqual(['t2', 't3']);
+  });
+
+  it('builds the folder set before choosing candidates', () => {
+    const script = generateQueryScript({ entity: 'tasks', filters: { folderId: 'fWork' } });
+    expect(script.indexOf('const _folderIdSet = new Set();')).toBeGreaterThan(-1);
+    expect(script.indexOf('const _folderIdSet = new Set();')).toBeLessThan(script.indexOf('items = _taskCandidates();'));
+  });
+
+  it('starts from matching projects for projectName', () => {
+    expect(candidates({ projectName: 'WORK' })).toEqual(['rWork', 'a1', 'a1-sub', 'a2']);
+  });
+
+  it('adds inbox tasks for projectName "inbox", alongside projects that match it', () => {
+    expect(candidates({ projectName: 'inbox' })).toEqual(['rZero', 'z1', 'i1', 'i1-sub', 'i2']);
+  });
+
+  it('prefers projectId over the other narrowings', () => {
+    expect(candidates({ projectId: 'pZero', tags: ['Waiting'], inbox: true })).toEqual(['rZero', 'z1']);
+  });
+
+  it('is used by task queries only', () => {
+    expect(generateQueryScript({ entity: 'tasks', filters: { tags: ['Waiting'] } })).toContain('items = _taskCandidates();');
+    expect(generateQueryScript({ entity: 'projects', filters: {} })).not.toContain('function _taskCandidates');
+  });
+});
