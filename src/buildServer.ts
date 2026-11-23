@@ -5,6 +5,7 @@ import { Logger } from './utils/logger.js';
 import { setScriptLogger } from './utils/scriptExecution.js';
 import { registerResources } from './resources/index.js';
 import { withUpgradeNudge } from './daemon/upgradeNudge.js';
+import { parseScopes, SCOPES, type Scope } from './scopes.js';
 
 // Import tool definitions
 import * as dumpDatabaseTool from './tools/definitions/dumpDatabase.js';
@@ -38,6 +39,8 @@ import * as createTagTool from './tools/definitions/createTag.js';
 // from version.ts, which the daemon socket path also depends on (#99).
 export { SERVER_VERSION } from "./version.js";
 import { SERVER_VERSION } from "./version.js";
+
+type ToolModule = { schema: z.ZodObject<z.ZodRawShape>; handler: (...args: any[]) => Promise<any> };
 
 const INSTRUCTIONS = `OmniFocus MCP server for macOS task management.
 
@@ -74,10 +77,10 @@ export interface BuiltServer {
  *
  * Caller owns the transport. Note the logger side-effect below.
  */
-export function createOmniFocusServer(): BuiltServer {
+export function createOmniFocusServer(scopes: ReadonlySet<Scope> = parseScopes()): BuiltServer {
   const server = new McpServer(
     { name: "OmniFocus MCP", version: SERVER_VERSION },
-    { instructions: INSTRUCTIONS }
+    { instructions: scopes.size === SCOPES.length ? INSTRUCTIONS : `${INSTRUCTIONS}\n\nENABLED SCOPES: ${[...scopes].join(', ')}. Tools or resources named above that you don't have are disabled.` }
   );
 
   const logger = new Logger(server.server);
@@ -98,91 +101,36 @@ export function createOmniFocusServer(): BuiltServer {
     return {};
   });
 
-  registerResources(server, logger);
+  // Every tool declares its scope; only tools in an enabled scope are registered.
+  const register = (scope: Scope, name: string, description: string, tool: ToolModule) => {
+    if (scopes.has(scope)) server.tool(name, description, tool.schema.shape, withUpgradeNudge(tool.handler));
+  };
 
-  server.tool(
-    "dump_database",
-    "Gets the current state of your OmniFocus database",
-    dumpDatabaseTool.schema.shape,
-    withUpgradeNudge(dumpDatabaseTool.handler)
-  );
+  if (scopes.has('read')) registerResources(server, logger);
 
-  server.tool(
-    "add_omnifocus_task",
-    "Create a NEW task. If a matching task already exists (e.g. in the Inbox), do NOT create a duplicate — MOVE it with edit_item + newProjectName. When unsure, check with query_omnifocus first.",
-    addOmniFocusTaskTool.schema.shape,
-    withUpgradeNudge(addOmniFocusTaskTool.handler)
-  );
+  register('read', "dump_database", "Gets the current state of your OmniFocus database", dumpDatabaseTool);
 
-  server.tool(
-    "add_project",
-    "Add a new project to OmniFocus",
-    addProjectTool.schema.shape,
-    withUpgradeNudge(addProjectTool.handler)
-  );
+  register('add', "add_omnifocus_task", "Create a NEW task. If a matching task already exists (e.g. in the Inbox), do NOT create a duplicate — MOVE it with edit_item + newProjectName. When unsure, check with query_omnifocus first.", addOmniFocusTaskTool);
 
-  server.tool(
-    "remove_item",
-    "Remove a task or project from OmniFocus",
-    removeItemTool.schema.shape,
-    withUpgradeNudge(removeItemTool.handler)
-  );
+  register('add', "add_project", "Add a new project to OmniFocus", addProjectTool);
 
-  server.tool(
-    "edit_item",
-    "Edit an existing task or project. Also how you MOVE a task: set newProjectName (or \"\" / \"inbox\"). Prefer moving an existing task over re-creating it — never make duplicates.",
-    editItemTool.schema.shape,
-    withUpgradeNudge(editItemTool.handler)
-  );
+  register('modify', "remove_item", "Remove a task or project from OmniFocus", removeItemTool);
 
-  server.tool(
-    "batch_add_items",
-    "Add multiple tasks or projects to OmniFocus in a single operation",
-    batchAddItemsTool.schema.shape,
-    withUpgradeNudge(batchAddItemsTool.handler)
-  );
+  register('modify', "edit_item", "Edit an existing task or project. Also how you MOVE a task: set newProjectName (or \"\" / \"inbox\"). Prefer moving an existing task over re-creating it — never make duplicates.", editItemTool);
 
-  server.tool(
-    "batch_remove_items",
-    "Remove multiple tasks or projects from OmniFocus in a single operation",
-    batchRemoveItemsTool.schema.shape,
-    withUpgradeNudge(batchRemoveItemsTool.handler)
-  );
+  register('add', "batch_add_items", "Add multiple tasks or projects to OmniFocus in a single operation", batchAddItemsTool);
 
-  server.tool(
-    "query_omnifocus",
-    "Query tasks, projects, or folders with filters (project, folder, tags, status, dates). Much faster and lighter than dump_database for targeted lookups.",
-    queryOmniFocusTool.schema.shape,
-    withUpgradeNudge(queryOmniFocusTool.handler)
-  );
+  register('modify', "batch_remove_items", "Remove multiple tasks or projects from OmniFocus in a single operation", batchRemoveItemsTool);
 
-  server.tool(
-    "list_perspectives",
-    "List built-in and custom perspectives (custom is a Pro feature)",
-    listPerspectivesTool.schema.shape,
-    withUpgradeNudge(listPerspectivesTool.handler)
-  );
+  register('read', "query_omnifocus", "Query tasks, projects, or folders with filters (project, folder, tags, status, dates). Much faster and lighter than dump_database for targeted lookups.", queryOmniFocusTool);
 
-  server.tool(
-    "get_perspective_view",
-    "Get the items visible in a named OmniFocus perspective",
-    getPerspectiveViewTool.schema.shape,
-    withUpgradeNudge(getPerspectiveViewTool.handler)
-  );
+  register('read', "list_perspectives", "List built-in and custom perspectives (custom is a Pro feature)", listPerspectivesTool);
 
-  server.tool(
-    "list_tags",
-    "List all tags with their hierarchy",
-    listTagsTool.schema.shape,
-    withUpgradeNudge(listTagsTool.handler)
-  );
+  register('read', "get_perspective_view", "Get the items visible in a named OmniFocus perspective", getPerspectiveViewTool);
 
-  server.tool(
-    "create_tag",
-    "Create a new tag in OmniFocus, optionally nested under an existing parent tag",
-    createTagTool.schema.shape,
-    withUpgradeNudge(createTagTool.handler)
-  );
+  register('read', "list_tags", "List all tags with their hierarchy", listTagsTool);
+
+  register('add', "create_tag", "Create a new tag in OmniFocus, optionally nested under an existing parent tag", createTagTool);
 
   rejectUnknownArguments(server);
 

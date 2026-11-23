@@ -80,10 +80,10 @@ describe('schema description budget (#105)', () => {
     expect(describeChars(source)).toBeLessThanOrEqual(500);
   });
 
-  it('keeps the server.tool() registration descriptions under budget', () => {
+  it('keeps the tool registration descriptions under budget', () => {
     const source = readFileSync(join(definitionsDir, '..', '..', 'buildServer.ts'), 'utf8');
-    const matches = [...source.matchAll(/server\.tool\(\s*"[^"]+",\s*"((?:[^"\\]|\\.)*)"/g)];
-    expect(matches.length).toBeGreaterThan(0);
+    const matches = [...source.matchAll(/register\('\w+',\s*"[^"]+",\s*"((?:[^"\\]|\\.)*)"/g)];
+    expect(matches.length).toBe(12);
     const total = matches.reduce((sum, m) => sum + m[1].length, 0);
     expect(total).toBeLessThanOrEqual(1300);
   });

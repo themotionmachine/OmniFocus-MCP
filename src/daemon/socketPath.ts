@@ -1,6 +1,7 @@
 import { homedir, tmpdir } from 'os';
 import { join } from 'path';
 import { VERSION_SLUG } from '../version.js';
+import { parseScopes, scopeKey } from '../scopes.js';
 
 /**
  * Where the daemon listens, and why it's a Unix socket rather than a TCP port
@@ -50,10 +51,23 @@ export const MAX_SOCKET_PATH_LENGTH = 100;
  */
 export const SOCKET_FILENAME = `daemon-${VERSION_SLUG}.sock`;
 
+/**
+ * The daemon is shared, and it is spawned with the env of whichever client
+ * started it, so scopes must be part of the address: a client limited to
+ * OMNIFOCUS_MCP_SCOPES=read must never reach a daemon started with all scopes.
+ * Each scope set gets its own daemon; all scopes keeps SOCKET_FILENAME. The
+ * '+' separator never appears in VERSION_SLUG, so names can't collide.
+ */
+export function socketFilename(env: SocketPathEnv = process.env as SocketPathEnv): string {
+  const key = scopeKey(parseScopes(env.OMNIFOCUS_MCP_SCOPES));
+  return key ? `daemon-${VERSION_SLUG}+${key}.sock` : SOCKET_FILENAME;
+}
+
 export interface SocketPathEnv {
   /** Explicit override; used verbatim. */
   OMNIFOCUS_MCP_SOCKET?: string;
   XDG_RUNTIME_DIR?: string;
+  OMNIFOCUS_MCP_SCOPES?: string;
 }
 
 /**
@@ -73,7 +87,7 @@ export function resolveSocketDir(
   if (env.XDG_RUNTIME_DIR) return join(env.XDG_RUNTIME_DIR, 'omnifocus-mcp');
   if (home) {
     const candidate = join(home, '.omnifocus-mcp');
-    if (join(candidate, SOCKET_FILENAME).length <= MAX_SOCKET_PATH_LENGTH) {
+    if (join(candidate, socketFilename(env)).length <= MAX_SOCKET_PATH_LENGTH) {
       return candidate;
     }
   }
@@ -91,7 +105,7 @@ export function resolveSocketPath(
   temp: string = tmpdir()
 ): string {
   if (env.OMNIFOCUS_MCP_SOCKET) return env.OMNIFOCUS_MCP_SOCKET;
-  return join(resolveSocketDir(env, uid, home, temp), SOCKET_FILENAME);
+  return join(resolveSocketDir(env, uid, home, temp), socketFilename(env));
 }
 
 /**

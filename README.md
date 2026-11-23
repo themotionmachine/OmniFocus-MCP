@@ -51,6 +51,42 @@ claude mcp add omnifocus -- npx -y omnifocus-mcp
 
 Other MCP clients work the same way: launch `npx -y omnifocus-mcp` over stdio.
 
+### Limiting what an agent can do
+
+Every tool belongs to one scope. Set `OMNIFOCUS_MCP_SCOPES` to a comma-separated list of the scopes you want; tools outside them are never offered, so the agent can't see or call them. Leave it unset for all scopes (the default).
+
+| Scope | What it allows | Tools |
+|---|---|---|
+| `read` | Query and list; changes nothing. Also enables the [resources](#resources). | `query_omnifocus`, `dump_database`, `list_tags`, `list_perspectives`, `get_perspective_view` |
+| `add` | Create new items; never changes or removes existing ones | `add_omnifocus_task`, `add_project`, `batch_add_items`, `create_tag` |
+| `modify` | Change, complete, drop, move or **delete** existing items | `edit_item`, `remove_item`, `batch_remove_items` |
+
+Read-only in Claude Code:
+
+```bash
+claude mcp add omnifocus -e OMNIFOCUS_MCP_SCOPES=read -- npx -y omnifocus-mcp
+```
+
+Read and add, nothing destructive, in Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "omnifocus": {
+      "command": "npx",
+      "args": ["-y", "omnifocus-mcp"],
+      "env": { "OMNIFOCUS_MCP_SCOPES": "read,add" }
+    }
+  }
+}
+```
+
+Good to know:
+
+- An unknown scope (e.g. `read-only`) stops the server at startup with the list of valid scopes. It never falls back to all scopes.
+- `read` still lets the agent see everything, including the whole database via `dump_database`. Scopes limit what an agent can do, not what it can see.
+- `add` creates any tags that don't exist yet, and adding a subtask under an existing task makes that task a parent.
+
 ## Example Conversations
 
 **Targeted queries:**
@@ -273,6 +309,8 @@ This matters when several agents use OmniFocus at once. OmniFocus is a single-th
 
 The daemon listens on a Unix domain socket in a `0700` directory (`~/.omnifocus-mcp/daemon-<version>.sock` by default), so access is enforced by the filesystem — no network port and no token. It exits on its own once no client has been connected for the idle window, and logs to `daemon.log` beside the socket.
 
+Each set of [scopes](#limiting-what-an-agent-can-do) gets its own daemon (e.g. `daemon-<version>+read.sock`), so a restricted client never shares a daemon with a less restricted one. Without scopes set, the name is unchanged.
+
 The socket name carries the package version so that upgrading can never leave you talking to the previous version's daemon. Right after an upgrade you may briefly see two daemons: the old one keeps serving the clients already attached to it and exits once the last of them disconnects. Clients still attached to the old daemon are told about it in-band — while a newer daemon is serving, every tool result carries a one-line upgrade notice, so nobody has to remember to reconnect.
 
 A session that simply goes quiet is no longer disconnected: when the idle window passes with no traffic, the shim pings the client and keeps the session if it answers, so long-lived sessions (Claude Code and similar) keep their tools across long quiet stretches. Only a client that never answers is treated as gone.
@@ -293,8 +331,9 @@ Note that the check is on *repeating item plus terminal status*, not on the shap
 
 | Variable | Default | Purpose |
 |---|---|---|
+| `OMNIFOCUS_MCP_SCOPES` | unset (all scopes) | Comma-separated scopes the agent gets: `read`, `add`, `modify`. See [Limiting what an agent can do](#limiting-what-an-agent-can-do). |
 | `OMNIFOCUS_MCP_NO_DAEMON` | unset | Set to `1` to skip the daemon entirely and run a dedicated server per client (the pre-daemon behavior). First thing to try if you suspect the daemon. |
-| `OMNIFOCUS_MCP_SOCKET` | `~/.omnifocus-mcp/daemon-<version>.sock` | Override the socket path, e.g. to run an isolated instance. |
+| `OMNIFOCUS_MCP_SOCKET` | `~/.omnifocus-mcp/daemon-<version>.sock` | Override the socket path, e.g. to run an isolated instance. Used as given, so don't share one override between clients with different scopes. |
 | `OMNIFOCUS_MCP_IDLE_TIMEOUT_MINUTES` | `30` | Idle window after which the server pings the client and exits only if it gets no answer. `0` disables the check. |
 | `OMNIFOCUS_MCP_MAX_CONCURRENT_OSASCRIPT` | `4` | Maximum concurrent `osascript` calls. Lower it if you still see AppleEvent timeouts. |
 
