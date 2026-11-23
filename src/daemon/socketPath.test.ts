@@ -5,6 +5,7 @@ import {
   resolveLockDir,
   MAX_SOCKET_PATH_LENGTH,
   SOCKET_FILENAME,
+  socketFilename,
 } from './socketPath.js';
 import { VERSION_SLUG } from '../version.js';
 
@@ -126,5 +127,20 @@ describe('socket filename is version-qualified (#99)', () => {
     expect(`${dir}/${SOCKET_FILENAME}`.length).toBeLessThanOrEqual(
       Math.max(MAX_SOCKET_PATH_LENGTH, `/tmp/omnifocus-mcp-501/${SOCKET_FILENAME}`.length)
     );
+  });
+});
+
+describe('scoped socket names', () => {
+  it('keeps the existing name when every scope is enabled', () => {
+    expect(socketFilename({})).toBe(SOCKET_FILENAME);
+  });
+
+  it('gives each scope set its own daemon', () => {
+    expect(socketFilename({ OMNIFOCUS_MCP_SCOPES: 'add,read' })).toBe(`daemon-${VERSION_SLUG}+read-add.sock`);
+    expect(socketFilename({ OMNIFOCUS_MCP_SCOPES: 'read' })).not.toBe(SOCKET_FILENAME);
+  });
+
+  it('refuses to start with an invalid scope list', () => {
+    expect(() => resolveSocketPath({ OMNIFOCUS_MCP_SCOPES: 'read-only' }, 501, '/Users/x', '/tmp')).toThrow();
   });
 });

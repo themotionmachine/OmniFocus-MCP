@@ -26,9 +26,10 @@ vi.mock('./utils/scriptExecution.js', async (importOriginal) => {
 });
 
 import { createOmniFocusServer } from './buildServer.js';
+import { parseScopes } from './scopes.js';
 
-async function connectedClient() {
-  const { server } = createOmniFocusServer();
+async function connectedClient(scopes?: string) {
+  const { server } = createOmniFocusServer(parseScopes(scopes));
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
   const client = new Client({ name: 'test', version: '0.0.0' });
@@ -130,5 +131,37 @@ describe('nested objects are strict too', () => {
       arguments: { itemType: 'task', newRepeat: null },
     })) as any;
     expect(r.content[0].text).toContain('Either id or name');
+  });
+});
+
+describe('scopes limit what an agent can see and call', () => {
+  const READ = ['dump_database', 'get_perspective_view', 'list_perspectives', 'list_tags', 'query_omnifocus'];
+  const ADD = ['add_omnifocus_task', 'add_project', 'batch_add_items', 'create_tag'];
+  const MODIFY = ['batch_remove_items', 'edit_item', 'remove_item'];
+  const toolNames = async (scopes?: string) =>
+    (await (await connectedClient(scopes)).listTools()).tools.map((t) => t.name).sort();
+
+  it('registers all 12 tools by default', async () => {
+    expect(await toolNames()).toEqual([...READ, ...ADD, ...MODIFY].sort());
+  });
+
+  it('read-only exposes only read tools', async () => {
+    expect(await toolNames('read')).toEqual(READ);
+  });
+
+  it('read,add exposes no tool that changes or deletes existing items', async () => {
+    expect(await toolNames('read,add')).toEqual([...READ, ...ADD].sort());
+  });
+
+  it('a disabled tool cannot be called', async () => {
+    const client = await connectedClient('read');
+    await expect(
+      client.callTool({ name: 'remove_item', arguments: { id: 'abc', itemType: 'task' } })
+    ).rejects.toThrow(/remove_item/);
+  });
+
+  it('resources are read access, so they go away without the read scope', async () => {
+    expect((await connectedClient('add')).getServerCapabilities()?.resources).toBeUndefined();
+    expect((await connectedClient('read')).getServerCapabilities()?.resources).toBeDefined();
   });
 });
