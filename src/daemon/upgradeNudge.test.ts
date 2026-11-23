@@ -5,7 +5,27 @@ import {
   upgradeNoticeText,
   findNewerServingVersion,
   withUpgradeNudge,
+  nudgeApplies,
 } from './upgradeNudge.js';
+import { resolveSocketPath } from './socketPath.js';
+
+describe('nudgeApplies', () => {
+  const env = { XDG_RUNTIME_DIR: '/run/user/501' };
+
+  it('applies when no socket override is set', () => {
+    expect(nudgeApplies(env)).toBe(true);
+  });
+
+  it('applies in a daemon the shim spawned, which always gets OMNIFOCUS_MCP_SOCKET', () => {
+    // The shim passes the shared-directory path it resolved; treating any value
+    // as "isolated" silenced the nudge in every shim-spawned daemon.
+    expect(nudgeApplies({ ...env, OMNIFOCUS_MCP_SOCKET: resolveSocketPath(env) })).toBe(true);
+  });
+
+  it('skips an isolated instance whose socket lives outside the shared directory', () => {
+    expect(nudgeApplies({ ...env, OMNIFOCUS_MCP_SOCKET: '/tmp/isolated/test.sock' })).toBe(false);
+  });
+});
 
 describe('parseSocketVersion (#113)', () => {
   it('extracts a clean release version', () => {

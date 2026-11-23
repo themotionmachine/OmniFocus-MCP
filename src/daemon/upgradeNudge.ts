@@ -1,8 +1,8 @@
 import { readdirSync } from 'fs';
 import { createConnection } from 'net';
-import { join } from 'path';
+import { dirname, join, resolve } from 'path';
 import { SERVER_VERSION } from '../version.js';
-import { resolveSocketDir } from './socketPath.js';
+import { resolveSocketDir, type SocketPathEnv } from './socketPath.js';
 
 /**
  * In-band upgrade nudge (issue #113).
@@ -107,14 +107,22 @@ export function _resetNudgeCache(): void {
 }
 
 /**
- * The throttled, production entry point: the current notice text, or null.
+ * Whether the shared socket directory speaks for this process.
  *
- * Skipped entirely under OMNIFOCUS_MCP_SOCKET — an isolated instance's socket
- * lives outside the shared directory, so the shared directory says nothing
- * about it.
+ * An isolated instance (OMNIFOCUS_MCP_SOCKET pointing outside the shared
+ * directory) is skipped: the shared directory says nothing about it. The
+ * variable alone can't mean "isolated", though — the shim sets it for every
+ * daemon it spawns, to a path inside the shared directory — so compare the
+ * directory rather than checking presence.
  */
+export function nudgeApplies(env: SocketPathEnv = process.env as SocketPathEnv): boolean {
+  const socketPath = env.OMNIFOCUS_MCP_SOCKET;
+  return !socketPath || resolve(dirname(socketPath)) === resolve(resolveSocketDir(env));
+}
+
+/** The throttled, production entry point: the current notice text, or null. */
 export async function upgradeNotice(): Promise<string | null> {
-  if (process.env.OMNIFOCUS_MCP_SOCKET) return null;
+  if (!nudgeApplies()) return null;
   const now = Date.now();
   if (cache && now - cache.at < CHECK_TTL_MS) return cache.notice;
   let notice: string | null = null;
