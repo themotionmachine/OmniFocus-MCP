@@ -19,6 +19,7 @@ import * as listPerspectivesTool from './tools/definitions/listPerspectives.js';
 import * as getPerspectiveViewTool from './tools/definitions/getPerspectiveView.js';
 import * as listTagsTool from './tools/definitions/listTags.js';
 import * as createTagTool from './tools/definitions/createTag.js';
+import * as synchronizeTool from './tools/definitions/synchronize.js';
 
 /**
  * Server construction, factored out of `server.ts` (issue #80).
@@ -182,6 +183,13 @@ export function createOmniFocusServer(): BuiltServer {
     "Create a new tag in OmniFocus, optionally nested under an existing parent tag",
     createTagTool.schema.shape,
     withUpgradeNudge(createTagTool.handler)
+  );
+
+  server.tool(
+    "synchronize",
+    "Sync OmniFocus with its sync server and wait for it to finish, so the next query sees changes made on other devices",
+    synchronizeTool.schema.shape,
+    withUpgradeNudge(synchronizeTool.handler)
   );
 
   rejectUnknownArguments(server);
